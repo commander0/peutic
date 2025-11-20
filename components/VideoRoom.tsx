@@ -248,6 +248,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
                 <h3 className="text-2xl font-bold text-white tracking-tight">Securing Session</h3>
                 <p className="text-gray-400 mt-2 font-mono text-sm">Establishing end-to-end encryption...</p>
+                <p className="text-gray-500 text-xs mt-4 max-w-xs text-center opacity-70">
+                    *Note: A partner specialist may conduct this session if primary is unavailable.
+                </p>
             </div>
         )}
 

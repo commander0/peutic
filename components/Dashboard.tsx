@@ -1,9 +1,10 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types';
 import { 
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
-  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity
+  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -455,6 +456,20 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <Sparkles className="w-4 h-4" /> Specialist Network
                             </h4>
+                            
+                            {/* High Demand Disclaimer */}
+                            <div className="bg-gray-100 border border-gray-200 p-4 rounded-xl mb-6 flex items-start gap-3">
+                                <Info className="w-5 h-5 text-gray-600 mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <p className="text-sm font-bold text-gray-900">Scheduling Notice</p>
+                                    <p className="text-xs text-gray-600 mt-1 leading-relaxed">
+                                        Due to high global demand, if your selected specialist is finalizing another session, 
+                                        you may be connected with an equally qualified <strong>Partner Specialist (Substitute Avatar)</strong> 
+                                        to ensure immediate care. All specialists are fully briefed on your context.
+                                    </p>
+                                </div>
+                            </div>
+
                             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                                 <div>
                                     <h2 className="text-2xl font-bold text-gray-900">Your Care Team</h2>
