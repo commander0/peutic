@@ -1,13 +1,14 @@
 
-import { User, UserRole, Transaction, Companion, GlobalSettings } from '../types';
+import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric } from '../types';
 
 // Simulation of a MongoDB/Postgres Backend using LocalStorage
 const DB_KEYS = {
-  USER: 'peutic_db_current_user', // The logged-in user session
-  ALL_USERS: 'peutic_db_users', // All registered users
+  USER: 'peutic_db_current_user',
+  ALL_USERS: 'peutic_db_users', 
   COMPANIONS: 'peutic_db_companions',
   TRANSACTIONS: 'peutic_db_transactions',
-  SETTINGS: 'peutic_db_settings'
+  SETTINGS: 'peutic_db_settings',
+  LOGS: 'peutic_db_logs'
 };
 
 // Initial Seed Data
@@ -44,7 +45,8 @@ const INITIAL_SETTINGS: GlobalSettings = {
   pricePerMinute: 1.49,
   maintenanceMode: false,
   allowSignups: true,
-  siteName: 'Peutic'
+  siteName: 'Peutic',
+  broadcastMessage: 'Welcome to Peutic. Specialists are standing by.'
 };
 
 export const Database = {
@@ -55,10 +57,10 @@ export const Database = {
   },
 
   saveUserSession: (user: User): User => {
-    localStorage.setItem(DB_KEYS.USER, JSON.stringify(user));
-    // Also update the user in the master list
-    Database.updateUser(user);
-    return user;
+    const userWithTime = { ...user, lastActive: new Date().toISOString() };
+    localStorage.setItem(DB_KEYS.USER, JSON.stringify(userWithTime));
+    Database.updateUser(userWithTime);
+    return userWithTime;
   },
 
   clearSession: () => {
@@ -71,7 +73,6 @@ export const Database = {
     return stored ? JSON.parse(stored) : [];
   },
 
-  // Security check for admin existence
   hasAdmin: (): boolean => {
     const users = Database.getAllUsers();
     return users.some(u => u.role === UserRole.ADMIN);
@@ -86,16 +87,15 @@ export const Database = {
       balance: 0.00,
       subscriptionStatus: 'ACTIVE',
       avatar: `https://ui-avatars.com/api/?name=${name}&background=FACC15&color=000`,
-      joinedAt: new Date().toISOString()
+      joinedAt: new Date().toISOString(),
+      lastActive: new Date().toISOString()
     };
 
-    // Add to master list
     const users = Database.getAllUsers();
     users.push(newUser);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
-
-    // Save current session
     Database.saveUserSession(newUser);
+    Database.logSystemEvent('INFO', 'User Registration', `New user registered: ${email}`);
     return newUser;
   },
 
@@ -111,8 +111,6 @@ export const Database = {
       users[index] = updatedUser;
       localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     }
-    
-    // If updating currently logged in user
     const currentUser = Database.getUser();
     if (currentUser && currentUser.id === updatedUser.id) {
       localStorage.setItem(DB_KEYS.USER, JSON.stringify(updatedUser));
@@ -123,6 +121,7 @@ export const Database = {
      const list = Database.getCompanions();
      const updatedList = list.map(c => ({ ...c, status }));
      localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
+     Database.logSystemEvent('WARNING', 'Bulk Status Update', `Admin set all companions to ${status}`);
   },
 
   // --- Companions ---
@@ -156,6 +155,7 @@ export const Database = {
 
   saveSettings: (settings: GlobalSettings) => {
     localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(settings));
+    Database.logSystemEvent('INFO', 'Settings Update', 'Global configuration updated');
   },
 
   // --- Transactions ---
@@ -173,15 +173,16 @@ export const Database = {
     const transactions = Database.getAllTransactions();
     transactions.unshift(tx);
     localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+    if (tx.cost && tx.cost > 0) {
+        Database.logSystemEvent('SUCCESS', 'Payment Processed', `Received $${tx.cost} from ${tx.userName}`);
+    }
   },
 
-  // --- Wallet Logic ---
+  // --- Wallet ---
   deductBalance: (minutes: number): boolean => {
     const user = Database.getUser();
     if (!user) return false;
-    
     if (user.balance < minutes) return false;
-
     user.balance -= minutes;
     Database.updateUser(user);
     return true;
@@ -190,10 +191,8 @@ export const Database = {
   topUpWallet: (amountMinutes: number, costDollars: number) => {
     const user = Database.getUser();
     if (!user) return;
-    
     user.balance += amountMinutes;
     Database.updateUser(user);
-    
     Database.addTransaction({
       id: `tx_${Date.now()}`,
       userId: user.id,
@@ -205,4 +204,42 @@ export const Database = {
       status: 'COMPLETED'
     });
   },
+
+  // --- Logging & Metrics ---
+  getSystemLogs: (): SystemLog[] => {
+      const stored = localStorage.getItem(DB_KEYS.LOGS);
+      return stored ? JSON.parse(stored) : [];
+  },
+
+  logSystemEvent: (type: SystemLog['type'], event: string, details: string) => {
+      const logs = Database.getSystemLogs();
+      const newLog: SystemLog = {
+          id: `log_${Date.now()}_${Math.random()}`,
+          timestamp: new Date().toISOString(),
+          type,
+          event,
+          details,
+          ip: '192.168.1.x'
+      };
+      logs.unshift(newLog);
+      // Keep last 100 logs
+      if (logs.length > 100) logs.pop();
+      localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
+  },
+
+  getServerMetrics: (): ServerMetric[] => {
+      // Generate fake metrics history for charts
+      const metrics: ServerMetric[] = [];
+      const now = Date.now();
+      for (let i = 20; i >= 0; i--) {
+          metrics.push({
+              time: new Date(now - i * 10000).toLocaleTimeString(),
+              cpu: 20 + Math.random() * 30,
+              memory: 40 + Math.random() * 20,
+              latency: 15 + Math.random() * 20,
+              activeSessions: Math.floor(Math.random() * 15) + 5
+          });
+      }
+      return metrics;
+  }
 };

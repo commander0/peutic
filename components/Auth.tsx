@@ -268,7 +268,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
       ];
 
       return (
-        <div className="fixed inset-0 bg-white z-50 flex flex-col md:flex-row">
+        <div className="fixed inset-0 bg-[#FFFBEB] z-50 flex flex-col md:flex-row">
             <div className="hidden md:block w-1/2 bg-peutic-yellow relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -280,12 +280,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                 </div>
             </div>
             
-            <div className="w-full md:w-1/2 p-8 md:p-20 flex flex-col justify-center relative bg-white">
+            <div className="w-full md:w-1/2 p-8 md:p-20 flex flex-col justify-center relative bg-[#FFFBEB]">
                 <div className="max-w-md w-full mx-auto">
                     {/* Progress Bar */}
                     <div className="flex gap-2 mb-12">
                         {[0, 1, 2, 3].map(i => (
-                            <div key={i} className={`h-2 rounded-full flex-1 transition-all duration-500 ${i <= onboardingStep ? 'bg-peutic-yellow' : 'bg-gray-100'}`}></div>
+                            <div key={i} className={`h-2 rounded-full flex-1 transition-all duration-500 ${i <= onboardingStep ? 'bg-peutic-yellow' : 'bg-yellow-100'}`}></div>
                         ))}
                     </div>
 
@@ -309,7 +309,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             <h2 className="text-3xl font-bold mb-8">The Peutic Promise</h2>
                             <div className="space-y-6 mb-10">
                                 <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <Shield className="w-6 h-6 text-yellow-600" />
                                     </div>
                                     <div>
@@ -318,7 +318,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     </div>
                                 </div>
                                 <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <Clock className="w-6 h-6 text-yellow-600" />
                                     </div>
                                     <div>
@@ -327,7 +327,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     </div>
                                 </div>
                                 <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-yellow-50 rounded-xl flex items-center justify-center flex-shrink-0">
+                                    <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center flex-shrink-0">
                                         <Heart className="w-6 h-6 text-yellow-600" />
                                     </div>
                                     <div>
@@ -378,7 +378,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             <p className="text-gray-500 text-lg mb-8">
                                 We have curated a list of specialists based on your preferences. Your first step towards a better you starts now.
                             </p>
-                            <div className="bg-gray-50 p-4 rounded-xl mb-8 text-left border border-gray-100">
+                            <div className="bg-white p-4 rounded-xl mb-8 text-left border border-yellow-100 shadow-sm">
                                 <p className="text-sm font-bold text-gray-800 mb-1">Quick Tip:</p>
                                 <p className="text-sm text-gray-500">You can browse specialist bios and check their ratings before connecting. Sessions are charged by the minute, so you are always in control.</p>
                             </div>
@@ -396,7 +396,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
 
   // --- RENDER AUTH FORM ---
   return (
-    <div className="fixed inset-0 bg-white z-50 flex flex-col md:flex-row">
+    <div className="fixed inset-0 bg-[#FFFBEB] z-50 flex flex-col md:flex-row">
       {/* Left Side (Image) */}
       <div className="hidden md:block w-1/2 bg-black relative overflow-hidden">
         <img 
@@ -415,7 +415,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
       </div>
 
       {/* Right Side (Form) */}
-      <div className="w-full md:w-1/2 p-8 md:p-20 flex flex-col justify-center relative bg-white overflow-y-auto">
+      <div className="w-full md:w-1/2 p-8 md:p-20 flex flex-col justify-center relative bg-[#FFFBEB] overflow-y-auto">
         <button onClick={onCancel} className="absolute top-8 right-8 text-sm text-gray-500 hover:text-black font-semibold">Back to Home</button>
         
         <div className="max-w-md w-full mx-auto pt-10 md:pt-0">
@@ -458,7 +458,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <input 
                                         type="email" 
                                         required 
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white"
+                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white"
                                         placeholder="you@example.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
@@ -485,7 +485,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                         type="text" 
                                         required 
                                         maxLength={6}
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white tracking-widest font-mono"
+                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white tracking-widest font-mono"
                                         placeholder="123456"
                                         value={resetCode}
                                         onChange={(e) => setResetCode(e.target.value)}
@@ -512,7 +512,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <input 
                                         type="password" 
                                         required 
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white"
+                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white"
                                         placeholder="New secure password"
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
@@ -526,7 +526,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <input 
                                         type="password" 
                                         required 
-                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white"
+                                        className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white"
                                         placeholder="Repeat new password"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
@@ -573,7 +573,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <input 
                                         type="text" 
                                         required 
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white"
+                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white"
                                         placeholder="John Doe"
                                         value={name}
                                         onChange={(e) => setName(e.target.value)}
@@ -589,7 +589,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                 <input 
                                     type="email" 
                                     required 
-                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white"
+                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white"
                                     placeholder="you@example.com"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -604,7 +604,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                 <input 
                                     type="password" 
                                     required 
-                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-gray-50 focus:bg-white"
+                                    className="w-full pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all bg-white focus:bg-white"
                                     placeholder="••••••••"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -633,7 +633,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                 <input 
                                     type="password" 
                                     required 
-                                    className={`w-full pl-12 pr-4 py-3 rounded-xl border focus:ring-1 outline-none transition-all bg-gray-50 focus:bg-white ${password && confirmPassword && password !== confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-peutic-yellow focus:ring-peutic-yellow'}`}
+                                    className={`w-full pl-12 pr-4 py-3 rounded-xl border focus:ring-1 outline-none transition-all bg-white focus:bg-white ${password && confirmPassword && password !== confirmPassword ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : 'border-gray-200 focus:border-peutic-yellow focus:ring-peutic-yellow'}`}
                                     placeholder="••••••••"
                                     value={confirmPassword}
                                     onChange={(e) => setConfirmPassword(e.target.value)}
@@ -658,9 +658,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                     </form>
                     
                     <div className="my-8 flex items-center gap-4">
-                        <div className="h-px bg-gray-200 flex-1"></div>
+                        <div className="h-px bg-gray-300 flex-1"></div>
                         <span className="text-gray-400 text-sm">Or continue with</span>
-                        <div className="h-px bg-gray-200 flex-1"></div>
+                        <div className="h-px bg-gray-300 flex-1"></div>
                     </div>
 
                     <div className="grid grid-cols-3 gap-4">
@@ -677,7 +677,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             <button 
                                 type="button"
                                 onClick={() => handleSimulatedOAuth('google')}
-                                className={`absolute inset-0 w-full h-full flex items-center justify-center border border-gray-200 rounded-md hover:bg-gray-50 transition-colors bg-white z-0 ${googleLoaded ? 'hidden' : 'flex'}`}
+                                className={`absolute inset-0 w-full h-full flex items-center justify-center border border-gray-200 rounded-md hover:bg-white transition-colors bg-white z-0 ${googleLoaded ? 'hidden' : 'flex'}`}
                             >
                                 {loading && authProvider === 'google' ? (
                                     <span className="w-5 h-5 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin"></span>
@@ -699,7 +699,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             type="button"
                             onClick={() => handleSimulatedOAuth('facebook')} 
                             disabled={loading}
-                            className="flex items-center justify-center py-3 border border-gray-200 rounded-xl hover:bg-blue-50 hover:border-blue-200 transition-colors group disabled:opacity-50 h-[46px]"
+                            className="flex items-center justify-center py-3 border border-gray-200 rounded-xl bg-white hover:bg-blue-50 hover:border-blue-200 transition-colors group disabled:opacity-50 h-[46px]"
                         >
                             {loading && authProvider === 'facebook' ? (
                                 <span className="w-5 h-5 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></span>
@@ -711,7 +711,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             type="button"
                             onClick={() => handleSimulatedOAuth('x')} 
                             disabled={loading}
-                            className="flex items-center justify-center py-3 border border-gray-200 rounded-xl hover:bg-gray-50 hover:border-black transition-colors group disabled:opacity-50 h-[46px]"
+                            className="flex items-center justify-center py-3 border border-gray-200 rounded-xl bg-white hover:bg-gray-50 hover:border-black transition-colors group disabled:opacity-50 h-[46px]"
                         >
                             {loading && authProvider === 'x' ? (
                                 <span className="w-5 h-5 border-2 border-gray-300 border-t-black rounded-full animate-spin"></span>

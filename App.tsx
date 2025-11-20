@@ -82,7 +82,7 @@ const App: React.FC = () => {
   };
 
   if (isRestoring) {
-    return <div className="min-h-screen flex items-center justify-center bg-white"><div className="w-8 h-8 border-4 border-peutic-yellow border-t-transparent rounded-full animate-spin"></div></div>;
+    return <div className="min-h-screen flex items-center justify-center bg-[#FFFBEB]"><div className="w-8 h-8 border-4 border-peutic-yellow border-t-transparent rounded-full animate-spin"></div></div>;
   }
 
   // Maintenance Screen (Bypass for Admins)

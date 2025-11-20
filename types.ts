@@ -14,6 +14,7 @@ export interface User {
   avatar?: string;
   subscriptionStatus: 'ACTIVE' | 'INACTIVE' | 'PREMIUM' | 'BANNED';
   joinedAt: string;
+  lastActive?: string;
 }
 
 export interface Companion {
@@ -43,4 +44,22 @@ export interface GlobalSettings {
   maintenanceMode: boolean;
   allowSignups: boolean;
   siteName: string;
+  broadcastMessage?: string;
+}
+
+export interface SystemLog {
+  id: string;
+  timestamp: string;
+  type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' | 'SECURITY';
+  event: string;
+  details: string;
+  ip?: string;
+}
+
+export interface ServerMetric {
+  time: string;
+  cpu: number;
+  memory: number;
+  latency: number;
+  activeSessions: number;
 }

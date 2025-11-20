@@ -225,9 +225,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans text-gray-900">
+    <div className="min-h-screen bg-[#FFFBEB] font-sans text-gray-900">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-30 shadow-sm">
+      <nav className="bg-[#FFFBEB] border-b border-yellow-100 sticky top-0 z-30 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
             <div className="flex items-center gap-3">
@@ -238,7 +238,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
             </div>
             
             <div className="flex items-center gap-6">
-              <div className="hidden md:block px-4 py-2 bg-gray-50 rounded-lg border border-gray-100 text-sm text-gray-500 font-medium italic">
+              <div className="hidden md:block px-4 py-2 bg-white rounded-lg border border-yellow-200 text-sm text-gray-500 font-medium italic shadow-sm">
                 "{dailyInsight}"
               </div>
               
@@ -255,7 +255,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                 </button>
               </div>
 
-              <div className="h-8 w-px bg-gray-200 hidden md:block"></div>
+              <div className="h-8 w-px bg-gray-300 hidden md:block"></div>
 
               <button onClick={onLogout} className="text-gray-500 hover:text-black transition-colors">
                 <LogOut className="w-6 h-6" />
@@ -270,7 +270,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
         <div className="flex flex-col md:flex-row gap-8">
            {/* Sidebar */}
            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 text-center">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-yellow-100 text-center">
                     <div className="w-24 h-24 rounded-full bg-gray-200 mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg">
                         <img src={user.avatar} alt="User" className="w-full h-full" />
                     </div>
@@ -282,7 +282,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                     <button onClick={() => { setPaymentError(undefined); setShowPayment(true); }} className="w-full py-2 bg-peutic-yellow rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors">Add Funds</button>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden">
                     {[
                         { id: 'companions', icon: Users, label: 'Specialists' },
                         { id: 'history', icon: Clock, label: 'History' },
@@ -291,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id as any)}
-                            className={`w-full flex items-center gap-3 px-6 py-4 text-sm font-bold transition-colors ${activeTab === item.id ? 'bg-black text-white' : 'text-gray-600 hover:bg-gray-50'}`}
+                            className={`w-full flex items-center gap-3 px-6 py-4 text-sm font-bold transition-colors ${activeTab === item.id ? 'bg-black text-white' : 'text-gray-600 hover:bg-yellow-50'}`}
                         >
                             <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-peutic-yellow' : 'text-gray-400'}`} />
                             {item.label}
@@ -323,7 +323,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
                         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                             {filteredCompanions.map(companion => (
-                                <div key={companion.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
+                                <div key={companion.id} className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                                     <div className="h-64 bg-gray-200 relative overflow-hidden">
                                         <img src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                                         <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${companion.status === 'AVAILABLE' ? 'bg-green-500 text-white' : companion.status === 'OFFLINE' ? 'bg-red-500 text-white' : 'bg-gray-500 text-white'}`}>
@@ -361,7 +361,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                 )}
                 
                 {activeTab === 'history' && (
-                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                    <div className="bg-white rounded-2xl border border-yellow-100 overflow-hidden shadow-sm">
                         <div className="p-6 border-b border-gray-100">
                             <h3 className="text-xl font-bold text-gray-900">Transaction & Session History</h3>
                         </div>
@@ -406,7 +406,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                 )}
                 
                 {activeTab === 'settings' && (
-                     <div className="bg-white rounded-2xl border border-gray-200 p-8">
+                     <div className="bg-white rounded-2xl border border-yellow-100 p-8 shadow-sm">
                         <h3 className="text-xl font-bold text-gray-900 mb-6">Account Settings</h3>
                         <div className="space-y-6">
                              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
