@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video, Menu, X } from 'lucide-react';
+import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video, Menu, X, Cookie } from 'lucide-react';
 import { TRANSLATIONS, LanguageCode, getTranslation } from '../services/i18n';
 
 interface LandingPageProps {
@@ -10,13 +10,26 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [lang, setLang] = useState<LanguageCode>('en');
   const [langMenuOpen, setLangMenuOpen] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [onlineCount, setOnlineCount] = useState(124);
+  const [showCookies, setShowCookies] = useState(false);
 
   useEffect(() => {
     // Randomize online count between 80 and 300 on load
     setOnlineCount(Math.floor(Math.random() * (300 - 80 + 1)) + 80);
+    
+    // Show cookie banner after delay
+    const timer = setTimeout(() => {
+        if (!localStorage.getItem('peutic_cookies_accepted')) {
+            setShowCookies(true);
+        }
+    }, 2000);
+    return () => clearTimeout(timer);
   }, []);
+
+  const acceptCookies = () => {
+      localStorage.setItem('peutic_cookies_accepted', 'true');
+      setShowCookies(false);
+  };
 
   const toggleLang = (code: LanguageCode) => {
     setLang(code);
@@ -34,9 +47,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   // Updated with reliable SVG sources
   const pressLogos = [
     "https://upload.wikimedia.org/wikipedia/commons/b/b9/TechCrunch_logo.svg",
-    "https://upload.wikimedia.org/wikipedia/commons/7/77/The_New_York_Times_logo.png", // NYT prefers PNG for web display usually, but this is a reliable path
+    "https://upload.wikimedia.org/wikipedia/commons/f/fa/The_New_York_Times_Logo.svg", 
     "https://upload.wikimedia.org/wikipedia/commons/9/95/Wired_logo.svg",
-    "https://upload.wikimedia.org/wikipedia/commons/5/5e/Bloomberg_logo.svg",
+    "https://upload.wikimedia.org/wikipedia/commons/2/2f/Bloomberg_Businessweek_logo.svg",
     "https://upload.wikimedia.org/wikipedia/commons/0/0c/Forbes_logo.svg"
   ];
 
@@ -45,13 +58,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       
       {/* --- REALISTIC SUNRAY EFFECT --- */}
       <div className="fixed -top-20 -right-20 w-[800px] h-[800px] pointer-events-none z-0 overflow-hidden opacity-80 mix-blend-soft-light">
-          {/* 1. The Sun Core (Bright Center) */}
           <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-yellow-200 rounded-full blur-[60px] opacity-80"></div>
-          
-          {/* 2. God Rays (Beams) */}
           <div className="absolute top-0 right-0 w-full h-full bg-[conic-gradient(from_225deg_at_top_right,rgba(255,255,255,0.8)_0deg,transparent_15deg,rgba(255,223,0,0.3)_30deg,transparent_45deg)] blur-xl transform scale-150 origin-top-right"></div>
-          
-          {/* 3. Ambient Warm Glow (Wash) */}
           <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-yellow-400/40 via-orange-200/10 to-transparent"></div>
       </div>
 
@@ -86,31 +94,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
             {/* CTA */}
             <div className="flex items-center gap-4">
-               <button onClick={onLoginClick} className="text-sm font-bold hidden md:block">{getTranslation(lang, 'login')}</button>
+               <button onClick={onLoginClick} className="text-sm font-bold hidden md:block text-[#FACC15] hover:text-[#EAB308] transition-colors">{getTranslation(lang, 'login')}</button>
                <button onClick={onLoginClick} className="bg-[#FACC15] text-black px-6 py-3 rounded-full font-bold hover:bg-[#EAB308] transition-transform hover:scale-105 shadow-lg flex items-center gap-2">
                   {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
                </button>
             </div>
-
-            {/* Mobile Menu Toggle */}
-            <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile Menu Dropdown */}
-        {mobileMenuOpen && (
-            <div className="md:hidden bg-white border-b border-yellow-100 p-4 shadow-xl absolute w-full left-0 top-20 animate-float" style={{animation: 'none'}}>
-                <div className="flex flex-col space-y-4">
-                    <div className="h-px bg-gray-100 my-2"></div>
-                    <button onClick={onLoginClick} className="text-lg font-bold text-gray-900 text-left">{getTranslation(lang, 'login')}</button>
-                    <button onClick={onLoginClick} className="bg-black text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
-                        {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-        )}
       </nav>
 
       {/* HERO SECTION */}
@@ -153,7 +143,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <div className="relative lg:h-[600px] w-full flex items-center justify-center mt-12 lg:mt-0">
                       {/* HERO VIDEO UI MOCKUP */}
                       <div className="relative w-[280px] md:w-[350px] h-[400px] md:h-[500px] bg-black rounded-[40px] border-8 border-white shadow-2xl overflow-hidden transform rotate-0 md:rotate-[-3deg] md:hover:rotate-0 transition-transform duration-500 z-20">
-                           {/* Simulated Video Feed - Using stock video of a woman listening/talking */}
                            <video 
                               autoPlay 
                               muted 
@@ -162,13 +151,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                               poster="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800"
                               className="absolute inset-0 w-full h-full object-cover"
                            >
-                              {/* Stock footage: Professional woman listening on video call */}
                               <source src="https://player.vimeo.com/external/459389137.sd.mp4?s=964c5e43b5183623a60267eb1858736b54305441&profile_id=164&oauth2_token_id=57447761" type="video/mp4" />
                            </video>
                            
                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
                            
-                           {/* UI Elements */}
                            <div className="absolute top-6 left-6 right-6 flex justify-between items-center">
                                 <div className="bg-black/30 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-2 border border-white/10">
                                     <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
@@ -193,7 +180,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                            </div>
                       </div>
 
-                      {/* Floating Elements */}
                       <div className="hidden md:flex absolute top-20 -right-4 bg-white p-4 rounded-2xl shadow-xl animate-float items-center gap-3 z-30">
                           <div className="bg-green-100 p-2 rounded-full"><CheckCircle className="w-6 h-6 text-green-600" /></div>
                           <div>
@@ -214,7 +200,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* PRESS BANNER (MARQUEE) */}
+      {/* PRESS BANNER */}
       <section className="py-10 border-y border-yellow-100 bg-white/80 backdrop-blur-sm overflow-hidden z-10 relative">
           <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">Trusted by Industry Leaders</p>
           <div className="relative flex overflow-x-hidden group">
@@ -226,7 +212,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* SCIENCE / STATS (Updated Background Color) */}
+      {/* SCIENCE / STATS */}
       <section className="py-24 bg-[#FFFBEB] relative overflow-hidden z-10">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-200 rounded-full blur-[120px] opacity-30"></div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -252,7 +238,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* SPECIALIST LAYOUT (3 Top / 2 Bottom - FLEXBOX IMPLEMENTATION) */}
+      {/* SPECIALIST LAYOUT */}
       <section className="py-24 bg-[#FFFBEB] z-10 relative">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
@@ -289,9 +275,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid md:grid-cols-2 gap-16 items-center">
                   <div className="order-2 md:order-1">
-                       {/* High Quality Video Visual */}
                        <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 aspect-video">
-                           {/* Stock footage: Woman calm and happy on laptop */}
                            <video 
                               autoPlay 
                               muted 
@@ -350,12 +334,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* PRICING / CTA (Updated Background Color) */}
+      {/* PRICING / CTA */}
       <section id="pricing" className="py-24 bg-[#FFFBEB] text-center z-10 relative">
           <div className="max-w-4xl mx-auto px-4">
               <h2 className="text-4xl md:text-5xl font-black mb-8 tracking-tight text-gray-900">Simple, Transparent Pricing.</h2>
               <div className="bg-white rounded-3xl p-8 md:p-12 inline-block max-w-lg w-full relative overflow-hidden shadow-2xl border border-yellow-100">
-                  {/* Lifetime Deal Badge */}
                   <div className="inline-block bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black mb-6 animate-pulse tracking-widest">
                       LIFETIME RATE LOCKED IN
                   </div>
@@ -397,6 +380,30 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               <p className="text-xs opacity-50">© 2025 Peutic Inc. {getTranslation(lang, 'footer_rights')}</p>
           </div>
       </footer>
+
+      {/* COOKIE CONSENT BANNER */}
+      {showCookies && (
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 shadow-2xl z-[100] animate-float" style={{animation: 'none'}}>
+              <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+                  <div className="flex items-start gap-4">
+                      <div className="p-3 bg-yellow-50 rounded-xl hidden md:block">
+                          <Cookie className="w-6 h-6 text-yellow-600" />
+                      </div>
+                      <div>
+                          <h4 className="font-bold text-gray-900">We value your privacy</h4>
+                          <p className="text-sm text-gray-500 max-w-xl mt-1">
+                              We use cookies to enhance your experience, analyze traffic, and provide secure authentication. 
+                              By continuing, you agree to our use of cookies.
+                          </p>
+                      </div>
+                  </div>
+                  <div className="flex gap-3 w-full md:w-auto">
+                      <button onClick={() => setShowCookies(false)} className="flex-1 md:flex-none px-6 py-3 rounded-xl border border-gray-200 font-bold text-sm hover:bg-gray-50">Preferences</button>
+                      <button onClick={acceptCookies} className="flex-1 md:flex-none px-8 py-3 rounded-xl bg-black text-white font-bold text-sm hover:bg-gray-800 shadow-lg">Accept All</button>
+                  </div>
+              </div>
+          </div>
+      )}
     </div>
   );
 };
