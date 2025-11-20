@@ -11,7 +11,9 @@ const DB_KEYS = {
   LOGS: 'peutic_db_logs',
   MOODS: 'peutic_db_moods',
   JOURNALS: 'peutic_db_journals',
-  PROMOS: 'peutic_db_promos'
+  PROMOS: 'peutic_db_promos',
+  QUEUE: 'peutic_db_queue', // New Queue Key
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions' // New Session Counter
 };
 
 // Initial Seed Data
@@ -40,282 +42,305 @@ const INITIAL_COMPANIONS: Companion[] = [
   { id: 'c22', name: 'Mary', specialty: 'Spiritual Guidance', status: 'AVAILABLE', rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1588516903720-860f194dc830?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Connecting with your deeper spiritual self.', replicaId: 'r6ca16dbe104' },
   { id: 'c23', name: 'Destiny', specialty: 'Goal Setting', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1589571894960-20bbe2815d22?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Turning your dreams into actionable plans.', replicaId: 'r38a383b0173' },
   { id: 'c24', name: 'Rose (Jr)', specialty: 'Academic Stress', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Handling the pressures of school and exams.', replicaId: 'r1af76e94d00' },
-  { id: 'c25', name: 'Raj', specialty: 'Cultural Adjustment', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1506277886164-e25aa3f4ef7f?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Navigating life in a new culture or environment.', replicaId: 'ra066ab28864' },
-  { id: 'c26', name: 'Ben', specialty: 'Financial Stress', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Emotional support for financial planning.', replicaId: 'r1a4e22fa0d9' },
-  { id: 'c27', name: 'Steph', specialty: 'Sleep Hygiene', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1597223557154-721c1cecc4b0?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Developing habits for a restful night.', replicaId: 'r9c55f9312fb' },
+  { id: 'c25', name: 'Raj', specialty: 'Cultural Adjustment', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Navigating life in a new culture or environment.', replicaId: 'ra066ab28864' },
+  { id: 'c26', name: 'Ben', specialty: 'Phobia Desensitization', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1480429370139-89acccb096b9?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Overcoming specific fears step by step.', replicaId: 'r1a4e22fa0d9' },
+  { id: 'c27', name: 'Steph', specialty: 'Burnout Recovery', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Restoring balance after periods of intense stress.', replicaId: 'r9c55f9312fb' }
 ];
 
-const INITIAL_SETTINGS: GlobalSettings = {
-  pricePerMinute: 1.49,
-  maintenanceMode: false,
-  allowSignups: true,
-  siteName: 'Peutic',
-  broadcastMessage: 'Welcome to Peutic. Specialists are standing by.'
-};
+export class Database {
+  // --- USER MANAGEMENT ---
+  static getAllUsers(): User[] {
+    const usersStr = localStorage.getItem(DB_KEYS.ALL_USERS);
+    return usersStr ? JSON.parse(usersStr) : [];
+  }
 
-export const Database = {
-  // --- Auth & User Session ---
-  getUser: (): User | null => {
-    const stored = localStorage.getItem(DB_KEYS.USER);
-    return stored ? JSON.parse(stored) : null;
-  },
-
-  saveUserSession: (user: User): User => {
-    const userWithTime = { ...user, lastActive: new Date().toISOString() };
-    localStorage.setItem(DB_KEYS.USER, JSON.stringify(userWithTime));
-    Database.updateUser(userWithTime);
-    return userWithTime;
-  },
-
-  clearSession: () => {
-    localStorage.removeItem(DB_KEYS.USER);
-  },
-
-  // --- User Management ---
-  getAllUsers: (): User[] => {
-    const stored = localStorage.getItem(DB_KEYS.ALL_USERS);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  hasAdmin: (): boolean => {
-    const users = Database.getAllUsers();
-    return users.some(u => u.role === UserRole.ADMIN);
-  },
-
-  createUser: (name: string, email: string, role: UserRole): User => {
+  static createUser(name: string, email: string, role: UserRole = UserRole.USER): User {
+    const users = this.getAllUsers();
     const newUser: User = {
-      id: `user_${Math.random().toString(36).substr(2, 9)}`,
+      id: `u_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       email,
       role,
-      balance: 0.00,
+      balance: 0, // Start with 0 balance
+      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FACC15&color=000`,
       subscriptionStatus: 'ACTIVE',
-      avatar: `https://ui-avatars.com/api/?name=${name}&background=FACC15&color=000`,
       joinedAt: new Date().toISOString(),
       lastActive: new Date().toISOString()
     };
-
-    const users = Database.getAllUsers();
     users.push(newUser);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
-    Database.saveUserSession(newUser);
-    Database.logSystemEvent('INFO', 'User Registration', `New user registered: ${email}`);
+    this.saveUserSession(newUser);
     return newUser;
-  },
+  }
 
-  getUserByEmail: (email: string): User | undefined => {
-    const users = Database.getAllUsers();
-    return users.find(u => u.email.toLowerCase() === email.toLowerCase());
-  },
+  static getUser(): User | null {
+    const userStr = localStorage.getItem(DB_KEYS.USER);
+    return userStr ? JSON.parse(userStr) : null;
+  }
 
-  updateUser: (updatedUser: User) => {
-    const users = Database.getAllUsers();
+  static saveUserSession(user: User) {
+    localStorage.setItem(DB_KEYS.USER, JSON.stringify(user));
+  }
+
+  static clearSession() {
+    localStorage.removeItem(DB_KEYS.USER);
+  }
+
+  static updateUser(updatedUser: User) {
+    // Update in All Users list
+    const users = this.getAllUsers();
     const index = users.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
       users[index] = updatedUser;
       localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     }
-    const currentUser = Database.getUser();
+    // Update current session if match
+    const currentUser = this.getUser();
     if (currentUser && currentUser.id === updatedUser.id) {
-      localStorage.setItem(DB_KEYS.USER, JSON.stringify(updatedUser));
+      this.saveUserSession(updatedUser);
     }
-  },
+  }
 
-  setAllCompanionsStatus: (status: 'AVAILABLE' | 'BUSY' | 'OFFLINE') => {
-     const list = Database.getCompanions();
-     const updatedList = list.map(c => ({ ...c, status }));
-     localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
-     Database.logSystemEvent('WARNING', 'Bulk Status Update', `Admin set all companions to ${status}`);
-  },
+  static getUserByEmail(email: string): User | undefined {
+      return this.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
 
-  // --- Companions ---
-  getCompanions: (): Companion[] => {
-    const stored = localStorage.getItem(DB_KEYS.COMPANIONS);
-    if (!stored) {
-      localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(INITIAL_COMPANIONS));
-      return INITIAL_COMPANIONS;
+  static hasAdmin(): boolean {
+      return this.getAllUsers().some(u => u.role === UserRole.ADMIN);
+  }
+
+  // --- COMPANION MANAGEMENT ---
+  static getCompanions(): Companion[] {
+    const saved = localStorage.getItem(DB_KEYS.COMPANIONS);
+    if (!saved) {
+        localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(INITIAL_COMPANIONS));
+        return INITIAL_COMPANIONS;
     }
-    return JSON.parse(stored);
-  },
+    return JSON.parse(saved);
+  }
 
-  updateCompanion: (updatedCompanion: Companion) => {
-    const list = Database.getCompanions();
-    const index = list.findIndex(c => c.id === updatedCompanion.id);
-    if (index !== -1) {
-      list[index] = updatedCompanion;
-      localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(list));
+  static updateCompanion(updated: Companion) {
+      const list = this.getCompanions();
+      const idx = list.findIndex(c => c.id === updated.id);
+      if (idx !== -1) {
+          list[idx] = updated;
+          localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(list));
+      }
+  }
+
+  static setAllCompanionsStatus(status: 'AVAILABLE' | 'BUSY' | 'OFFLINE') {
+      const list = this.getCompanions();
+      const updatedList = list.map(c => ({ ...c, status }));
+      localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
+      this.logSystemEvent('INFO', 'Mass Status Update', `All specialists set to ${status}`);
+  }
+
+  // --- WALLET & TRANSACTIONS ---
+  static topUpWallet(minutes: number, cost: number) {
+    const user = this.getUser();
+    if (user) {
+      user.balance += minutes;
+      this.updateUser(user);
+      this.addTransaction({
+        id: `tx_${Date.now()}`,
+        userId: user.id,
+        userName: user.name,
+        date: new Date().toISOString(),
+        amount: minutes,
+        cost: cost,
+        description: 'Wallet Top-up',
+        status: 'COMPLETED'
+      });
+      this.logSystemEvent('SUCCESS', 'Payment Received', `User ${user.email} added $${cost}`);
     }
-  },
+  }
 
-  // --- Settings ---
-  getSettings: (): GlobalSettings => {
-    const stored = localStorage.getItem(DB_KEYS.SETTINGS);
-    if (!stored) {
-      localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(INITIAL_SETTINGS));
-      return INITIAL_SETTINGS;
+  static deductBalance(minutes: number) {
+    const user = this.getUser();
+    if (user) {
+      user.balance = Math.max(0, user.balance - minutes);
+      this.updateUser(user);
     }
-    return JSON.parse(stored);
-  },
+  }
 
-  saveSettings: (settings: GlobalSettings) => {
-    localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(settings));
-    Database.logSystemEvent('INFO', 'Settings Update', 'Global configuration updated');
-  },
+  static getAllTransactions(): Transaction[] {
+    const txStr = localStorage.getItem(DB_KEYS.TRANSACTIONS);
+    return txStr ? JSON.parse(txStr) : [];
+  }
 
-  // --- Transactions ---
-  getAllTransactions: (): Transaction[] => {
-    const stored = localStorage.getItem(DB_KEYS.TRANSACTIONS);
-    return stored ? JSON.parse(stored) : [];
-  },
+  static getUserTransactions(userId: string): Transaction[] {
+    return this.getAllTransactions().filter(tx => tx.userId === userId).reverse();
+  }
 
-  getUserTransactions: (userId: string): Transaction[] => {
-    const all = Database.getAllTransactions();
-    return all.filter(t => t.userId === userId);
-  },
-
-  addTransaction: (tx: Transaction) => {
-    const transactions = Database.getAllTransactions();
-    transactions.unshift(tx);
-    localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(transactions));
-    if (tx.cost && tx.cost > 0) {
-        Database.logSystemEvent('SUCCESS', 'Payment Processed', `Received $${tx.cost} from ${tx.userName}`);
+  static addTransaction(tx: Transaction) {
+    const all = this.getAllTransactions();
+    // If missing userId, try to fill from current session
+    if (!tx.userId) {
+        const u = this.getUser();
+        if (u) { tx.userId = u.id; tx.userName = u.name; }
     }
-  },
+    all.push(tx);
+    localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(all));
+  }
 
-  // --- Wallet ---
-  deductBalance: (minutes: number): boolean => {
-    const user = Database.getUser();
-    if (!user) return false;
-    if (user.balance < minutes) return false;
-    user.balance -= minutes;
-    Database.updateUser(user);
-    return true;
-  },
-
-  topUpWallet: (amountMinutes: number, costDollars: number) => {
-    const user = Database.getUser();
-    if (!user) return;
-    user.balance += amountMinutes;
-    Database.updateUser(user);
-    Database.addTransaction({
-      id: `tx_${Date.now()}`,
-      userId: user.id,
-      userName: user.name,
-      date: new Date().toISOString(),
-      amount: amountMinutes,
-      cost: costDollars,
-      description: 'Wallet Top-up',
-      status: 'COMPLETED'
-    });
-  },
-
-  // --- Wellness Features ---
-  saveMood: (mood: MoodEntry) => {
-    const stored = localStorage.getItem(DB_KEYS.MOODS);
-    const moods: MoodEntry[] = stored ? JSON.parse(stored) : [];
-    moods.push(mood);
-    localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(moods));
-    Database.logSystemEvent('INFO', 'Mood Logged', `User ${mood.userId} logged mood: ${mood.mood}`);
-  },
-
-  getUserMoods: (userId: string): MoodEntry[] => {
-    const stored = localStorage.getItem(DB_KEYS.MOODS);
-    const moods: MoodEntry[] = stored ? JSON.parse(stored) : [];
-    return moods.filter(m => m.userId === userId).reverse();
-  },
-
-  saveJournal: (entry: JournalEntry) => {
-    const stored = localStorage.getItem(DB_KEYS.JOURNALS);
-    const entries: JournalEntry[] = stored ? JSON.parse(stored) : [];
-    entries.push(entry);
-    localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(entries));
-  },
-
-  getUserJournals: (userId: string): JournalEntry[] => {
-    const stored = localStorage.getItem(DB_KEYS.JOURNALS);
-    const entries: JournalEntry[] = stored ? JSON.parse(stored) : [];
-    return entries.filter(j => j.userId === userId).reverse();
-  },
-
-  // --- Promo Codes (Marketing) ---
-  getPromoCodes: (): PromoCode[] => {
-    const stored = localStorage.getItem(DB_KEYS.PROMOS);
-    return stored ? JSON.parse(stored) : [];
-  },
-
-  createPromoCode: (code: string, discount: number): PromoCode => {
-    const promos = Database.getPromoCodes();
-    const newPromo: PromoCode = {
-        id: `promo_${Date.now()}`,
-        code: code.toUpperCase(),
-        discountPercentage: discount,
-        uses: 0,
-        active: true
+  // --- GLOBAL SETTINGS ---
+  static getSettings(): GlobalSettings {
+    const saved = localStorage.getItem(DB_KEYS.SETTINGS);
+    return saved ? JSON.parse(saved) : {
+      pricePerMinute: 1.49,
+      maintenanceMode: false,
+      allowSignups: true,
+      siteName: 'Peutic',
+      maxConcurrentSessions: 15
     };
-    promos.push(newPromo);
-    localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(promos));
-    Database.logSystemEvent('INFO', 'Promo Created', `Created code ${code} (${discount}%)`);
-    return newPromo;
-  },
+  }
 
-  deletePromoCode: (id: string) => {
-      let promos = Database.getPromoCodes();
-      promos = promos.filter(p => p.id !== id);
-      localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(promos));
-  },
+  static saveSettings(s: GlobalSettings) {
+    localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(s));
+    this.logSystemEvent('WARNING', 'Settings Changed', 'Global configuration updated by admin');
+  }
 
-  // --- Email Simulation ---
-  simulateSendEmail: (to: string, subject: string) => {
-      Database.logSystemEvent('SUCCESS', 'Email Sent', `Sent '${subject}' to ${to}`);
-  },
+  // --- SYSTEM LOGS & METRICS ---
+  static getSystemLogs(): SystemLog[] {
+      const saved = localStorage.getItem(DB_KEYS.LOGS);
+      return saved ? JSON.parse(saved) : [];
+  }
 
-  // --- Logging & Metrics ---
-  getSystemLogs: (): SystemLog[] => {
-      const stored = localStorage.getItem(DB_KEYS.LOGS);
-      return stored ? JSON.parse(stored) : [];
-  },
-
-  logSystemEvent: (type: SystemLog['type'], event: string, details: string) => {
-      const logs = Database.getSystemLogs();
+  static logSystemEvent(type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' | 'SECURITY', event: string, details: string) {
+      const logs = this.getSystemLogs();
       const newLog: SystemLog = {
           id: `log_${Date.now()}_${Math.random()}`,
           timestamp: new Date().toISOString(),
           type,
           event,
-          details,
-          ip: '192.168.1.x'
+          details
       };
-      logs.unshift(newLog);
-      // Keep last 100 logs
-      if (logs.length > 100) logs.pop();
+      logs.unshift(newLog); // Newest first
+      if (logs.length > 200) logs.pop(); // Keep log size manageable
       localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
-  },
+  }
 
-  getServerMetrics: (): ServerMetric[] => {
-      // Generate fake metrics history for charts
-      const metrics: ServerMetric[] = [];
-      const now = Date.now();
-      for (let i = 20; i >= 0; i--) {
-          metrics.push({
-              time: new Date(now - i * 10000).toLocaleTimeString(),
-              cpu: 20 + Math.random() * 30,
-              memory: 40 + Math.random() * 20,
-              latency: 15 + Math.random() * 20,
-              activeSessions: Math.floor(Math.random() * 15) + 5
-          });
+  static getServerMetrics(): ServerMetric[] {
+      // Simulate metrics since we are client-side
+      const now = new Date();
+      const active = this.getActiveSessionCount();
+      return Array.from({length: 10}, (_, i) => ({
+          time: new Date(now.getTime() - i * 5000).toLocaleTimeString(),
+          cpu: 20 + Math.random() * 30 + (active * 2), // CPU scales with users
+          memory: 30 + Math.random() * 20,
+          latency: 15 + Math.random() * 40,
+          activeSessions: active
+      })).reverse();
+  }
+
+  // --- QUEUE & TRAFFIC MANAGEMENT ---
+  static getQueue(): string[] {
+      const q = localStorage.getItem(DB_KEYS.QUEUE);
+      return q ? JSON.parse(q) : [];
+  }
+
+  static joinQueue(userId: string): number {
+      const q = this.getQueue();
+      if (!q.includes(userId)) {
+          q.push(userId);
+          localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
       }
-      return metrics;
-  },
+      return q.indexOf(userId) + 1; // Position (1-based)
+  }
 
-  exportData: (type: 'USERS' | 'LOGS') => {
-      const data = type === 'USERS' ? Database.getAllUsers() : Database.getSystemLogs();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  static leaveQueue(userId: string) {
+      let q = this.getQueue();
+      q = q.filter(id => id !== userId);
+      localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
+  }
+
+  static getQueuePosition(userId: string): number {
+      const q = this.getQueue();
+      return q.indexOf(userId) + 1; // Returns 0 if not in queue
+  }
+
+  // Helper to simulate queue movement for demo purposes
+  static advanceQueue() {
+      const q = this.getQueue();
+      if (q.length > 0) {
+          // Remove the first person (simulating they entered a session)
+          q.shift();
+          localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
+      }
+  }
+
+  static getActiveSessionCount(): number {
+      const count = localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS);
+      return count ? parseInt(count, 10) : 0;
+  }
+
+  static incrementActiveSessions() {
+      let count = this.getActiveSessionCount();
+      count++;
+      localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, count.toString());
+  }
+
+  static decrementActiveSessions() {
+      let count = this.getActiveSessionCount();
+      count = Math.max(0, count - 1);
+      localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, count.toString());
+      // When a session ends, free up a spot in the queue (Simulate Round Robin)
+      this.advanceQueue();
+  }
+
+
+  // --- WELLNESS & PROMOS ---
+  static saveMood(entry: MoodEntry) {
+      const saved = localStorage.getItem(DB_KEYS.MOODS) || '[]';
+      const moods = JSON.parse(saved);
+      moods.push(entry);
+      localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(moods));
+  }
+
+  static saveJournal(entry: JournalEntry) {
+      const saved = localStorage.getItem(DB_KEYS.JOURNALS) || '[]';
+      const journals = JSON.parse(saved);
+      journals.push(entry);
+      localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(journals));
+  }
+
+  static simulateSendEmail(to: string, subject: string) {
+      this.logSystemEvent('SUCCESS', 'Email Sent', `Subject: "${subject}" to ${to}`);
+  }
+
+  // Promo Codes
+  static getPromoCodes(): PromoCode[] {
+      const saved = localStorage.getItem(DB_KEYS.PROMOS);
+      return saved ? JSON.parse(saved) : [];
+  }
+  
+  static createPromoCode(code: string, discount: number) {
+      const list = this.getPromoCodes();
+      list.push({ 
+          id: Date.now().toString(), 
+          code: code.toUpperCase(), 
+          discountPercentage: discount, 
+          uses: 0, 
+          active: true 
+      });
+      localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
+  }
+
+  static deletePromoCode(id: string) {
+      const list = this.getPromoCodes().filter(p => p.id !== id);
+      localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
+  }
+
+  // Admin Data Export
+  static exportData(type: 'USERS' | 'LOGS') {
+      const data = type === 'USERS' ? this.getAllUsers() : this.getSystemLogs();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = `peutic_${type.toLowerCase()}_export_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a);
       a.click();
-      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      this.logSystemEvent('INFO', 'Data Export', `Admin exported ${type} database`);
   }
-};
+}

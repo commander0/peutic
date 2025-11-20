@@ -4,7 +4,7 @@ import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types'
 import { 
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
-  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info
+  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -24,6 +24,80 @@ declare global {
     Stripe?: any;
   }
 }
+
+// --- WAITING ROOM MODAL ---
+const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady: () => void }> = ({ userId, onLeave, onReady }) => {
+    const [position, setPosition] = useState<number>(0);
+    const [estWait, setEstWait] = useState<number>(5); // Minutes
+
+    useEffect(() => {
+        // Initial Join
+        const pos = Database.joinQueue(userId);
+        setPosition(pos);
+        setEstWait(Math.ceil(pos * 1.5)); // Approx 1.5 mins per person
+
+        // Poll for position updates
+        const interval = setInterval(() => {
+            const currentPos = Database.getQueuePosition(userId);
+            if (currentPos === 0 || currentPos === 1) {
+                // Ready to enter!
+                clearInterval(interval);
+                onReady();
+            } else {
+                // Simulate line moving for demo effect if stalled
+                if (Math.random() > 0.7) Database.advanceQueue(); 
+                
+                setPosition(currentPos);
+                setEstWait(Math.ceil(currentPos * 1.5));
+            }
+        }, 2000);
+
+        return () => clearInterval(interval);
+    }, [userId, onReady]);
+
+    const handleLeave = () => {
+        Database.leaveQueue(userId);
+        onLeave();
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4">
+            <div className="bg-[#FFFBEB] w-full max-w-lg rounded-3xl p-8 text-center relative shadow-2xl border border-yellow-500/50">
+                <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 overflow-hidden rounded-t-3xl">
+                    <div className="h-full bg-peutic-yellow animate-marquee w-1/2"></div>
+                </div>
+                
+                <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                    <Hourglass className="w-10 h-10 text-peutic-yellow animate-spin-slow" />
+                </div>
+
+                <h2 className="text-3xl font-black text-gray-900 mb-2">Premium Waiting Room</h2>
+                <p className="text-gray-600 mb-8">High demand detected. You are in a priority queue.</p>
+
+                <div className="bg-white p-6 rounded-2xl border border-yellow-200 shadow-sm mb-8 flex justify-around items-center">
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase">Position</p>
+                        <p className="text-4xl font-black text-black">#{position}</p>
+                    </div>
+                    <div className="w-px h-10 bg-gray-200"></div>
+                    <div>
+                        <p className="text-xs font-bold text-gray-400 uppercase">Est. Wait</p>
+                        <p className="text-4xl font-black text-black">{estWait}<span className="text-lg text-gray-500">m</span></p>
+                    </div>
+                </div>
+
+                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-8 bg-yellow-50 p-3 rounded-lg">
+                    <Coffee className="w-4 h-4" />
+                    <span>Please don't close this window. We will connect you automatically.</span>
+                </div>
+
+                <button onClick={handleLeave} className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors">
+                    Leave Queue
+                </button>
+            </div>
+        </div>
+    );
+};
 
 const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, cost: number) => void; initialError?: string }> = ({ onClose, onSuccess, initialError }) => {
     const [amount, setAmount] = useState(20); // Default $20
@@ -208,6 +282,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
   const [showPayment, setShowPayment] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
+  const [showQueue, setShowQueue] = useState(false); // New Queue State
+  const [pendingCompanion, setPendingCompanion] = useState<Companion | null>(null);
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [dailyInsight, setDailyInsight] = useState<string>('');
@@ -219,6 +295,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [mood, setMood] = useState<'Happy'|'Calm'|'Neutral'|'Sad'|'Anxious' | null>(null);
   const [journalContent, setJournalContent] = useState('');
   const [showJournal, setShowJournal] = useState(false);
+  
+  // Retention State
+  const [streak, setStreak] = useState(3); // Simulated streak
+  const [weeklyGoal, setWeeklyGoal] = useState(1); // 1 out of 3 sessions
   
   useEffect(() => {
       // Refresh data from DB logic
@@ -258,13 +338,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       setPaymentError(undefined);
   };
 
-  // STRICT CREDIT CHECK
+  // STRICT CREDIT & QUEUE CHECK
   const handleConnectRequest = (companion: Companion) => {
+      // 1. Check Balance
       if (balance <= 0) {
           setPaymentError("You need to add credits to start a session.");
           setShowPayment(true);
+          return;
+      } 
+
+      // 2. Check Queue / Capacity
+      const activeSessions = Database.getActiveSessionCount();
+      const settings = Database.getSettings();
+      
+      if (activeSessions >= settings.maxConcurrentSessions) {
+          setPendingCompanion(companion);
+          setShowQueue(true); // Open waiting room
       } else {
           onStartSession(companion);
+      }
+  };
+
+  const handleQueueReady = () => {
+      setShowQueue(false);
+      Database.leaveQueue(user.id); // Remove from queue
+      if (pendingCompanion) {
+          onStartSession(pendingCompanion);
+          setPendingCompanion(null);
       }
   };
 
@@ -277,7 +377,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       };
       Database.saveMood(entry);
       setMood(null); 
-      alert("Mood logged to your secure history.");
+      alert("Mood logged to your secure history. Streak updated!");
+      setStreak(s => s + 1);
   };
 
   const handleSaveJournal = () => {
@@ -313,6 +414,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
             </div>
             
             <div className="flex items-center gap-3 md:gap-6">
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-orange-50 border border-orange-100 rounded-full">
+                 <Flame className="w-4 h-4 text-orange-500 fill-orange-500 animate-pulse" />
+                 <span className="text-xs font-bold text-orange-700">{streak} Day Streak</span>
+              </div>
+
               <div className="hidden md:block px-4 py-2 bg-white rounded-lg border border-yellow-200 text-sm text-gray-500 font-medium italic shadow-sm max-w-xs truncate">
                 "{dailyInsight}"
               </div>
@@ -358,6 +464,19 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                         <button onClick={() => { setPaymentError(undefined); setShowPayment(true); }} className="hidden md:block w-full py-2 bg-peutic-yellow rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors mt-2">Add Funds</button>
                     </div>
                 </div>
+                
+                {/* Retention Widget: Weekly Goal */}
+                <div className="bg-white p-4 rounded-2xl shadow-sm border border-yellow-100 hidden md:block">
+                    <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-bold text-gray-500 uppercase">Weekly Goal</span>
+                        <Target className="w-4 h-4 text-gray-400" />
+                    </div>
+                    <p className="text-sm font-bold text-gray-900 mb-3">{weeklyGoal} / 3 Sessions</p>
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-2">
+                        <div className="bg-green-500 h-2 rounded-full" style={{ width: `${(weeklyGoal / 3) * 100}%` }}></div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 text-center">Complete 2 more to unlock badge</p>
+                </div>
 
                 <div className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden flex md:block justify-between md:justify-start">
                     {[
@@ -387,7 +506,21 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                                 <Activity className="w-4 h-4" /> Daily Wellness
                             </h4>
-                            <div className="bg-white rounded-2xl border border-yellow-100 p-6 shadow-sm">
+                            
+                            <div className="bg-white rounded-2xl border border-yellow-100 p-6 shadow-sm mb-6 relative overflow-hidden">
+                                {/* Gamification Banner */}
+                                <div className="absolute top-0 right-0 p-4 hidden md:block">
+                                     <div className="bg-gray-50 border border-gray-100 rounded-lg p-3 flex items-center gap-3">
+                                        <div className="bg-yellow-100 p-2 rounded-full">
+                                            <Trophy className="w-5 h-5 text-yellow-600" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-bold text-gray-900">Next Reward</p>
+                                            <p className="text-[10px] text-gray-500">Deep Sleep Pack (Locked)</p>
+                                        </div>
+                                     </div>
+                                </div>
+
                                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
                                     <div>
                                         <h2 className="text-2xl font-bold text-gray-900">Hello, {user.name.split(' ')[0]}</h2>
@@ -578,6 +711,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                      <div className="bg-white rounded-2xl border border-yellow-100 p-8 shadow-sm">
                         <h3 className="text-xl font-bold text-gray-900 mb-6">Account Settings</h3>
                         <div className="space-y-6">
+                             {/* Value Reinforcement Card */}
+                             <div className="p-6 bg-green-50 border border-green-100 rounded-xl">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-3 bg-white rounded-full shadow-sm text-green-600">
+                                        <CreditCard className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <p className="text-green-800 font-bold text-lg">Lifetime Member Status: Active</p>
+                                        <p className="text-green-700 text-sm mt-1">
+                                            You are saving <strong>$0.50/min</strong> compared to standard pricing.
+                                            Total estimated savings: <span className="font-black">${(transactions.reduce((acc, t) => t.amount < 0 ? acc + Math.abs(t.amount) : acc, 0) * 0.50).toFixed(2)}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                             </div>
+
                              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl">
                                 <div>
                                     <p className="font-bold">Email Notifications</p>
@@ -600,6 +749,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       </div>
 
       {/* Modals */}
+      {showQueue && <WaitingRoomModal userId={user.id} onLeave={() => setShowQueue(false)} onReady={handleQueueReady} />}
       {showPayment && <PaymentModal onClose={() => setShowPayment(false)} onSuccess={handlePaymentSuccess} initialError={paymentError} />}
       {showBreathing && <BreathingExercise onClose={() => setShowBreathing(false)} />}
     </div>

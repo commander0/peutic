@@ -335,19 +335,29 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       <section id="pricing" className="py-24 bg-black text-white text-center z-10 relative">
           <div className="max-w-4xl mx-auto px-4">
               <h2 className="text-4xl md:text-5xl font-black mb-8 tracking-tight">Simple, Transparent Pricing.</h2>
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 md:p-12 inline-block max-w-lg w-full">
-                  <p className="text-gray-400 font-bold uppercase tracking-widest mb-4">{getTranslation(lang, 'pricing_title')}</p>
-                  <div className="text-6xl md:text-7xl font-black text-peutic-yellow mb-4 flex items-start justify-center gap-1">
-                      <span className="text-3xl mt-2">$</span>1.49<span className="text-xl text-gray-400 mt-8">/min</span>
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 md:p-12 inline-block max-w-lg w-full relative overflow-hidden">
+                  {/* Lifetime Deal Badge */}
+                  <div className="inline-block bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black mb-6 animate-pulse tracking-widest">
+                      LIFETIME RATE LOCKED IN
                   </div>
-                  <p className="text-gray-300 mb-8">{getTranslation(lang, 'pricing_desc')}</p>
+
+                  <p className="text-gray-400 font-bold uppercase tracking-widest mb-4">{getTranslation(lang, 'pricing_title')}</p>
+                  
+                  <div className="flex items-baseline justify-center gap-4 mb-4">
+                      <span className="text-3xl text-gray-500 font-bold line-through decoration-red-500 decoration-2 opacity-70">$1.99</span>
+                      <div className="text-6xl md:text-7xl font-black text-peutic-yellow flex items-start gap-1">
+                          <span className="text-3xl mt-2">$</span>1.49<span className="text-xl text-gray-400 mt-8">/min</span>
+                      </div>
+                  </div>
+                  
+                  <p className="text-gray-300 mb-8">Sign up today to grandfather this exclusive rate forever. The price will never increase for early members.</p>
                   <ul className="text-left space-y-3 mb-8 max-w-xs mx-auto">
                       <li className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> <span>No subscription fees</span></li>
                       <li className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> <span>HD Video & Audio</span></li>
                       <li className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> <span>24/7 Availability</span></li>
                   </ul>
                   <button onClick={onLoginClick} className="w-full bg-peutic-yellow text-black py-4 rounded-xl font-bold hover:bg-yellow-400 transition-transform hover:scale-105 shadow-lg shadow-yellow-500/20">
-                      {getTranslation(lang, 'pricing_button')}
+                      Lock In $1.49 Rate Now
                   </button>
               </div>
           </div>

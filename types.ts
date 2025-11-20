@@ -45,6 +45,7 @@ export interface GlobalSettings {
   allowSignups: boolean;
   siteName: string;
   broadcastMessage?: string;
+  maxConcurrentSessions: number; // New: Traffic Control
 }
 
 export interface SystemLog {

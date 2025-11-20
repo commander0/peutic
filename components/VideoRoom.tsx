@@ -40,11 +40,14 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   // Audio simulation for Demo Mode
   const [audioLevel, setAudioLevel] = useState<number[]>(new Array(20).fill(5));
 
-  // --- Session Initialization ---
+  // --- Session Initialization & Traffic Management ---
   const initSession = async () => {
     setConnectionState('CONNECTING');
     setErrorMsg('');
     
+    // Traffic Management: Increment active session count
+    Database.incrementActiveSessions();
+
     try {
         const user = Database.getUser();
         if (!user || user.balance <= 0) {
@@ -65,7 +68,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     } catch (err: any) {
         if (err.message.includes("Insufficient Credits")) {
             alert("Your session ended because you are out of credits.");
-            onEndSession();
+            handleEndSession(); // Clean exit
             return;
         }
 
@@ -82,7 +85,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   useEffect(() => {
     initSession();
-  }, [companion.replicaId, userName]);
+    
+    // Cleanup: Ensure we decrement session count if component unmounts unexpectedly
+    return () => {
+        Database.decrementActiveSessions();
+    };
+  }, []); // Run once on mount
 
   // --- Webcam Logic ---
   useEffect(() => {
@@ -125,6 +133,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- End Session Logic ---
   const handleEndSession = () => {
+      // Note: Database.decrementActiveSessions() is called by useEffect cleanup automatically
+      
       const minutesUsed = Math.ceil(duration / 60);
       if (minutesUsed > 0) {
         Database.deductBalance(minutesUsed);
