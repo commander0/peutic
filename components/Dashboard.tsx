@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types';
 import { 
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
-  Smile, PenTool, Wind, BookOpen, Save, Sparkles
+  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -378,78 +377,87 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
            {/* Content Area */}
            <div className="flex-1">
                 {activeTab === 'hub' && (
-                    <div className="space-y-8 animate-float" style={{animation: 'none'}}>
-                        {/* Wellness Header Section */}
-                        <div className="bg-white rounded-2xl border border-yellow-100 p-6 shadow-sm">
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">Hello, {user.name.split(' ')[0]}</h2>
-                                    <p className="text-gray-500">How are you feeling right now?</p>
+                    <div className="space-y-10 animate-float" style={{animation: 'none'}}>
+                        
+                        {/* Section 1: Daily Wellness Tools */}
+                        <div>
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Activity className="w-4 h-4" /> Daily Wellness
+                            </h4>
+                            <div className="bg-white rounded-2xl border border-yellow-100 p-6 shadow-sm">
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+                                    <div>
+                                        <h2 className="text-2xl font-bold text-gray-900">Hello, {user.name.split(' ')[0]}</h2>
+                                        <p className="text-gray-500">How are you feeling right now?</p>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {['Happy', 'Calm', 'Neutral', 'Anxious', 'Sad'].map((m: any) => (
+                                            <button 
+                                                key={m} 
+                                                onClick={() => handleSaveMood(m)}
+                                                className="w-10 h-10 rounded-full bg-gray-50 hover:bg-yellow-100 flex items-center justify-center text-xl transition-all hover:scale-110"
+                                                title={m}
+                                            >
+                                                {m === 'Happy' ? '😄' : m === 'Calm' ? '😌' : m === 'Neutral' ? '😐' : m === 'Anxious' ? '😰' : '😔'}
+                                            </button>
+                                        ))}
+                                    </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    {['Happy', 'Calm', 'Neutral', 'Anxious', 'Sad'].map((m: any) => (
-                                        <button 
-                                            key={m} 
-                                            onClick={() => handleSaveMood(m)}
-                                            className="w-10 h-10 rounded-full bg-gray-50 hover:bg-yellow-100 flex items-center justify-center text-xl transition-all hover:scale-110"
-                                            title={m}
-                                        >
-                                            {m === 'Happy' ? '😄' : m === 'Calm' ? '😌' : m === 'Neutral' ? '😐' : m === 'Anxious' ? '😰' : '😔'}
-                                        </button>
-                                    ))}
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <button 
+                                        onClick={() => setShowBreathing(true)}
+                                        className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Wind className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="block font-bold">Breathe</span>
+                                            <span className="text-xs opacity-70">Panic Relief Tool</span>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => setShowJournal(!showJournal)}
+                                        className="flex items-center gap-3 p-4 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors border border-purple-100 group"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <BookOpen className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left">
+                                            <span className="block font-bold">Journal</span>
+                                            <span className="text-xs opacity-70">Private Notes</span>
+                                        </div>
+                                    </button>
                                 </div>
+
+                                {showJournal && (
+                                    <div className="mt-4 pt-4 border-t border-gray-100 animate-float" style={{animation: 'none'}}>
+                                        <textarea 
+                                            className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-1 focus:ring-black outline-none resize-none mb-2"
+                                            placeholder="Write down your thoughts safely here..."
+                                            value={journalContent}
+                                            onChange={(e) => setJournalContent(e.target.value)}
+                                        ></textarea>
+                                        <div className="flex justify-end">
+                                            <button onClick={handleSaveJournal} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors flex items-center gap-2">
+                                                <Save className="w-3 h-3" /> Save to Vault
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <button 
-                                    onClick={() => setShowBreathing(true)}
-                                    className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <Wind className="w-5 h-5" />
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="block font-bold">Breathe</span>
-                                        <span className="text-xs opacity-70">Panic Relief Tool</span>
-                                    </div>
-                                </button>
-
-                                <button 
-                                    onClick={() => setShowJournal(!showJournal)}
-                                    className="flex items-center gap-3 p-4 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors border border-purple-100 group"
-                                >
-                                    <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
-                                        <BookOpen className="w-5 h-5" />
-                                    </div>
-                                    <div className="text-left">
-                                        <span className="block font-bold">Journal</span>
-                                        <span className="text-xs opacity-70">Private Notes</span>
-                                    </div>
-                                </button>
-                            </div>
-
-                            {showJournal && (
-                                <div className="mt-4 pt-4 border-t border-gray-100 animate-float" style={{animation: 'none'}}>
-                                    <textarea 
-                                        className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-1 focus:ring-black outline-none resize-none mb-2"
-                                        placeholder="Write down your thoughts safely here..."
-                                        value={journalContent}
-                                        onChange={(e) => setJournalContent(e.target.value)}
-                                    ></textarea>
-                                    <div className="flex justify-end">
-                                        <button onClick={handleSaveJournal} className="bg-black text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-gray-800 transition-colors flex items-center gap-2">
-                                            <Save className="w-3 h-3" /> Save to Vault
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </div>
 
-                        {/* Specialists Grid */}
+                        {/* Section 2: Specialists Grid */}
                         <div>
+                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                <Sparkles className="w-4 h-4" /> Specialist Network
+                            </h4>
                             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-5 h-5 text-peutic-yellow" /> Your Care Team</h2>
+                                    <h2 className="text-2xl font-bold text-gray-900">Your Care Team</h2>
                                     <p className="text-gray-500">Available 24/7 for video sessions.</p>
                                 </div>
                                 <div className="relative w-full md:w-auto">
