@@ -4,7 +4,8 @@ import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types'
 import { 
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
-  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee
+  Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
+  Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -24,6 +25,106 @@ declare global {
     Stripe?: any;
   }
 }
+
+// --- MINDFUL MATCH GAME COMPONENT ---
+const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
+    const [cards, setCards] = useState<any[]>([]);
+    const [flipped, setFlipped] = useState<number[]>([]);
+    const [solved, setSolved] = useState<number[]>([]);
+    const [moves, setMoves] = useState(0);
+    const [won, setWon] = useState(false);
+
+    const ICONS = [Sun, Heart, Smile, Music, Cloud, Coffee, Anchor, Feather];
+
+    useEffect(() => {
+        initGame();
+    }, []);
+
+    const initGame = () => {
+        const duplicated = [...ICONS, ...ICONS];
+        const shuffled = duplicated
+            .sort(() => Math.random() - 0.5)
+            .map((icon, index) => ({ id: index, icon, isFlipped: false }));
+        setCards(shuffled);
+        setFlipped([]);
+        setSolved([]);
+        setMoves(0);
+        setWon(false);
+    };
+
+    const handleCardClick = (index: number) => {
+        if (flipped.length === 2 || solved.includes(index) || flipped.includes(index)) return;
+        
+        const newFlipped = [...flipped, index];
+        setFlipped(newFlipped);
+        
+        if (newFlipped.length === 2) {
+            setMoves(m => m + 1);
+            const firstCard = cards[newFlipped[0]];
+            const secondCard = cards[newFlipped[1]];
+            
+            if (firstCard.icon === secondCard.icon) {
+                setSolved([...solved, newFlipped[0], newFlipped[1]]);
+                setFlipped([]);
+            } else {
+                setTimeout(() => setFlipped([]), 1000);
+            }
+        }
+    };
+
+    useEffect(() => {
+        if (cards.length > 0 && solved.length === cards.length) {
+            setWon(true);
+            if (onWin) onWin();
+        }
+    }, [solved, cards, onWin]);
+
+    return (
+        <div className="bg-white/50 rounded-2xl p-4 border border-yellow-100">
+            <div className="flex justify-between items-center mb-4">
+                <div>
+                    <h3 className="font-bold text-gray-900">Mindful Match</h3>
+                    <p className="text-xs text-gray-500">Find the pairs to focus your mind.</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <span className="text-xs font-bold bg-yellow-100 px-2 py-1 rounded-lg text-yellow-800">Moves: {moves}</span>
+                    <button onClick={initGame} className="p-2 hover:bg-gray-200 rounded-full transition"><RefreshCw className="w-4 h-4" /></button>
+                </div>
+            </div>
+
+            {won ? (
+                <div className="text-center py-12 animate-float" style={{animation: 'none'}}>
+                    <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <Trophy className="w-8 h-8 text-green-600" />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900">Focus Complete!</h3>
+                    <p className="text-gray-500 mb-4">You cleared your mind in {moves} moves.</p>
+                    <button onClick={initGame} className="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-gray-800">Play Again</button>
+                </div>
+            ) : (
+                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                    {cards.map((card, index) => {
+                        const isVisible = flipped.includes(index) || solved.includes(index);
+                        const Icon = card.icon;
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => handleCardClick(index)}
+                                className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-300 transform ${isVisible ? 'bg-white border-2 border-peutic-yellow rotate-y-180' : 'bg-black hover:bg-gray-800'}`}
+                            >
+                                {isVisible ? (
+                                    <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-peutic-yellow animate-in fade-in zoom-in" />
+                                ) : (
+                                    <div className="w-2 h-2 bg-gray-800 rounded-full"></div>
+                                )}
+                            </button>
+                        );
+                    })}
+                </div>
+            )}
+        </div>
+    );
+};
 
 // --- WAITING ROOM MODAL ---
 const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady: () => void }> = ({ userId, onLeave, onReady }) => {
@@ -61,39 +162,51 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
     };
 
     return (
-        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4">
-            <div className="bg-[#FFFBEB] w-full max-w-lg rounded-3xl p-8 text-center relative shadow-2xl border border-yellow-500/50">
+        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 overflow-y-auto">
+            <div className="bg-[#FFFBEB] w-full max-w-2xl rounded-3xl p-6 md:p-8 text-center relative shadow-2xl border border-yellow-500/50 my-8">
                 <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 overflow-hidden rounded-t-3xl">
                     <div className="h-full bg-peutic-yellow animate-marquee w-1/2"></div>
                 </div>
                 
-                <div className="w-20 h-20 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-                    <Hourglass className="w-10 h-10 text-peutic-yellow animate-spin-slow" />
-                </div>
+                <div className="flex flex-col md:flex-row gap-8">
+                    {/* Left: Status */}
+                    <div className="flex-1">
+                        <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+                            <Hourglass className="w-8 h-8 text-peutic-yellow animate-spin-slow" />
+                        </div>
 
-                <h2 className="text-3xl font-black text-gray-900 mb-2">Premium Waiting Room</h2>
-                <p className="text-gray-600 mb-8">High demand detected. You are in a priority queue.</p>
+                        <h2 className="text-2xl font-black text-gray-900 mb-2">Premium Waiting Room</h2>
+                        <p className="text-gray-600 text-sm mb-6">High demand detected. You are in a priority queue.</p>
 
-                <div className="bg-white p-6 rounded-2xl border border-yellow-200 shadow-sm mb-8 flex justify-around items-center">
-                    <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase">Position</p>
-                        <p className="text-4xl font-black text-black">#{position}</p>
+                        <div className="bg-white p-4 rounded-2xl border border-yellow-200 shadow-sm mb-6 flex justify-around items-center">
+                            <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase">Position</p>
+                                <p className="text-3xl font-black text-black">#{position}</p>
+                            </div>
+                            <div className="w-px h-10 bg-gray-200"></div>
+                            <div>
+                                <p className="text-xs font-bold text-gray-400 uppercase">Est. Wait</p>
+                                <p className="text-3xl font-black text-black">{estWait}<span className="text-sm text-gray-500">m</span></p>
+                            </div>
+                        </div>
+
+                        <button onClick={handleLeave} className="text-gray-400 hover:text-red-500 font-bold text-xs transition-colors mb-6 md:mb-0">
+                            Leave Queue
+                        </button>
                     </div>
-                    <div className="w-px h-10 bg-gray-200"></div>
-                    <div>
-                        <p className="text-xs font-bold text-gray-400 uppercase">Est. Wait</p>
-                        <p className="text-4xl font-black text-black">{estWait}<span className="text-lg text-gray-500">m</span></p>
+
+                    {/* Right: Game */}
+                    <div className="flex-1 border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-6">
+                        <div className="bg-yellow-50 rounded-xl p-3 mb-4 text-left flex items-start gap-2">
+                            <Gamepad2 className="w-4 h-4 text-yellow-700 mt-0.5" />
+                            <div>
+                                <p className="text-xs font-bold text-yellow-800">While you wait...</p>
+                                <p className="text-[10px] text-yellow-700">Play this quick game to center your thoughts.</p>
+                            </div>
+                        </div>
+                        <MindfulMatchGame />
                     </div>
                 </div>
-
-                <div className="flex items-center justify-center gap-2 text-sm text-gray-500 mb-8 bg-yellow-50 p-3 rounded-lg">
-                    <Coffee className="w-4 h-4" />
-                    <span>Please don't close this window. We will connect you automatically.</span>
-                </div>
-
-                <button onClick={handleLeave} className="text-gray-400 hover:text-red-500 font-bold text-sm transition-colors">
-                    Leave Queue
-                </button>
             </div>
         </div>
     );
@@ -101,6 +214,7 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
 
 const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, cost: number) => void; initialError?: string }> = ({ onClose, onSuccess, initialError }) => {
     const [amount, setAmount] = useState(20); // Default $20
+    const [isCustom, setIsCustom] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(initialError || null);
     
@@ -155,6 +269,12 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
         setProcessing(true);
         setError(null);
 
+        if (!amount || amount <= 0) {
+            setError("Please enter a valid amount.");
+            setProcessing(false);
+            return;
+        }
+
         if (!stripeRef.current || !cardElementRef.current) {
             setError("Payment system not initialized.");
             setProcessing(false);
@@ -194,20 +314,51 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
                 
                 <div className="p-8">
                     <div className="mb-8 text-center">
-                        <p className="text-gray-500 text-sm mb-2 font-medium">Select Amount to Add</p>
-                        <h2 className="text-5xl font-extrabold tracking-tight mb-6">${amount.toFixed(2)}</h2>
-                        <div className="flex justify-center gap-3">
-                            {[20, 50, 100].map((val) => (
+                        <p className="text-gray-500 text-sm mb-4 font-medium">Select Amount to Add</p>
+                        
+                        {!isCustom && (
+                            <h2 className="text-5xl font-extrabold tracking-tight mb-6">${amount.toFixed(2)}</h2>
+                        )}
+
+                        <div className="flex justify-center gap-2 mb-6 flex-wrap">
+                            {[20, 50, 100, 250].map((val) => (
                                 <button 
                                     key={val}
-                                    onClick={() => setAmount(val)}
-                                    className={`px-5 py-3 rounded-xl text-sm font-bold transition-all ${amount === val ? 'bg-black text-white shadow-lg scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                                    type="button"
+                                    onClick={() => { setAmount(val); setIsCustom(false); }}
+                                    className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!isCustom && amount === val ? 'bg-black text-white shadow-lg transform scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
                                 >
                                     ${val}
                                 </button>
                             ))}
+                            <button 
+                                type="button"
+                                onClick={() => { setIsCustom(true); setAmount(0); }}
+                                className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isCustom ? 'bg-black text-white shadow-lg transform scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
+                            >
+                                Custom
+                            </button>
                         </div>
-                        <p className="text-xs text-gray-400 mt-3">Adds approx. <span className="font-bold text-black">{Math.floor(amount / pricePerMin)} mins</span> of talk time.</p>
+
+                        {isCustom && (
+                            <div className="mb-6 animate-in fade-in zoom-in duration-300">
+                                <div className="relative max-w-[180px] mx-auto">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">$</span>
+                                    <input 
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        value={amount === 0 ? '' : amount}
+                                        onChange={(e) => setAmount(parseFloat(e.target.value) || 0)}
+                                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-300 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none text-2xl font-bold text-center"
+                                        placeholder="0.00"
+                                        autoFocus
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <p className="text-xs text-gray-400 mt-2">Adds approx. <span className="font-bold text-black">{Math.floor((amount || 0) / pricePerMin)} mins</span> of talk time.</p>
                     </div>
 
                     {error && (
@@ -224,12 +375,12 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
                         
                         <button 
                             type="submit" 
-                            disabled={processing || !window.Stripe}
-                            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${processing ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-peutic-yellow text-black hover:bg-yellow-400 hover:scale-[1.02]'}`}
+                            disabled={processing || !window.Stripe || (amount <= 0)}
+                            className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${processing || (amount <= 0) ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-peutic-yellow text-black hover:bg-yellow-400 hover:scale-[1.02]'}`}
                         >
                             {processing ? <span className="animate-pulse">Processing Securely...</span> : (
                                 <>
-                                    <Lock className="w-5 h-5" /> Pay ${amount.toFixed(2)}
+                                    <Lock className="w-5 h-5" /> Pay ${(amount || 0).toFixed(2)}
                                 </>
                             )}
                         </button>
@@ -282,7 +433,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
   const [showPayment, setShowPayment] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
-  const [showQueue, setShowQueue] = useState(false); // New Queue State
+  const [showGame, setShowGame] = useState(false); // New Game Modal State
+  const [showQueue, setShowQueue] = useState(false);
   const [pendingCompanion, setPendingCompanion] = useState<Companion | null>(null);
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -540,7 +692,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-2 gap-4">
+                                <div className="grid grid-cols-3 gap-4">
                                     <button 
                                         onClick={() => setShowBreathing(true)}
                                         className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group"
@@ -548,9 +700,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <Wind className="w-5 h-5" />
                                         </div>
-                                        <div className="text-left">
-                                            <span className="block font-bold text-sm md:text-base">Breathe</span>
-                                            <span className="text-xs opacity-70 hidden md:inline">Panic Relief Tool</span>
+                                        <div className="text-left hidden sm:block">
+                                            <span className="block font-bold text-sm">Breathe</span>
+                                            <span className="text-xs opacity-70">Panic Relief</span>
                                         </div>
                                     </button>
 
@@ -561,9 +713,22 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <BookOpen className="w-5 h-5" />
                                         </div>
-                                        <div className="text-left">
-                                            <span className="block font-bold text-sm md:text-base">Journal</span>
-                                            <span className="text-xs opacity-70 hidden md:inline">Private Notes</span>
+                                        <div className="text-left hidden sm:block">
+                                            <span className="block font-bold text-sm">Journal</span>
+                                            <span className="text-xs opacity-70">Private Notes</span>
+                                        </div>
+                                    </button>
+
+                                    <button 
+                                        onClick={() => setShowGame(true)}
+                                        className="flex items-center gap-3 p-4 rounded-xl bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition-colors border border-yellow-100 group"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                                            <Gamepad2 className="w-5 h-5" />
+                                        </div>
+                                        <div className="text-left hidden sm:block">
+                                            <span className="block font-bold text-sm">Focus</span>
+                                            <span className="text-xs opacity-70">Mind Game</span>
                                         </div>
                                     </button>
                                 </div>
@@ -752,6 +917,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       {showQueue && <WaitingRoomModal userId={user.id} onLeave={() => setShowQueue(false)} onReady={handleQueueReady} />}
       {showPayment && <PaymentModal onClose={() => setShowPayment(false)} onSuccess={handlePaymentSuccess} initialError={paymentError} />}
       {showBreathing && <BreathingExercise onClose={() => setShowBreathing(false)} />}
+      
+      {/* Standalone Game Modal */}
+      {showGame && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+              <div className="bg-[#FFFBEB] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative">
+                  <button onClick={() => setShowGame(false)} className="absolute top-4 right-4 p-2 hover:bg-yellow-100 rounded-full"><X className="w-5 h-5" /></button>
+                  <MindfulMatchGame />
+              </div>
+          </div>
+      )}
     </div>
   );
 };

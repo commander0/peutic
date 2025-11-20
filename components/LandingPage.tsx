@@ -24,11 +24,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   };
 
   const featuredSpecialists = [
-    { name: "Ruby", role: "Anxiety & Panic", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" },
-    { name: "Elena", role: "Women's Health", img: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" },
-    { name: "James", role: "Men's Health", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400&h=400", status: "In Session" },
-    { name: "Danny", role: "Grief Support", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" },
-    { name: "Julia", role: "Relationships", img: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" }
+    { name: "Ruby", role: "Anxiety & Panic", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
+    { name: "Elena", role: "Women's Health", img: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
+    { name: "James", role: "Men's Health", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600&h=600", status: "In Session" },
+    { name: "Danny", role: "Grief Support", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
+    { name: "Julia", role: "Relationships", img: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" }
   ];
 
   // Updated with reliable SVG sources
@@ -248,21 +248,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* SPECIALIST CAROUSEL */}
+      {/* SPECIALIST LAYOUT (3 Top / 2 Bottom - FLEXBOX IMPLEMENTATION) */}
       <section className="py-24 bg-[#FFFBEB] z-10 relative">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
                   <div>
-                    <h2 className="text-3xl md:text-4xl font-black mb-4">Meet The Team</h2>
+                    <h2 className="text-3xl md:text-4xl font-black mb-4">Meet some of the team</h2>
                     <p className="text-gray-600 max-w-xl">Real humans. Real empathy. Select a specialist that resonates with you.</p>
                   </div>
                   <button onClick={onLoginClick} className="flex items-center gap-2 font-bold hover:gap-3 transition-all">View All <ArrowRight className="w-4 h-4" /></button>
               </div>
 
-              <div className="flex gap-6 overflow-x-auto pb-8 no-scrollbar snap-x">
+              {/* 
+                 FLEXBOX LAYOUT:
+                 - 'flex-wrap' allows items to wrap to the next line.
+                 - 'justify-center' ensures the wrapped items (the bottom 2) are centered.
+                 - 'w-full md:w-[30%]' sizes the items:
+                    - On Mobile: 100% width (Stack)
+                    - On Desktop: 30% width (Fit 3 in top row, remaining 2 wrap and center)
+              */}
+              <div className="flex flex-wrap justify-center gap-6">
                   {featuredSpecialists.map((s, i) => (
-                      <div key={i} className="min-w-[280px] bg-white p-4 rounded-3xl shadow-sm border border-yellow-100 hover:shadow-xl transition-all snap-center group cursor-pointer" onClick={onLoginClick}>
-                          <div className="h-64 rounded-2xl overflow-hidden mb-4 relative">
+                      <div 
+                        key={i} 
+                        className="w-full md:w-[31%] bg-white p-4 rounded-3xl shadow-sm border border-yellow-100 hover:shadow-xl transition-all group cursor-pointer transform hover:scale-[1.02]" 
+                        onClick={onLoginClick}
+                      >
+                          <div className="aspect-square rounded-2xl overflow-hidden mb-4 relative">
                               <img src={s.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={s.name} />
                               <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md ${s.status === 'Available' ? 'bg-green-500/80' : 'bg-yellow-500/80'}`}>
                                   {s.status}

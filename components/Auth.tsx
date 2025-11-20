@@ -142,58 +142,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
     setAuthProvider(provider);
     setError('');
     
-    // X.com Specific: Visual Routing
-    if (provider === 'x') {
-        // Open a popup to X.com to visually confirm "Routing"
-        const width = 600;
-        const height = 600;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
-        
-        // We use a generic intent URL so it looks authentic but doesn't break the app with a missing callback backend
-        const popup = window.open(
-            'https://twitter.com/intent/tweet?text=Verifying%20Login%20for%20Peutic%20Secure%20Access', 
-            'Connect with X', 
-            `width=${width},height=${height},top=${top},left=${left}`
-        );
-
-        // Simulate the handshake delay while popup is open
-        setTimeout(() => {
-            if (popup) popup.close();
-            
-            const mockName = 'Alex (X Verified)';
-            const mockPic = `https://ui-avatars.com/api/?name=Alex+X&background=000000&color=fff`;
-            
-            onLogin(UserRole.USER, mockName, mockPic);
-            setLoading(false);
-            setAuthProvider(null);
-        }, 3000); // 3 second delay for realism
-        return;
-    }
-
-    // Standard Simulation for others
-    const delay = Math.floor(Math.random() * 800) + 1000;
+    // Fallback for Launch: Instruct user to use email if OAuth fails/is restricted
+    // This prevents "Demo Mode" confusion on iPhone
+    const delay = 1000;
 
     setTimeout(() => {
-        let mockName = '';
-        let mockPic = '';
-        
-        switch(provider) {
-            case 'facebook':
-                mockName = 'Alex (FB Verified)';
-                mockPic = `https://ui-avatars.com/api/?name=Alex+FB&background=1877F2&color=fff`;
-                break;
-            case 'google':
-                mockName = 'Alex (Google Verified)';
-                mockPic = `https://ui-avatars.com/api/?name=Alex+G&background=DB4437&color=fff`;
-                break;
-            default:
-                mockName = 'Verified User';
-        }
-        
-        onLogin(UserRole.USER, mockName, mockPic);
         setLoading(false);
         setAuthProvider(null);
+        setError("For security on this device, please sign up with Email & Password.");
     }, delay);
   };
 
