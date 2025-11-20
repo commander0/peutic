@@ -2,12 +2,13 @@
 import React, { useState, useEffect } from 'react';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-    AreaChart, Area
+    AreaChart, Area, Line, ComposedChart, Legend
 } from 'recharts';
 import { 
     Users, DollarSign, Activity, LogOut, Settings, Video, 
     Search, Edit2, Ban, Zap, ShieldAlert, 
-    Terminal, Globe, AlertOctagon, Megaphone, Menu, X, Gift, Download, Tag
+    Terminal, Globe, AlertOctagon, Megaphone, Menu, X, Gift, Download, Tag,
+    Clock, Wifi, Server
 } from 'lucide-react';
 import { Database } from '../services/database';
 import { User, UserRole, Companion, Transaction, GlobalSettings, SystemLog, ServerMetric, PromoCode } from '../types';
@@ -24,6 +25,14 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [metrics, setMetrics] = useState<ServerMetric[]>([]);
   const [promos, setPromos] = useState<PromoCode[]>([]);
+  
+  // New Session Metrics State
+  const [sessionStats, setSessionStats] = useState({
+      avgDuration: '18m 30s',
+      totalMinutesToday: 1420,
+      peakConcurrency: 42,
+      bandwidthUsage: '1.2 GB/s'
+  });
 
   // UI States
   const [searchTerm, setSearchTerm] = useState('');
@@ -40,7 +49,18 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         setTransactions(Database.getAllTransactions());
         setSettings(Database.getSettings());
         setLogs(Database.getSystemLogs());
-        setMetrics(Database.getServerMetrics());
+        
+        const currentMetrics = Database.getServerMetrics();
+        setMetrics(currentMetrics);
+        
+        // Simulate Session Stats Fluctuation
+        setSessionStats(prev => ({
+            avgDuration: `${15 + Math.floor(Math.random() * 5)}m ${10 + Math.floor(Math.random() * 50)}s`,
+            totalMinutesToday: prev.totalMinutesToday + Math.floor(Math.random() * 10),
+            peakConcurrency: Math.max(prev.peakConcurrency, currentMetrics[0]?.activeSessions || 0),
+            bandwidthUsage: `${(0.8 + Math.random() * 0.5).toFixed(2)} GB/s`
+        }));
+
         setPromos(Database.getPromoCodes());
         setLastRefresh(new Date());
     };
@@ -99,6 +119,13 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const revenueData = transactions.slice(0, 10).map(tx => ({
       name: new Date(tx.date).toLocaleTimeString(),
       revenue: tx.cost || 0
+  })).reverse();
+  
+  // Prepare Combined Session Data for Chart
+  const sessionActivityData = metrics.map(m => ({
+      time: m.time,
+      sessions: m.activeSessions,
+      users: Math.floor(m.activeSessions * 1.8) + Math.floor(Math.random() * 5) // Simulated online users > sessions
   })).reverse();
 
   const filteredUsers = users.filter(u => {
@@ -211,11 +238,83 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <KPICard title="Total Revenue" value={`$${totalRevenue.toFixed(2)}`} icon={DollarSign} trend="+12.5%" color="green" />
                         <KPICard title="Total Users" value={users.length.toString()} icon={Users} trend="+5 this hour" color="blue" />
-                        <KPICard title="Active Sessions" value={metrics[0]?.activeSessions.toString() || "0"} icon={Activity} trend="High Load" color="purple" />
+                        <KPICard title="Active Sessions" value={metrics[0]?.activeSessions.toString() || "0"} icon={Video} trend="High Load" color="purple" />
                         <KPICard title="Server Latency" value={`${metrics[0]?.latency.toFixed(0)}ms`} icon={Zap} trend="Optimal" color="yellow" />
                     </div>
 
-                    {/* Charts Row */}
+                    {/* LIVE OPERATIONS LAYER */}
+                    <div className="grid lg:grid-cols-3 gap-8">
+                        {/* Concurrent Sessions Chart */}
+                        <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-yellow-100">
+                             <div className="flex justify-between items-center mb-6">
+                                <h3 className="font-bold text-lg flex items-center gap-2">
+                                    <Activity className="w-5 h-5 text-peutic-yellow" /> Live Traffic Analysis
+                                </h3>
+                                <div className="flex gap-2 items-center">
+                                    <span className="relative flex h-3 w-3">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                    </span>
+                                    <span className="text-xs font-bold text-red-500 uppercase tracking-wider">LIVE</span>
+                                </div>
+                            </div>
+                            <div className="h-72">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <ComposedChart data={sessionActivityData}>
+                                        <defs>
+                                            <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
+                                                <stop offset="5%" stopColor="#0A0A0A" stopOpacity={0.8}/>
+                                                <stop offset="95%" stopColor="#0A0A0A" stopOpacity={0}/>
+                                            </linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                                        <XAxis dataKey="time" hide />
+                                        <YAxis hide />
+                                        <Tooltip contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'}} />
+                                        <Legend />
+                                        <Bar dataKey="sessions" name="Video Rooms" barSize={20} fill="url(#colorSessions)" radius={[4, 4, 0, 0]} />
+                                        <Line type="monotone" dataKey="users" name="Active Users" stroke="#FACC15" strokeWidth={3} dot={false} />
+                                    </ComposedChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Session Analytics Panel */}
+                         <div className="bg-white p-6 rounded-2xl shadow-sm border border-yellow-100 flex flex-col justify-between">
+                            <div>
+                                <h3 className="font-bold text-lg mb-6">Session Analytics</h3>
+                                <div className="space-y-6">
+                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <Clock className="w-5 h-5 text-gray-400" />
+                                            <span className="text-sm font-bold text-gray-500">Avg Duration</span>
+                                        </div>
+                                        <p className="text-2xl font-black">{sessionStats.avgDuration}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <Users className="w-5 h-5 text-gray-400" />
+                                            <span className="text-sm font-bold text-gray-500">Peak Concurrent</span>
+                                        </div>
+                                        <p className="text-2xl font-black">{sessionStats.peakConcurrency}</p>
+                                    </div>
+                                    <div className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                        <div className="flex items-center gap-3 mb-2">
+                                            <Wifi className="w-5 h-5 text-gray-400" />
+                                            <span className="text-sm font-bold text-gray-500">Bandwidth</span>
+                                        </div>
+                                        <p className="text-2xl font-black text-green-600">{sessionStats.bandwidthUsage}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="mt-6 pt-6 border-t border-gray-100">
+                                <p className="text-xs text-gray-400 font-mono mb-1">TOTAL CONSUMPTION TODAY</p>
+                                <p className="text-xl font-bold text-gray-900">{sessionStats.totalMinutesToday} minutes</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Charts Row (Revenue & Health) */}
                     <div className="grid lg:grid-cols-3 gap-8">
                         {/* Main Revenue Chart */}
                         <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-yellow-100">

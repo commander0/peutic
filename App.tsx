@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { HashRouter as Router } from 'react-router-dom';
 import { User, UserRole, Companion } from './types';
 import LandingPage from './components/LandingPage';
@@ -16,6 +16,9 @@ const App: React.FC = () => {
   const [activeSessionCompanion, setActiveSessionCompanion] = useState<Companion | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+  
+  // Security: Activity Tracking
+  const lastActivityRef = useRef<number>(Date.now());
 
   // Restore session on load and check settings
   useEffect(() => {
@@ -36,6 +39,52 @@ const App: React.FC = () => {
     setIsRestoring(false);
     return () => clearInterval(interval);
   }, []);
+
+  // --- SESSION TIMEOUT LOGIC ---
+  useEffect(() => {
+    // Function to update last activity timestamp
+    const updateActivity = () => {
+      lastActivityRef.current = Date.now();
+    };
+
+    // Listen for user interactions
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => document.addEventListener(event, updateActivity));
+
+    return () => {
+      events.forEach(event => document.removeEventListener(event, updateActivity));
+    };
+  }, []);
+
+  useEffect(() => {
+    // Check for timeout every minute
+    const checkTimeout = () => {
+      if (!user) return;
+      
+      // Don't timeout if user is currently in a video session
+      if (activeSessionCompanion) {
+          lastActivityRef.current = Date.now(); // Keep session alive during call
+          return;
+      }
+
+      const now = Date.now();
+      const elapsed = now - lastActivityRef.current;
+      
+      // Policy: 15 Minutes for Users (Privacy), 24 Hours for Admins (Utility)
+      const timeoutLimit = user.role === UserRole.ADMIN 
+        ? 24 * 60 * 60 * 1000 
+        : 15 * 60 * 1000;
+
+      if (elapsed > timeoutLimit) {
+        handleLogout();
+        alert("For your security, your session has expired due to inactivity. Please log in again.");
+      }
+    };
+
+    const interval = setInterval(checkTimeout, 60 * 1000);
+    return () => clearInterval(interval);
+  }, [user, activeSessionCompanion]);
+
 
   const handleLogin = (role: UserRole, name: string, avatar?: string, email?: string) => {
     let currentUser = Database.getUser();
@@ -77,6 +126,7 @@ const App: React.FC = () => {
 
     setUser(currentUser);
     Database.saveUserSession(currentUser);
+    lastActivityRef.current = Date.now(); // Reset timer on login
     setShowAuth(false);
   };
 
