@@ -15,6 +15,7 @@ export interface User {
   subscriptionStatus: 'ACTIVE' | 'INACTIVE' | 'PREMIUM' | 'BANNED';
   joinedAt: string;
   lastActive?: string;
+  birthday?: string;
 }
 
 export interface Companion {

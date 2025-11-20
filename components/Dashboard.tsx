@@ -110,10 +110,14 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
                             <button
                                 key={index}
                                 onClick={() => handleCardClick(index)}
-                                className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-300 transform ${isVisible ? 'bg-white border-2 border-peutic-yellow rotate-y-180' : 'bg-black hover:bg-gray-800'}`}
+                                className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-300 transform ${
+                                    isVisible 
+                                    ? 'bg-white border-2 border-peutic-yellow scale-100' 
+                                    : 'bg-black hover:bg-gray-800 scale-95'
+                                }`}
                             >
                                 {isVisible ? (
-                                    <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-peutic-yellow animate-in fade-in zoom-in" />
+                                    <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-peutic-yellow animate-in fade-in zoom-in duration-300" />
                                 ) : (
                                     <div className="w-2 h-2 bg-gray-800 rounded-full"></div>
                                 )}
@@ -721,14 +725,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
                                     <button 
                                         onClick={() => setShowGame(true)}
-                                        className="flex items-center gap-3 p-4 rounded-xl bg-yellow-50 text-yellow-700 hover:bg-yellow-100 transition-colors border border-yellow-100 group"
+                                        className="flex items-center gap-3 p-4 rounded-xl bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors border border-yellow-200 group"
                                     >
                                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform">
                                             <Gamepad2 className="w-5 h-5" />
                                         </div>
                                         <div className="text-left hidden sm:block">
-                                            <span className="block font-bold text-sm">Focus</span>
-                                            <span className="text-xs opacity-70">Mind Game</span>
+                                            <span className="block font-bold text-sm">Play Game</span>
+                                            <span className="text-xs opacity-70">Mindful Match</span>
                                         </div>
                                     </button>
                                 </div>

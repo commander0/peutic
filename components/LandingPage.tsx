@@ -368,16 +368,16 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-black text-gray-500 py-12 border-t border-gray-800 z-10 relative">
+      <footer className="bg-[#FFFBEB] text-gray-600 py-12 border-t border-yellow-200 z-10 relative">
           <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-2">
-                  <Heart className="w-5 h-5 text-gray-600" />
-                  <span className="font-bold text-gray-300">Peutic Inc.</span>
+                  <Heart className="w-5 h-5 text-black" />
+                  <span className="font-bold text-black">Peutic Inc.</span>
               </div>
               <div className="flex gap-8 text-sm font-medium">
-                  <a href="#" className="hover:text-white transition-colors">Privacy Policy</a>
-                  <a href="#" className="hover:text-white transition-colors">Terms of Service</a>
-                  <a href="#" className="hover:text-white transition-colors">Support</a>
+                  <a href="#" className="hover:text-black transition-colors">Privacy Policy</a>
+                  <a href="#" className="hover:text-black transition-colors">Terms of Service</a>
+                  <a href="#" className="hover:text-black transition-colors">Support</a>
               </div>
               <p className="text-xs opacity-50">© 2025 Peutic Inc. {getTranslation(lang, 'footer_rights')}</p>
           </div>

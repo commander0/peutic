@@ -54,7 +54,7 @@ export class Database {
     return usersStr ? JSON.parse(usersStr) : [];
   }
 
-  static createUser(name: string, email: string, role: UserRole = UserRole.USER): User {
+  static createUser(name: string, email: string, birthday?: string, role: UserRole = UserRole.USER): User {
     const users = this.getAllUsers();
     const newUser: User = {
       id: `u_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -65,7 +65,8 @@ export class Database {
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FACC15&color=000`,
       subscriptionStatus: 'ACTIVE',
       joinedAt: new Date().toISOString(),
-      lastActive: new Date().toISOString()
+      lastActive: new Date().toISOString(),
+      birthday
     };
     users.push(newUser);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
