@@ -1,5 +1,5 @@
 
-import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric } from '../types';
+import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry } from '../types';
 
 // Simulation of a MongoDB/Postgres Backend using LocalStorage
 const DB_KEYS = {
@@ -8,7 +8,9 @@ const DB_KEYS = {
   COMPANIONS: 'peutic_db_companions',
   TRANSACTIONS: 'peutic_db_transactions',
   SETTINGS: 'peutic_db_settings',
-  LOGS: 'peutic_db_logs'
+  LOGS: 'peutic_db_logs',
+  MOODS: 'peutic_db_moods',
+  JOURNALS: 'peutic_db_journals'
 };
 
 // Initial Seed Data
@@ -203,6 +205,40 @@ export const Database = {
       description: 'Wallet Top-up',
       status: 'COMPLETED'
     });
+  },
+
+  // --- Wellness Features ---
+  saveMood: (mood: MoodEntry) => {
+    const stored = localStorage.getItem(DB_KEYS.MOODS);
+    const moods: MoodEntry[] = stored ? JSON.parse(stored) : [];
+    moods.push(mood);
+    localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(moods));
+    Database.logSystemEvent('INFO', 'Mood Logged', `User ${mood.userId} logged mood: ${mood.mood}`);
+  },
+
+  getUserMoods: (userId: string): MoodEntry[] => {
+    const stored = localStorage.getItem(DB_KEYS.MOODS);
+    const moods: MoodEntry[] = stored ? JSON.parse(stored) : [];
+    return moods.filter(m => m.userId === userId).reverse();
+  },
+
+  saveJournal: (entry: JournalEntry) => {
+    const stored = localStorage.getItem(DB_KEYS.JOURNALS);
+    const entries: JournalEntry[] = stored ? JSON.parse(stored) : [];
+    entries.push(entry);
+    localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(entries));
+  },
+
+  getUserJournals: (userId: string): JournalEntry[] => {
+    const stored = localStorage.getItem(DB_KEYS.JOURNALS);
+    const entries: JournalEntry[] = stored ? JSON.parse(stored) : [];
+    return entries.filter(j => j.userId === userId).reverse();
+  },
+
+  // --- Email Simulation ---
+  simulateSendEmail: (to: string, subject: string) => {
+      Database.logSystemEvent('SUCCESS', 'Email Sent', `Sent '${subject}' to ${to}`);
+      // In a real app, this would trigger a backend API call to SendGrid/AWS SES
   },
 
   // --- Logging & Metrics ---

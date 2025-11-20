@@ -137,6 +137,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
           onLogin(UserRole.USER, formattedName, undefined, email);
       } else {
           // Signup Flow - Go to Onboarding
+          Database.simulateSendEmail(email, "Welcome to Peutic - Your Journey Begins");
           setLoading(false);
           setShowOnboarding(true);
       }

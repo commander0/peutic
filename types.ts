@@ -63,3 +63,18 @@ export interface ServerMetric {
   latency: number;
   activeSessions: number;
 }
+
+export interface MoodEntry {
+  id: string;
+  userId: string;
+  date: string;
+  mood: 'Happy' | 'Calm' | 'Neutral' | 'Sad' | 'Anxious';
+  note?: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  userId: string;
+  date: string;
+  content: string;
+}

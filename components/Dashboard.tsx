@@ -1,9 +1,10 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Companion, Transaction } from '../types';
+import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types';
 import { 
   Video, CreditCard, Clock, Settings, LogOut, 
-  LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar
+  LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
+  Smile, PenTool, Wind, BookOpen, Save
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -168,15 +169,60 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
     );
 };
 
+// --- BREATHING COMPONENT ---
+const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [text, setText] = useState("Inhale");
+    
+    useEffect(() => {
+        const steps = [
+            { text: "Inhale", delay: 4000 },
+            { text: "Hold", delay: 4000 },
+            { text: "Exhale", delay: 4000 },
+            { text: "Hold", delay: 4000 }
+        ];
+        let currentStep = 0;
+
+        const runLoop = () => {
+            setText(steps[currentStep].text);
+            currentStep = (currentStep + 1) % steps.length;
+        };
+        
+        runLoop();
+        const interval = setInterval(runLoop, 4000);
+        return () => clearInterval(interval);
+    }, []);
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+             <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
+                <button onClick={onClose} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
+                <div className="absolute inset-0 bg-peutic-yellow/20 rounded-full animate-breathe"></div>
+                <div className="absolute inset-12 bg-peutic-yellow/40 rounded-full animate-breathe" style={{ animationDelay: '1s' }}></div>
+                <div className="relative z-10 text-center text-white">
+                    <h2 className="text-4xl font-bold mb-2">{text}</h2>
+                    <p className="text-white/60">Follow the rhythm</p>
+                </div>
+             </div>
+        </div>
+    );
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession }) => {
-  const [activeTab, setActiveTab] = useState<'companions' | 'history' | 'settings'>('companions');
+  const [activeTab, setActiveTab] = useState<'companions' | 'wellness' | 'history' | 'settings'>('companions');
   const [showPayment, setShowPayment] = useState(false);
+  const [showBreathing, setShowBreathing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [dailyInsight, setDailyInsight] = useState<string>('');
   const [balance, setBalance] = useState(user.balance);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [companions, setCompanions] = useState<Companion[]>([]);
+  
+  // Wellness State
+  const [mood, setMood] = useState<'Happy'|'Calm'|'Neutral'|'Sad'|'Anxious' | null>(null);
+  const [journalContent, setJournalContent] = useState('');
+  const [moodHistory, setMoodHistory] = useState<MoodEntry[]>([]);
+  const [journalHistory, setJournalHistory] = useState<JournalEntry[]>([]);
 
   useEffect(() => {
       // Refresh data from DB logic
@@ -190,6 +236,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
         // Load companions dynamically
         setCompanions(Database.getCompanions());
+
+        // Load Wellness Data
+        setMoodHistory(Database.getUserMoods(user.id));
+        setJournalHistory(Database.getUserJournals(user.id));
       };
 
       refreshData();
@@ -217,6 +267,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       } else {
           onStartSession(companion);
       }
+  };
+
+  const handleSaveMood = (m: 'Happy'|'Calm'|'Neutral'|'Sad'|'Anxious') => {
+      const entry: MoodEntry = {
+          id: `mood_${Date.now()}`,
+          userId: user.id,
+          date: new Date().toISOString(),
+          mood: m
+      };
+      Database.saveMood(entry);
+      setMoodHistory([entry, ...moodHistory]);
+      setMood(null); // Reset selection
+      alert("Mood logged.");
+  };
+
+  const handleSaveJournal = () => {
+      if (!journalContent.trim()) return;
+      const entry: JournalEntry = {
+          id: `jour_${Date.now()}`,
+          userId: user.id,
+          date: new Date().toISOString(),
+          content: journalContent
+      };
+      Database.saveJournal(entry);
+      setJournalHistory([entry, ...journalHistory]);
+      setJournalContent('');
+      alert("Entry saved to secure vault.");
   };
 
   const filteredCompanions = companions.filter(c => 
@@ -285,6 +362,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                 <div className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden">
                     {[
                         { id: 'companions', icon: Users, label: 'Specialists' },
+                        { id: 'wellness', icon: Smile, label: 'Wellness Tools' },
                         { id: 'history', icon: Clock, label: 'History' },
                         { id: 'settings', icon: Settings, label: 'Settings' }
                     ].map((item) => (
@@ -359,6 +437,78 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                         </div>
                     </>
                 )}
+
+                {activeTab === 'wellness' && (
+                    <div className="space-y-8">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 mb-2">Wellness Tools</h2>
+                            <p className="text-gray-500">Track your mental health and find calm.</p>
+                        </div>
+
+                        {/* Breathing & Mood Row */}
+                        <div className="grid md:grid-cols-2 gap-6">
+                            {/* Breathing */}
+                            <div className="bg-black text-white rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between min-h-[200px]">
+                                <div className="relative z-10">
+                                    <h3 className="text-xl font-bold flex items-center gap-2"><Wind className="w-5 h-5 text-peutic-yellow" /> Panic Relief</h3>
+                                    <p className="text-gray-400 text-sm mt-2">Feeling overwhelmed? Take 60 seconds to breathe.</p>
+                                </div>
+                                <div className="absolute right-0 top-0 w-40 h-40 bg-peutic-yellow/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 animate-pulse"></div>
+                                <button onClick={() => setShowBreathing(true)} className="relative z-10 mt-6 bg-white text-black py-3 px-6 rounded-xl font-bold hover:bg-gray-200 transition-colors">Start Breathing</button>
+                            </div>
+
+                            {/* Mood Tracker */}
+                            <div className="bg-white border border-yellow-100 rounded-2xl p-6 shadow-sm">
+                                <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><Smile className="w-5 h-5 text-yellow-500" /> Daily Mood Check</h3>
+                                <div className="flex justify-between gap-2">
+                                    {['Happy', 'Calm', 'Neutral', 'Anxious', 'Sad'].map((m: any) => (
+                                        <button 
+                                            key={m} 
+                                            onClick={() => handleSaveMood(m)}
+                                            className="flex flex-col items-center gap-2 group"
+                                        >
+                                            <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-xl group-hover:scale-110 group-hover:bg-yellow-100 transition-all">
+                                                {m === 'Happy' ? '😄' : m === 'Calm' ? '😌' : m === 'Neutral' ? '😐' : m === 'Anxious' ? '😰' : '😔'}
+                                            </div>
+                                            <span className="text-xs font-bold text-gray-500">{m}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Journaling */}
+                        <div className="bg-white border border-yellow-100 rounded-2xl p-6 shadow-sm">
+                            <h3 className="text-xl font-bold mb-4 flex items-center gap-2"><BookOpen className="w-5 h-5 text-blue-500" /> Private Journal</h3>
+                            <textarea 
+                                className="w-full h-32 p-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-1 focus:ring-black focus:border-black outline-none resize-none mb-4"
+                                placeholder="Write down your thoughts safely here..."
+                                value={journalContent}
+                                onChange={(e) => setJournalContent(e.target.value)}
+                            ></textarea>
+                            <div className="flex justify-end">
+                                <button onClick={handleSaveJournal} className="bg-black text-white px-6 py-2 rounded-xl font-bold hover:bg-gray-800 transition-colors flex items-center gap-2">
+                                    <Save className="w-4 h-4" /> Save Entry
+                                </button>
+                            </div>
+
+                            {/* Journal History */}
+                            <div className="mt-8">
+                                <h4 className="font-bold text-gray-500 text-sm uppercase mb-4">Recent Entries</h4>
+                                <div className="space-y-4">
+                                    {journalHistory.length === 0 ? (
+                                        <p className="text-gray-400 text-sm italic">No entries yet.</p>
+                                    ) : journalHistory.map(entry => (
+                                        <div key={entry.id} className="p-4 bg-gray-50 rounded-xl border border-gray-100">
+                                            <p className="text-xs text-gray-400 font-bold mb-2">{new Date(entry.date).toLocaleString()}</p>
+                                            <p className="text-gray-700 text-sm">{entry.content}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {activeTab === 'history' && (
                     <div className="bg-white rounded-2xl border border-yellow-100 overflow-hidden shadow-sm">
@@ -432,6 +582,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
       {/* Modals */}
       {showPayment && <PaymentModal onClose={() => setShowPayment(false)} onSuccess={handlePaymentSuccess} initialError={paymentError} />}
+      {showBreathing && <BreathingExercise onClose={() => setShowBreathing(false)} />}
     </div>
   );
 };
