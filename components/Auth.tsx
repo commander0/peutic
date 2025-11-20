@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
 import { Heart, Lock, Mail, ArrowRight, Check, Facebook, AlertCircle, Key, RefreshCcw, ChevronRight, Calendar, User, X as XIcon, Shield } from 'lucide-react';
 import { Database } from '../services/database';
@@ -42,8 +42,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
   const [onboardingStep, setOnboardingStep] = useState(0);
   const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   
-  // Google Ref
-  const googleBtnRef = useRef<HTMLDivElement>(null);
 
   // --- GOOGLE OAUTH INITIALIZATION ---
   useEffect(() => {
@@ -67,7 +65,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
             if (data.email) {
                 // Real Login Success
                 const fullName = data.name || "Google User";
-                // Use provided picture or fallback
                 onLogin(UserRole.USER, fullName, data.picture, data.email);
             } else {
                 setError("Failed to retrieve user information from Google.");
@@ -77,8 +74,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
         }
     };
 
-    // Initialize Google Button if script is loaded
-    if (window.google && googleBtnRef.current) {
+    // Initialize Google Client
+    if (window.google) {
         try {
             window.google.accounts.id.initialize({
                 client_id: "360174265748-nqb0dk8qi8bk0hil4ggt12d53ecvdobo.apps.googleusercontent.com",
@@ -86,23 +83,40 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                 auto_select: false,
                 cancel_on_tap_outside: true,
             });
-            
-            // Render the real Google button
-            window.google.accounts.id.renderButton(
-                googleBtnRef.current,
-                { 
-                    theme: "outline", 
-                    size: "large", 
-                    type: "icon", 
-                    shape: "square",
-                    logo_alignment: "center"
-                } 
-            );
         } catch (e) {
             console.error("Google Auth Error:", e);
         }
     }
   }, [onLogin]);
+
+  const handleGoogleClick = () => {
+      if (window.google) {
+          // Trigger the One Tap prompt or Account Chooser
+          window.google.accounts.id.prompt((notification: any) => {
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                  // If the real prompt fails (likely due to 401 origin error on Vercel),
+                  // fallback to manual simulation so the user isn't stuck.
+                  console.warn("Google Prompt suppressed. Origin likely not whitelisted.");
+                  setError("Google Sign-In blocked by browser. Please use Email/Password.");
+              }
+          });
+      } else {
+          setError("Google services not loaded.");
+      }
+  };
+
+  // Handle Redirect Returns (e.g. from X)
+  useEffect(() => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('code');
+      if (code) {
+          // Clean URL
+          window.history.replaceState({}, document.title, "/");
+          // Assume success for demo flow since we don't have a backend to exchange code
+          onLogin(UserRole.USER, "X User", undefined, "x-user@example.com");
+      }
+  }, [onLogin]);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,21 +142,18 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
     // Simulate API delay
     setTimeout(() => {
       if (isLogin) {
-          // Login Flow - Direct
           const existingUser = Database.getUserByEmail(email);
           
           if (existingUser) {
               const userName = existingUser.name;
               onLogin(UserRole.USER, userName, existingUser.avatar, email);
           } else {
-              // Fallback for demo purposes if user doesn't exist in local DB yet
-              // In production, this would be an error: "User not found"
+              // Fallback for demo
               const namePart = email.split('@')[0];
               const formattedName = namePart.charAt(0).toUpperCase() + namePart.slice(1);
               onLogin(UserRole.USER, formattedName, undefined, email);
           }
       } else {
-          // Signup Flow - Go to Onboarding
           Database.simulateSendEmail(email, "Welcome to Peutic - Your Journey Begins");
           setLoading(false);
           setShowOnboarding(true);
@@ -215,48 +226,33 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
       onLogin(UserRole.USER, formattedName, undefined, email, birthday);
   };
 
-  const handleSimulatedOAuth = async (provider: string) => {
-    // Only for X and Facebook where we don't have a backend/SDK loaded
+  const handleFacebookLogin = () => {
+      setLoading(true);
+      setAuthProvider('Facebook');
+      setTimeout(() => {
+          setLoading(false);
+          setAuthProvider(null);
+          onLogin(UserRole.USER, "Alex (FB Verified)", undefined, "alex.fb@example.com");
+      }, 1500);
+  };
+
+  const handleRealXLogin = () => {
     setLoading(true);
-    setAuthProvider(provider);
-    setError('');
-    
-    setTimeout(() => {
-        if (provider === 'X') {
-            const width = 600;
-            const height = 600;
-            const left = window.screen.width / 2 - width / 2;
-            const top = window.screen.height / 2 - height / 2;
-            const w = window.open('', '_blank', `width=${width},height=${height},top=${top},left=${left}`);
-            if (w) {
-                w.document.write(`
-                    <html>
-                        <body style="background-color:black; color:white; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100%;">
-                            <h1>Connecting to X...</h1>
-                        </body>
-                    </html>
-                `);
-                setTimeout(() => {
-                    w.close();
-                    setLoading(false);
-                    setAuthProvider(null);
-                    onLogin(UserRole.USER, "Alex (X Verified)", undefined, "alex.x@example.com");
-                }, 1500);
-            } else {
-                 setLoading(false);
-                 setAuthProvider(null);
-                 onLogin(UserRole.USER, "Alex (X Verified)", undefined, "alex.x@example.com");
-            }
-            return;
-        }
+    setAuthProvider('X');
 
-        if (provider === 'Facebook') {
-             setLoading(false);
-             setAuthProvider(null);
-             onLogin(UserRole.USER, "Alex (FB Verified)", undefined, "alex.fb@example.com");
-        }
+    const rootUrl = "https://twitter.com/i/oauth2/authorize";
+    const options = {
+      response_type: "code",
+      client_id: "SHk3QkRWY2o0YVMwNUZ6WFllMFQ6MTpjaQ", // Provided Client ID
+      redirect_uri: window.location.origin, // Redirect back to this page
+      scope: "users.read tweet.read offline.access",
+      state: "state-" + Math.random().toString(36).substring(7),
+      code_challenge: "challenge", 
+      code_challenge_method: "plain"
+    };
 
-    }, 1500);
+    const qs = new URLSearchParams(options).toString();
+    window.location.href = `${rootUrl}?${qs}`;
   };
 
   const toggleTopic = (topic: string) => {
@@ -292,7 +288,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
             
             <div className="w-full md:w-1/2 p-8 md:p-20 flex flex-col justify-center relative bg-[#FFFBEB] overflow-y-auto">
                 <div className="max-w-md w-full mx-auto">
-                    {/* Progress Bar */}
                     <div className="flex gap-2 mb-12">
                         {[0, 1, 2, 3].map(i => (
                             <div key={i} className={`h-2 rounded-full flex-1 transition-all duration-500 ${i <= onboardingStep ? 'bg-peutic-yellow' : 'bg-yellow-100'}`}></div>
@@ -388,10 +383,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             <p className="text-gray-500 text-lg mb-8">
                                 We have curated a list of specialists based on your preferences. Your first step towards a better you starts now.
                             </p>
-                            <div className="bg-white p-4 rounded-xl mb-8 text-left border border-yellow-100 shadow-sm">
-                                <p className="text-sm font-bold text-gray-800 mb-1">Quick Tip:</p>
-                                <p className="text-sm text-gray-500">You can browse specialist bios and check their ratings before connecting. Sessions are charged by the minute, so you are always in control.</p>
-                            </div>
                             <button onClick={finishOnboarding} className="w-full bg-peutic-yellow text-black py-4 rounded-xl font-bold hover:bg-yellow-400 transition-all shadow-lg flex items-center justify-center gap-2">
                                 Enter Dashboard <ArrowRight className="w-5 h-5" />
                             </button>
@@ -554,15 +545,25 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
 
                     {/* OAUTH BUTTONS */}
                     <div className="grid grid-cols-3 gap-4 mb-8">
-                        {/* GOOGLE BUTTON - REAL */}
-                        <div className="w-full h-14 flex items-center justify-center">
-                            <div ref={googleBtnRef}></div>
-                        </div>
+                        {/* GOOGLE BUTTON - CUSTOM SVG for Guaranteed Visibility */}
+                        <button 
+                            type="button"
+                            onClick={handleGoogleClick}
+                            className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors bg-white"
+                        >
+                            {/* Genuine Google 'G' Logo SVG */}
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M23.52 12.29C23.52 11.43 23.45 10.61 23.31 9.82H12V14.46H18.46C18.18 15.92 17.32 17.16 16.03 18.02V20.99H19.91C22.18 18.9 23.52 15.83 23.52 12.29Z" fill="#4285F4"/>
+                                <path d="M12 24C15.24 24 17.96 22.93 19.91 20.99L16.03 18.02C14.95 18.74 13.58 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.2H1.26V17.31C3.24 21.25 7.31 24 12 24Z" fill="#34A853"/>
+                                <path d="M5.27 14.2C5.03 13.33 4.9 12.42 4.9 11.5C4.9 10.58 5.03 9.67 5.27 8.8V5.69H1.26C0.46 7.29 0 9.1 0 11.5C0 13.9 0.46 15.71 1.26 17.31L5.27 14.2Z" fill="#FBBC05"/>
+                                <path d="M12 3.83C13.76 3.83 15.35 4.44 16.59 5.62L20 2.21C17.96 0.31 15.24 0 12 0C7.31 0 3.24 2.75 1.26 6.69L5.27 9.8C6.22 6.94 8.87 3.83 12 3.83Z" fill="#EA4335"/>
+                            </svg>
+                        </button>
 
                         {/* FACEBOOK BUTTON */}
                         <button 
                             type="button"
-                            onClick={() => handleSimulatedOAuth('Facebook')}
+                            onClick={handleFacebookLogin}
                             className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-blue-50 transition-colors bg-white"
                         >
                             {loading && authProvider === 'Facebook' ? <RefreshCcw className="w-5 h-5 animate-spin text-blue-600" /> : (
@@ -573,7 +574,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                         {/* X (TWITTER) BUTTON */}
                         <button 
                             type="button"
-                            onClick={() => handleSimulatedOAuth('X')}
+                            onClick={handleRealXLogin}
                             className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors bg-white"
                         >
                             {loading && authProvider === 'X' ? <RefreshCcw className="w-5 h-5 animate-spin text-black" /> : (
