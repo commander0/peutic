@@ -8,15 +8,18 @@ export interface TavusConversationResponse {
   status: string;
 }
 
-export const createTavusConversation = async (replicaId: string, userName: string): Promise<TavusConversationResponse> => {
+export const createTavusConversation = async (replicaId: string, userName: string, context?: string): Promise<TavusConversationResponse> => {
   if (!API_KEY) {
     throw new Error("Configuration Error: Missing Tavus API Key");
   }
 
+  // Use provided specific context (Persona) or fall back to generic
+  const systemContext = context || `You are an empathetic, professional, and warm human specialist. You are speaking with ${userName}. Your role is to listen actively, provide emotional support, and help them process their thoughts. Keep your answers concise (2-3 sentences) to keep the conversation flowing naturally. Do not mention you are an AI.`;
+
   const body = {
     replica_id: replicaId,
     conversation_name: `Session with ${userName} - ${new Date().toISOString()}`,
-    conversational_context: `You are an empathetic, professional, and warm human specialist. You are speaking with ${userName}. Your role is to listen activey, provide emotional support, and help them process their thoughts. Keep your answers concise (2-3 sentences) to keep the conversation flowing naturally. Do not mention you are an AI.`,
+    conversational_context: systemContext,
     properties: {
       max_call_duration: 3600,
       enable_recording: true,

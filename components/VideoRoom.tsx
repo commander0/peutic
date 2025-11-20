@@ -35,7 +35,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [pipPosition, setPipPosition] = useState({ x: 20, y: 80 }); // Percentage
   const [isDragging, setIsDragging] = useState(false);
   const [isPipExpanded, setIsPipExpanded] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
 
   // Audio simulation for Demo Mode
   const [audioLevel, setAudioLevel] = useState<number[]>(new Array(20).fill(5));
@@ -56,7 +55,11 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
         if (!companion.replicaId) throw new Error("Invalid Specialist Configuration");
 
-        const response = await createTavusConversation(companion.replicaId, userName);
+        // Inject Persona Context:
+        // This tells the AI who they are supposed to be.
+        const context = `You are ${companion.name}, a professional specialist in ${companion.specialty}. Your bio is: "${companion.bio}". You are speaking with ${userName}. Be empathetic, professional, and concise. Listen actively.`;
+
+        const response = await createTavusConversation(companion.replicaId, userName, context);
         
         if (response.conversation_url) {
              setConversationUrl(response.conversation_url);
@@ -290,10 +293,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
         {/* DEMO MODE (High-Fidelity Fallback) */}
         {connectionState === 'DEMO_MODE' && (
-             <div className="absolute inset-0 w-full h-full">
+             <div className="absolute inset-0 w-full h-full bg-black">
                 <img 
                     src={companion.imageUrl} 
-                    className="w-full h-full object-cover" // KEY CHANGE: Ensures no black bars
+                    className="w-full h-full object-cover object-top" // KEY CHANGE: object-top ensures face is visible on mobile
                     alt="Background"
                 />
                 <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]"></div>

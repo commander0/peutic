@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video } from 'lucide-react';
+import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video, Menu, X } from 'lucide-react';
 import { TRANSLATIONS, LanguageCode, getTranslation } from '../services/i18n';
 
 interface LandingPageProps {
@@ -11,6 +11,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [lang, setLang] = useState<LanguageCode>('en');
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [onlineCount, setOnlineCount] = useState(124);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Randomize online count between 80 and 300 on load
@@ -90,12 +91,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
             {/* CTA */}
             <div className="flex items-center gap-4">
                <button onClick={onLoginClick} className="text-sm font-bold hidden md:block">{getTranslation(lang, 'login')}</button>
-               <button onClick={onLoginClick} className="bg-black text-white px-6 py-3 rounded-full font-bold hover:bg-gray-800 transition-transform hover:scale-105 shadow-lg flex items-center gap-2">
+               <button onClick={onLoginClick} className="bg-[#FACC15] text-black px-6 py-3 rounded-full font-bold hover:bg-[#EAB308] transition-transform hover:scale-105 shadow-lg flex items-center gap-2">
                   {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
                </button>
             </div>
+
+             {/* Mobile Menu Toggle */}
+             <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+            <div className="md:hidden bg-white border-b border-yellow-100 p-4 shadow-xl absolute w-full left-0 top-20 animate-float" style={{animation: 'none'}}>
+                <div className="flex flex-col space-y-4">
+                    <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_features')}</a>
+                    <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_how')}</a>
+                    <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_membership')}</a>
+                    <div className="h-px bg-gray-100 my-2"></div>
+                    <button onClick={onLoginClick} className="text-lg font-bold text-gray-900 text-left">{getTranslation(lang, 'login')}</button>
+                    <button onClick={onLoginClick} className="bg-[#FACC15] text-black px-6 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
+                        {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        )}
       </nav>
 
       {/* HERO SECTION */}
@@ -122,8 +144,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                       </p>
                       
                       <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                          <button onClick={onLoginClick} className="px-8 py-4 bg-black text-white rounded-xl font-bold text-lg shadow-xl shadow-yellow-500/10 hover:bg-gray-900 transition-all hover:scale-105 flex items-center justify-center gap-3">
-                              <Play className="w-5 h-5 fill-white" /> {getTranslation(lang, 'cta_start')}
+                          <button onClick={onLoginClick} className="px-8 py-4 bg-[#FACC15] text-black rounded-xl font-bold text-lg shadow-xl shadow-yellow-500/20 hover:bg-[#EAB308] transition-all hover:scale-105 flex items-center justify-center gap-3">
+                              <Play className="w-5 h-5 fill-black" /> {getTranslation(lang, 'cta_start')}
                           </button>
                           <div className="flex items-center gap-4 px-6 py-4 bg-white/50 rounded-xl border border-white backdrop-blur-sm justify-center">
                               <Shield className="w-6 h-6 text-gray-400" />
@@ -138,8 +160,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <div className="relative lg:h-[600px] w-full flex items-center justify-center mt-12 lg:mt-0">
                       {/* HERO VIDEO UI MOCKUP */}
                       <div className="relative w-[280px] md:w-[350px] h-[400px] md:h-[500px] bg-black rounded-[40px] border-8 border-white shadow-2xl overflow-hidden transform rotate-0 md:rotate-[-3deg] md:hover:rotate-0 transition-transform duration-500 z-20">
-                           {/* Simulated Video Feed */}
-                           <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800" className="absolute inset-0 w-full h-full object-cover" alt="Specialist" />
+                           {/* Simulated Video Feed - Using stock video of a woman listening/talking */}
+                           <video 
+                              autoPlay 
+                              muted 
+                              loop 
+                              playsInline
+                              poster="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800"
+                              className="absolute inset-0 w-full h-full object-cover"
+                           >
+                              {/* Stock footage: Professional woman listening on video call */}
+                              <source src="https://player.vimeo.com/external/459389137.sd.mp4?s=964c5e43b5183623a60267eb1858736b54305441&profile_id=164&oauth2_token_id=57447761" type="video/mp4" />
+                           </video>
+                           
                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
                            
                            {/* UI Elements */}
@@ -200,27 +233,27 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* SCIENCE / STATS */}
-      <section className="py-24 bg-black text-white relative overflow-hidden z-10">
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-peutic-yellow rounded-full blur-[120px] opacity-10"></div>
+      {/* SCIENCE / STATS (Updated Background Color) */}
+      <section className="py-24 bg-[#FFFBEB] relative overflow-hidden z-10">
+          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-yellow-200 rounded-full blur-[120px] opacity-30"></div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="text-center max-w-3xl mx-auto mb-16">
-                  <h2 className="text-3xl md:text-4xl font-black mb-6">{getTranslation(lang, 'science_title')}</h2>
-                  <p className="text-gray-400 text-lg">{getTranslation(lang, 'science_subtitle')}</p>
+                  <h2 className="text-3xl md:text-4xl font-black mb-6 text-gray-900">{getTranslation(lang, 'science_title')}</h2>
+                  <p className="text-gray-600 text-lg">{getTranslation(lang, 'science_subtitle')}</p>
               </div>
 
               <div className="grid md:grid-cols-3 gap-8 text-center">
-                  <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                      <div className="text-5xl font-black text-peutic-yellow mb-2">{getTranslation(lang, 'stat_1_val')}</div>
-                      <p className="text-gray-400 font-bold">{getTranslation(lang, 'stat_1_desc')}</p>
+                  <div className="p-8 rounded-3xl bg-white border border-yellow-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="text-5xl font-black text-black mb-2">{getTranslation(lang, 'stat_1_val')}</div>
+                      <p className="text-gray-600 font-bold">{getTranslation(lang, 'stat_1_desc')}</p>
                   </div>
-                  <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                      <div className="text-5xl font-black text-peutic-yellow mb-2">{getTranslation(lang, 'stat_2_val')}</div>
-                      <p className="text-gray-400 font-bold">{getTranslation(lang, 'stat_2_desc')}</p>
+                  <div className="p-8 rounded-3xl bg-white border border-yellow-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="text-5xl font-black text-black mb-2">{getTranslation(lang, 'stat_2_val')}</div>
+                      <p className="text-gray-600 font-bold">{getTranslation(lang, 'stat_2_desc')}</p>
                   </div>
-                  <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm hover:bg-white/10 transition-colors">
-                      <div className="text-5xl font-black text-peutic-yellow mb-2">{getTranslation(lang, 'stat_3_val')}</div>
-                      <p className="text-gray-400 font-bold">{getTranslation(lang, 'stat_3_desc')}</p>
+                  <div className="p-8 rounded-3xl bg-white border border-yellow-100 shadow-sm hover:shadow-md transition-all">
+                      <div className="text-5xl font-black text-black mb-2">{getTranslation(lang, 'stat_3_val')}</div>
+                      <p className="text-gray-600 font-bold">{getTranslation(lang, 'stat_3_desc')}</p>
                   </div>
               </div>
           </div>
@@ -237,14 +270,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <button onClick={onLoginClick} className="flex items-center gap-2 font-bold hover:gap-3 transition-all">View All <ArrowRight className="w-4 h-4" /></button>
               </div>
 
-              {/* 
-                 FLEXBOX LAYOUT:
-                 - 'flex-wrap' allows items to wrap to the next line.
-                 - 'justify-center' ensures the wrapped items (the bottom 2) are centered.
-                 - 'w-full md:w-[30%]' sizes the items:
-                    - On Mobile: 100% width (Stack)
-                    - On Desktop: 30% width (Fit 3 in top row, remaining 2 wrap and center)
-              */}
               <div className="flex flex-wrap justify-center gap-6">
                   {featuredSpecialists.map((s, i) => (
                       <div 
@@ -271,10 +296,21 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid md:grid-cols-2 gap-16 items-center">
                   <div className="order-2 md:order-1">
-                       {/* Static High Quality Visual */}
-                       <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100">
-                           <img src="https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=1000&auto=format&fit=crop" alt="Calm Environment" className="w-full h-full object-cover" />
-                           <div className="absolute inset-0 bg-black/20"></div>
+                       {/* High Quality Video Visual */}
+                       <div className="relative rounded-3xl overflow-hidden shadow-2xl border border-gray-100 aspect-video">
+                           {/* Stock footage: Woman calm and happy on laptop */}
+                           <video 
+                              autoPlay 
+                              muted 
+                              loop 
+                              playsInline
+                              poster="https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=1000&auto=format&fit=crop"
+                              className="w-full h-full object-cover"
+                           >
+                              <source src="https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c0fd273d2c6d9a064f3ae35579b2bbdf&profile_id=164&oauth2_token_id=57447761" type="video/mp4" />
+                           </video>
+
+                           <div className="absolute inset-0 bg-black/10"></div>
                            <div className="absolute bottom-8 left-8 text-white">
                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center mb-6 cursor-pointer hover:bg-white/30 transition-colors">
                                    <Play className="w-6 h-6 fill-white text-white ml-1" />
@@ -321,11 +357,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* PRICING / CTA */}
-      <section id="pricing" className="py-24 bg-black text-white text-center z-10 relative">
+      {/* PRICING / CTA (Updated Background Color) */}
+      <section id="pricing" className="py-24 bg-[#FFFBEB] text-center z-10 relative">
           <div className="max-w-4xl mx-auto px-4">
-              <h2 className="text-4xl md:text-5xl font-black mb-8 tracking-tight">Simple, Transparent Pricing.</h2>
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 md:p-12 inline-block max-w-lg w-full relative overflow-hidden">
+              <h2 className="text-4xl md:text-5xl font-black mb-8 tracking-tight text-gray-900">Simple, Transparent Pricing.</h2>
+              <div className="bg-white rounded-3xl p-8 md:p-12 inline-block max-w-lg w-full relative overflow-hidden shadow-2xl border border-yellow-100">
                   {/* Lifetime Deal Badge */}
                   <div className="inline-block bg-red-600 text-white px-4 py-1.5 rounded-full text-xs font-black mb-6 animate-pulse tracking-widest">
                       LIFETIME RATE LOCKED IN
@@ -334,19 +370,19 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <p className="text-gray-400 font-bold uppercase tracking-widest mb-4">{getTranslation(lang, 'pricing_title')}</p>
                   
                   <div className="flex items-baseline justify-center gap-4 mb-4">
-                      <span className="text-3xl text-gray-500 font-bold line-through decoration-red-500 decoration-2 opacity-70">$1.99</span>
-                      <div className="text-6xl md:text-7xl font-black text-peutic-yellow flex items-start gap-1">
-                          <span className="text-3xl mt-2">$</span>1.49<span className="text-xl text-gray-400 mt-8">/min</span>
+                      <span className="text-3xl text-gray-400 font-bold line-through decoration-red-500 decoration-2 opacity-70">$1.99</span>
+                      <div className="text-6xl md:text-7xl font-black text-black flex items-start gap-1">
+                          <span className="text-3xl mt-2">$</span>1.49<span className="text-xl text-gray-500 mt-8">/min</span>
                       </div>
                   </div>
                   
-                  <p className="text-gray-300 mb-8">Sign up today to grandfather this exclusive rate forever. The price will never increase for early members.</p>
-                  <ul className="text-left space-y-3 mb-8 max-w-xs mx-auto">
+                  <p className="text-gray-600 mb-8">Sign up today to grandfather this exclusive rate forever. The price will never increase for early members.</p>
+                  <ul className="text-left space-y-3 mb-8 max-w-xs mx-auto text-gray-800">
                       <li className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> <span>No subscription fees</span></li>
                       <li className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> <span>HD Video & Audio</span></li>
                       <li className="flex items-center gap-3"><CheckCircle className="w-5 h-5 text-green-500" /> <span>24/7 Availability</span></li>
                   </ul>
-                  <button onClick={onLoginClick} className="w-full bg-peutic-yellow text-black py-4 rounded-xl font-bold hover:bg-yellow-400 transition-transform hover:scale-105 shadow-lg shadow-yellow-500/20">
+                  <button onClick={onLoginClick} className="w-full bg-[#FACC15] text-black py-4 rounded-xl font-bold hover:bg-[#EAB308] transition-transform hover:scale-105 shadow-lg shadow-yellow-500/20">
                       Lock In $1.49 Rate Now
                   </button>
               </div>
