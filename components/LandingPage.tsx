@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video, Menu, X } from 'lucide-react';
+import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video } from 'lucide-react';
 import { TRANSLATIONS, LanguageCode, getTranslation } from '../services/i18n';
 
 interface LandingPageProps {
@@ -11,7 +11,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [lang, setLang] = useState<LanguageCode>('en');
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [onlineCount, setOnlineCount] = useState(124);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     // Randomize online count between 80 and 300 on load
@@ -95,29 +94,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
                </button>
             </div>
-
-             {/* Mobile Menu Toggle */}
-             <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
           </div>
         </div>
-
-        {/* Mobile Menu Dropdown */}
-        {mobileMenuOpen && (
-            <div className="md:hidden bg-white border-b border-yellow-100 p-4 shadow-xl absolute w-full left-0 top-20 animate-float" style={{animation: 'none'}}>
-                <div className="flex flex-col space-y-4">
-                    <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_features')}</a>
-                    <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_how')}</a>
-                    <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_membership')}</a>
-                    <div className="h-px bg-gray-100 my-2"></div>
-                    <button onClick={onLoginClick} className="text-lg font-bold text-gray-900 text-left">{getTranslation(lang, 'login')}</button>
-                    <button onClick={onLoginClick} className="bg-[#FACC15] text-black px-6 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
-                        {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
-                    </button>
-                </div>
-            </div>
-        )}
       </nav>
 
       {/* HERO SECTION */}
