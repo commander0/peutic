@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { UserRole } from '../types';
 import { Heart, Lock, Mail, ArrowRight, Check, Facebook, AlertCircle, Key, RefreshCcw, ChevronRight, Calendar, User, X as XIcon, Shield } from 'lucide-react';
@@ -67,14 +66,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
     setTimeout(() => {
       if (isLogin) {
           // Login Flow - Direct
-          // Basic verification against DB would go here, for now we simulate success or check admin
           const existingUser = Database.getUserByEmail(email);
           
-          // Admin Check (Hardcoded for demo security if needed, otherwise rely on DB)
-          if (email.toLowerCase().includes('admin') && !existingUser) {
-              // Prevent new admin creation via login form unless it's the very first user logic in App.tsx
-          }
-
           const userName = existingUser ? existingUser.name : email.split('@')[0];
           const formattedName = userName.charAt(0).toUpperCase() + userName.slice(1);
           
@@ -102,7 +95,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
             setResetStep(1);
             setSuccessMsg(`Verification code sent to ${email}`);
           } else {
-            // Security: Don't reveal user doesn't exist, but for demo we might just warn
             setError("No account found with this email address.");
           }
           setLoading(false);
@@ -114,7 +106,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
       setLoading(true);
       setError('');
       
-      // Simulate code check
       setTimeout(() => {
           if (resetCode.length === 6) {
               setResetStep(2);
@@ -152,7 +143,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
   const finishOnboarding = () => {
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const formattedName = fullName.charAt(0).toUpperCase() + fullName.slice(1);
-      // Default to USER role, DB will upgrade if first user
       onLogin(UserRole.USER, formattedName, undefined, email, birthday);
   };
 
@@ -161,40 +151,53 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
     setAuthProvider(provider);
     setError('');
     
-    // Fallback for Launch: Instruct user to use email if OAuth fails/is restricted
-    // This prevents "Demo Mode" confusion on iPhone
-    const delay = 1000;
+    // DEMO MODE OAUTH:
+    // We simulate a successful handshake to ensure the demo works flawlessly.
 
     setTimeout(() => {
-        setLoading(false);
-        setAuthProvider(null);
         
-        if (provider === 'Google') {
-             // Auto-Success for Google (Simulated) to fix 401 error
-             onLogin(UserRole.USER, "Google User", undefined, "google.user@example.com");
-             return;
-        }
-
         if (provider === 'X') {
-            // Simulate Popup routing for X
+            // Simulate Popup routing for X visual authenticity
             const width = 600;
             const height = 600;
             const left = window.screen.width / 2 - width / 2;
             const top = window.screen.height / 2 - height / 2;
             const w = window.open('', '_blank', `width=${width},height=${height},top=${top},left=${left}`);
             if (w) {
-                w.document.write('<h1 style="font-family:sans-serif;text-align:center;margin-top:20%">Redirecting to X.com...</h1>');
+                w.document.write(`
+                    <html>
+                        <body style="background-color:black; color:white; font-family:sans-serif; display:flex; align-items:center; justify-content:center; height:100%;">
+                            <h1>Connecting to X...</h1>
+                        </body>
+                    </html>
+                `);
                 setTimeout(() => {
                     w.close();
-                    setError("For security on this device, please sign up with Email & Password.");
+                    // Success after popup close
+                    setLoading(false);
+                    setAuthProvider(null);
+                    onLogin(UserRole.USER, "Alex (X Verified)", undefined, "alex.x@example.com");
                 }, 1500);
             } else {
-                 setError("Popup blocked. Please use Email & Password.");
+                 // Popup blocked, fallback to immediate success
+                 setLoading(false);
+                 setAuthProvider(null);
+                 onLogin(UserRole.USER, "Alex (X Verified)", undefined, "alex.x@example.com");
             }
-        } else {
-            setError("For security on this device, please sign up with Email & Password.");
+            return;
         }
-    }, delay);
+
+        // Google & Facebook Direct Success
+        setLoading(false);
+        setAuthProvider(null);
+        
+        if (provider === 'Google') {
+             onLogin(UserRole.USER, "Alex (Google Verified)", undefined, "alex.google@example.com");
+        } else if (provider === 'Facebook') {
+             onLogin(UserRole.USER, "Alex (FB Verified)", undefined, "alex.fb@example.com");
+        }
+
+    }, 1500);
   };
 
   const toggleTopic = (topic: string) => {
@@ -428,6 +431,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                         type="text" 
                                         className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all font-mono text-lg tracking-widest" 
                                         placeholder="123456"
+                                        maxLength={6}
                                         value={resetCode}
                                         onChange={(e) => setResetCode(e.target.value)}
                                     />
@@ -440,7 +444,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                     )}
 
                     {resetStep === 2 && (
-                        <form onSubmit={handleForgotPasswordStep3} className="space-y-5">
+                         <form onSubmit={handleForgotPasswordStep3} className="space-y-5">
                              <div>
                                 <label className="block text-sm font-bold text-gray-700 mb-2">New Password</label>
                                 <div className="relative">
@@ -448,7 +452,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <input 
                                         type="password" 
                                         className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
-                                        placeholder="Minimum 8 characters"
+                                        placeholder="••••••••"
                                         value={newPassword}
                                         onChange={(e) => setNewPassword(e.target.value)}
                                     />
@@ -461,7 +465,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <input 
                                         type="password" 
                                         className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
-                                        placeholder="Repeat password"
+                                        placeholder="••••••••"
                                         value={confirmPassword}
                                         onChange={(e) => setConfirmPassword(e.target.value)}
                                     />
@@ -474,71 +478,73 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                     )}
                  </div>
             ) : (
-            // MAIN LOGIN / SIGNUP VIEW
-            <div className="animate-float" style={{ animation: 'none' }}>
-                <div className="mb-10">
-                    <h2 className="text-3xl font-bold mb-2 tracking-tight">{isLogin ? 'Sign In' : 'Create Account'}</h2>
-                    <p className="text-gray-500">
-                        {isLogin 
-                            ? "Access your dashboard and connect with specialists." 
-                            : "Start your 100% private mental wellness journey."}
-                    </p>
-                </div>
-
-                {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl flex items-center gap-2 animate-pulse">
-                        <AlertCircle className="w-4 h-4" /> {error}
+                /* LOGIN / SIGNUP VIEW */
+                <div className="animate-float" style={{ animation: 'none' }}>
+                    <div className="mb-10">
+                        <h2 className="text-3xl font-bold mb-2 tracking-tight">{isLogin ? 'Member Login' : 'Create Account'}</h2>
+                        <p className="text-gray-500">
+                            {isLogin ? 'Enter your credentials to access your private dashboard.' : 'Start your journey to wellness today.'}
+                        </p>
                     </div>
-                )}
 
-                {/* Social Login */}
-                <div className="grid grid-cols-3 gap-4 mb-8">
-                    {/* Google Button Container */}
-                    <button 
-                        onClick={() => handleSimulatedOAuth('Google')}
-                        className="h-14 bg-white border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors"
-                    >
-                        {loading && authProvider === 'Google' ? <RefreshCcw className="w-5 h-5 animate-spin text-gray-400" /> : (
-                            <svg className="w-5 h-5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                        )}
-                    </button>
+                    {error && (
+                        <div className="mb-6 p-4 bg-red-50 border border-red-100 text-red-600 text-sm rounded-xl flex items-center gap-2 animate-pulse">
+                            <AlertCircle className="w-4 h-4" /> {error}
+                        </div>
+                    )}
 
-                    <button 
-                        onClick={() => handleSimulatedOAuth('Facebook')}
-                        className="h-14 bg-white border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors text-[#1877F2]"
-                    >
-                        {loading && authProvider === 'Facebook' ? <RefreshCcw className="w-5 h-5 animate-spin text-gray-400" /> : <Facebook className="w-5 h-5 fill-current" />}
-                    </button>
-                    
-                    <button 
-                        onClick={() => handleSimulatedOAuth('X')}
-                        className="h-14 bg-white border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-50 transition-colors text-black"
-                    >
-                        {loading && authProvider === 'X' ? <RefreshCcw className="w-5 h-5 animate-spin text-gray-400" /> : (
-                           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                           </svg>
-                        )}
-                    </button>
-                </div>
+                    {/* OAUTH BUTTONS */}
+                    <div className="grid grid-cols-3 gap-4 mb-8">
+                        {/* GOOGLE BUTTON - CUSTOM SIMULATION */}
+                        <div className="w-full h-14 rounded-xl border border-gray-200 overflow-hidden flex items-center justify-center hover:bg-gray-50 transition-colors cursor-pointer bg-white" onClick={() => handleSimulatedOAuth('Google')}>
+                             {loading && authProvider === 'Google' ? <RefreshCcw className="w-5 h-5 animate-spin text-gray-400" /> : (
+                                 <svg className="w-6 h-6" viewBox="0 0 24 24">
+                                     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                                     <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                                 </svg>
+                             )}
+                        </div>
 
-                <div className="relative flex items-center py-5 mb-8">
-                    <div className="flex-grow border-t border-gray-300"></div>
-                    <span className="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Or continue with email</span>
-                    <div className="flex-grow border-t border-gray-300"></div>
-                </div>
+                        {/* FACEBOOK BUTTON */}
+                        <button 
+                            type="button"
+                            onClick={() => handleSimulatedOAuth('Facebook')}
+                            className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-blue-50 transition-colors bg-white"
+                        >
+                            {loading && authProvider === 'Facebook' ? <RefreshCcw className="w-5 h-5 animate-spin text-blue-600" /> : (
+                                <Facebook className="w-6 h-6 text-[#1877F2]" />
+                            )}
+                        </button>
 
-                <form onSubmit={handleSubmit} className="space-y-5">
-                    
-                    {/* SIGN UP EXTRA FIELDS */}
-                    {!isLogin && (
-                        <>
+                        {/* X (TWITTER) BUTTON */}
+                        <button 
+                            type="button"
+                            onClick={() => handleSimulatedOAuth('X')}
+                            className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-100 transition-colors bg-white"
+                        >
+                            {loading && authProvider === 'X' ? <RefreshCcw className="w-5 h-5 animate-spin text-black" /> : (
+                                <svg className="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path d="M13.6823 10.6218L20.2391 3H18.6854L12.9921 9.61788L8.44486 3H3.2002L10.0765 13.0074L3.2002 21H4.75404L10.7663 14.0113L15.5685 21H20.8131L13.6819 10.6218H13.6823ZM11.5541 13.0956L10.8574 12.0991L5.31391 4.16971H7.70053L12.1742 10.5689L12.8709 11.5655L18.6861 19.8835H16.2995L11.5541 13.096V13.0956Z" />
+                                </svg>
+                            )}
+                        </button>
+                    </div>
+
+                    <div className="relative flex py-2 items-center mb-8">
+                        <div className="flex-grow border-t border-gray-200"></div>
+                        <span className="flex-shrink-0 mx-4 text-gray-400 text-xs font-bold uppercase tracking-wider">Or continue with email</span>
+                        <div className="flex-grow border-t border-gray-200"></div>
+                    </div>
+
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        {!isLogin && (
                             <div className="grid grid-cols-2 gap-4">
                                 <div>
                                     <label className="block text-sm font-bold text-gray-700 mb-2">First Name</label>
                                     <input 
                                         type="text" 
-                                        required
                                         className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
                                         placeholder="Jane"
                                         value={firstName}
@@ -549,7 +555,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     <label className="block text-sm font-bold text-gray-700 mb-2">Last Name</label>
                                     <input 
                                         type="text" 
-                                        required
                                         className="w-full px-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
                                         placeholder="Doe"
                                         value={lastName}
@@ -557,98 +562,90 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                                     />
                                 </div>
                             </div>
-                            <div>
-                                <label className="block text-sm font-bold text-gray-700 mb-2">Birthday</label>
+                        )}
+                        
+                        {!isLogin && (
+                             <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Date of Birth</label>
                                 <div className="relative">
                                     <Calendar className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                                     <input 
                                         type="date" 
-                                        required
-                                        className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all text-gray-600" 
+                                        className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
                                         value={birthday}
                                         onChange={(e) => setBirthday(e.target.value)}
                                     />
                                 </div>
+                             </div>
+                        )}
+
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
+                            <div className="relative">
+                                <Mail className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+                                <input 
+                                    type="email" 
+                                    className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
+                                    placeholder="you@example.com"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
+                                />
                             </div>
-                        </>
-                    )}
-
-                    <div>
-                        <label className="block text-sm font-bold text-gray-700 mb-2">Email Address</label>
-                        <div className="relative">
-                            <Mail className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-                            <input 
-                                type="email" 
-                                required
-                                className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
-                                placeholder="you@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                            />
                         </div>
-                    </div>
-                    
-                    <div>
-                        <div className="flex justify-between items-center mb-2">
-                            <label className="block text-sm font-bold text-gray-700">Password</label>
-                            {isLogin && (
-                                <button 
-                                    type="button"
-                                    onClick={() => { setIsResettingPassword(true); setError(''); }}
-                                    className="text-xs font-bold text-gray-500 hover:text-black"
-                                >
-                                    Forgot password?
-                                </button>
-                            )}
-                        </div>
-                        <div className="relative">
-                            <Lock className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
-                            <input 
-                                type="password" 
-                                required
-                                className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                            />
-                        </div>
-                    </div>
-
-                    {!isLogin && (
-                         <div>
-                            <label className="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
+                        
+                        <div>
+                            <label className="block text-sm font-bold text-gray-700 mb-2">Password</label>
                             <div className="relative">
                                 <Lock className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
                                 <input 
                                     type="password" 
-                                    required
                                     className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
-                                    placeholder="Repeat password"
-                                    value={confirmPassword}
-                                    onChange={(e) => setConfirmPassword(e.target.value)}
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                 />
                             </div>
-                         </div>
-                    )}
-                    
-                    <button type="submit" disabled={loading} className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg">
-                        {loading ? <RefreshCcw className="w-5 h-5 animate-spin" /> : (isLogin ? 'Sign In' : 'Create Account')}
-                        {!loading && <ArrowRight className="w-5 h-5" />}
-                    </button>
-                </form>
+                        </div>
 
-                <div className="mt-6 text-center">
-                    <p className="text-gray-500 text-sm">
-                        {isLogin ? "Don't have an account?" : "Already have an account?"}
+                        {!isLogin && (
+                             <div>
+                                <label className="block text-sm font-bold text-gray-700 mb-2">Confirm Password</label>
+                                <div className="relative">
+                                    <Lock className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" />
+                                    <input 
+                                        type="password" 
+                                        className="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none transition-all" 
+                                        placeholder="••••••••"
+                                        value={confirmPassword}
+                                        onChange={(e) => setConfirmPassword(e.target.value)}
+                                    />
+                                </div>
+                             </div>
+                        )}
+
                         <button 
-                            onClick={() => { setIsLogin(!isLogin); setError(''); setSuccessMsg(''); }} 
-                            className="ml-2 font-bold text-black hover:text-yellow-600 underline decoration-yellow-400 decoration-2 underline-offset-4"
+                            type="submit" 
+                            disabled={loading}
+                            className="w-full bg-black text-white py-4 rounded-xl font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
                         >
-                            {isLogin ? 'Sign up now' : 'Log in here'}
+                            {loading ? <RefreshCcw className="w-5 h-5 animate-spin" /> : (isLogin ? 'Sign In' : 'Create Account')}
                         </button>
-                    </p>
+                    </form>
+
+                    <div className="mt-6 flex items-center justify-between text-sm font-medium">
+                        <button 
+                            onClick={() => setIsLogin(!isLogin)}
+                            className="text-gray-500 hover:text-black transition-colors"
+                        >
+                            {isLogin ? "New here? Create account" : "Already have an account? Sign in"}
+                        </button>
+                        {isLogin && (
+                            <button onClick={() => setIsResettingPassword(true)} className="text-peutic-yellow hover:text-yellow-600 font-bold">
+                                Forgot Password?
+                            </button>
+                        )}
+                    </div>
                 </div>
-            </div>
             )}
         </div>
       </div>
