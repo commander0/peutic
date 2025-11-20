@@ -58,9 +58,14 @@ const App: React.FC = () => {
         } else {
             // New Account Creation Logic
             // "Turn Key" Feature: If no admins exist in the database, the first user becomes Admin.
-            // All subsequent users are standard USERs.
+            // CRITICAL CHANGE: OAuth users (who didn't provide email/pass) should NOT become admin automatically.
+            // Admin status should be reserved for the manual email sign-up to avoid accidental privileges during demo.
+            
             const adminExists = Database.hasAdmin();
-            const finalRole = adminExists ? UserRole.USER : UserRole.ADMIN;
+            // Only grant admin if no admin exists AND it's an explicit email login (not oauth)
+            const isOAuth = !!avatar && (name.includes('Verified') || role === UserRole.USER);
+            
+            const finalRole = (!adminExists && !isOAuth) ? UserRole.ADMIN : UserRole.USER;
 
             currentUser = Database.createUser(name, userEmail, finalRole);
             if (avatar) {

@@ -1,5 +1,5 @@
 
-import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry } from '../types';
+import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
 // Simulation of a MongoDB/Postgres Backend using LocalStorage
 const DB_KEYS = {
@@ -10,7 +10,8 @@ const DB_KEYS = {
   SETTINGS: 'peutic_db_settings',
   LOGS: 'peutic_db_logs',
   MOODS: 'peutic_db_moods',
-  JOURNALS: 'peutic_db_journals'
+  JOURNALS: 'peutic_db_journals',
+  PROMOS: 'peutic_db_promos'
 };
 
 // Initial Seed Data
@@ -20,7 +21,7 @@ const INITIAL_COMPANIONS: Companion[] = [
   { id: 'c3', name: 'James', specialty: 'Men\'s Health', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200&h=200', bio: 'A safe space to discuss pressure, expectations, and balance.', replicaId: 'r92debe21318' },
   { id: 'c4', name: 'Danny', specialty: 'Grief Support', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Walking beside you through times of loss.', replicaId: 'r62baeccd777' },
   { id: 'c5', name: 'Anna', specialty: 'Family Dynamics', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Navigating complex family relationships with care.', replicaId: 'r6ae5b6efc9d' },
-  { id: 'c28', name: 'Elena', specialty: 'Women\'s Health', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Holistic support for hormonal health, fertility, and menopause.', replicaId: 're3a705cf66a' }, // Added Elena
+  { id: 'c28', name: 'Elena', specialty: 'Women\'s Health', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Holistic support for hormonal health, fertility, and menopause.', replicaId: 're3a705cf66a' }, 
   { id: 'c7', name: 'Olivia', specialty: 'Workplace Stress', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1598550874175-4d7112ee7f41?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Strategies to handle burnout and professional anxiety.', replicaId: 'rc2146c13e81' },
   { id: 'c8', name: 'Charlie', specialty: 'General Listening', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Here to listen to whatever is on your mind.', replicaId: 'rf4703150052' },
   { id: 'c9', name: 'Luna', specialty: 'Creative Blocks', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Unlocking your potential through open dialogue.', replicaId: 're5c4a8dd5ea' },
@@ -236,10 +237,36 @@ export const Database = {
     return entries.filter(j => j.userId === userId).reverse();
   },
 
+  // --- Promo Codes (Marketing) ---
+  getPromoCodes: (): PromoCode[] => {
+    const stored = localStorage.getItem(DB_KEYS.PROMOS);
+    return stored ? JSON.parse(stored) : [];
+  },
+
+  createPromoCode: (code: string, discount: number): PromoCode => {
+    const promos = Database.getPromoCodes();
+    const newPromo: PromoCode = {
+        id: `promo_${Date.now()}`,
+        code: code.toUpperCase(),
+        discountPercentage: discount,
+        uses: 0,
+        active: true
+    };
+    promos.push(newPromo);
+    localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(promos));
+    Database.logSystemEvent('INFO', 'Promo Created', `Created code ${code} (${discount}%)`);
+    return newPromo;
+  },
+
+  deletePromoCode: (id: string) => {
+      let promos = Database.getPromoCodes();
+      promos = promos.filter(p => p.id !== id);
+      localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(promos));
+  },
+
   // --- Email Simulation ---
   simulateSendEmail: (to: string, subject: string) => {
       Database.logSystemEvent('SUCCESS', 'Email Sent', `Sent '${subject}' to ${to}`);
-      // In a real app, this would trigger a backend API call to SendGrid/AWS SES
   },
 
   // --- Logging & Metrics ---
@@ -278,5 +305,17 @@ export const Database = {
           });
       }
       return metrics;
+  },
+
+  exportData: (type: 'USERS' | 'LOGS') => {
+      const data = type === 'USERS' ? Database.getAllUsers() : Database.getSystemLogs();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `peutic_${type.toLowerCase()}_export_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
   }
 };

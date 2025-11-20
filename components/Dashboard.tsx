@@ -312,14 +312,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                <span className="text-xl font-bold tracking-tight hidden md:block">Peutic</span>
             </div>
             
-            <div className="flex items-center gap-6">
-              <div className="hidden md:block px-4 py-2 bg-white rounded-lg border border-yellow-200 text-sm text-gray-500 font-medium italic shadow-sm">
+            <div className="flex items-center gap-3 md:gap-6">
+              <div className="hidden md:block px-4 py-2 bg-white rounded-lg border border-yellow-200 text-sm text-gray-500 font-medium italic shadow-sm max-w-xs truncate">
                 "{dailyInsight}"
               </div>
               
-              <div className="flex items-center gap-4 bg-gray-900 text-white px-5 py-2 rounded-full shadow-xl">
-                <div className="text-xs text-gray-400 font-medium uppercase tracking-wider">Balance</div>
-                <div className={`font-mono font-bold text-lg ${balance <= 0 ? 'text-red-500' : 'text-peutic-yellow'}`}>
+              <div className="flex items-center gap-2 md:gap-4 bg-gray-900 text-white px-3 md:px-5 py-2 rounded-full shadow-xl">
+                <div className="hidden md:block text-xs text-gray-400 font-medium uppercase tracking-wider">Balance</div>
+                <div className={`font-mono font-bold text-base md:text-lg ${balance <= 0 ? 'text-red-500' : 'text-peutic-yellow'}`}>
                     {Math.floor(balance)} mins
                 </div>
                 <button 
@@ -341,23 +341,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         <div className="flex flex-col md:flex-row gap-8">
            {/* Sidebar */}
            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-yellow-100 text-center">
-                    <div className="w-24 h-24 rounded-full bg-gray-200 mx-auto mb-4 overflow-hidden border-4 border-white shadow-lg">
+                <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-yellow-100 text-center flex md:block items-center gap-4 md:gap-0">
+                    <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gray-200 mx-auto md:mb-4 overflow-hidden border-4 border-white shadow-lg flex-shrink-0">
                         <img src={user.avatar} alt="User" className="w-full h-full" />
                     </div>
-                    <h3 className="font-bold text-lg">{user.name}</h3>
-                    <p className="text-sm text-gray-500 mb-4">Premium Member</p>
-                    {user.subscriptionStatus === 'BANNED' && (
-                      <p className="text-xs text-red-600 font-bold bg-red-100 p-1 rounded mb-2">ACCOUNT RESTRICTED</p>
-                    )}
-                    <button onClick={() => { setPaymentError(undefined); setShowPayment(true); }} className="w-full py-2 bg-peutic-yellow rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors">Add Funds</button>
+                    <div className="text-left md:text-center flex-1">
+                        <h3 className="font-bold text-lg">{user.name}</h3>
+                        <p className="text-sm text-gray-500 mb-0 md:mb-4">Premium Member</p>
+                        {user.subscriptionStatus === 'BANNED' && (
+                        <p className="text-xs text-red-600 font-bold bg-red-100 p-1 rounded mb-2 inline-block">ACCOUNT RESTRICTED</p>
+                        )}
+                        <button onClick={() => { setPaymentError(undefined); setShowPayment(true); }} className="hidden md:block w-full py-2 bg-peutic-yellow rounded-lg font-bold text-sm hover:bg-yellow-400 transition-colors mt-2">Add Funds</button>
+                    </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden flex md:block justify-between md:justify-start">
                     {[
                         { id: 'hub', icon: LayoutDashboard, label: 'Wellness Hub' },
                         { id: 'history', icon: Clock, label: 'History' },
@@ -366,10 +368,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                         <button
                             key={item.id}
                             onClick={() => setActiveTab(item.id as any)}
-                            className={`w-full flex items-center gap-3 px-6 py-4 text-sm font-bold transition-colors ${activeTab === item.id ? 'bg-black text-white' : 'text-gray-600 hover:bg-yellow-50'}`}
+                            className={`flex-1 md:w-full flex items-center justify-center md:justify-start gap-2 md:gap-3 px-4 md:px-6 py-4 text-xs md:text-sm font-bold transition-colors ${activeTab === item.id ? 'bg-black text-white' : 'text-gray-600 hover:bg-yellow-50'}`}
                         >
                             <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-peutic-yellow' : 'text-gray-400'}`} />
-                            {item.label}
+                            <span className="hidden md:inline">{item.label}</span>
                         </button>
                     ))}
                 </div>
@@ -414,8 +416,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                             <Wind className="w-5 h-5" />
                                         </div>
                                         <div className="text-left">
-                                            <span className="block font-bold">Breathe</span>
-                                            <span className="text-xs opacity-70">Panic Relief Tool</span>
+                                            <span className="block font-bold text-sm md:text-base">Breathe</span>
+                                            <span className="text-xs opacity-70 hidden md:inline">Panic Relief Tool</span>
                                         </div>
                                     </button>
 
@@ -427,8 +429,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                             <BookOpen className="w-5 h-5" />
                                         </div>
                                         <div className="text-left">
-                                            <span className="block font-bold">Journal</span>
-                                            <span className="text-xs opacity-70">Private Notes</span>
+                                            <span className="block font-bold text-sm md:text-base">Journal</span>
+                                            <span className="text-xs opacity-70 hidden md:inline">Private Notes</span>
                                         </div>
                                     </button>
                                 </div>
@@ -471,7 +473,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                             </div>
 
                             <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-                                <div>
+                                <div className="w-full md:w-auto">
                                     <h2 className="text-2xl font-bold text-gray-900">Your Care Team</h2>
                                     <p className="text-gray-500">Available 24/7 for video sessions.</p>
                                 </div>
@@ -487,7 +489,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                 </div>
                             </div>
 
-                            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {filteredCompanions.map(companion => (
                                     <div key={companion.id} className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                                         <div className="h-64 bg-gray-200 relative overflow-hidden">
@@ -544,17 +546,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                 <table className="w-full text-left">
                                     <thead className="bg-gray-50 text-gray-500 font-medium text-sm">
                                         <tr>
-                                            <th className="px-6 py-4">Description</th>
-                                            <th className="px-6 py-4">Date</th>
-                                            <th className="px-6 py-4">Minutes</th>
-                                            <th className="px-6 py-4">Status</th>
+                                            <th className="px-6 py-4 whitespace-nowrap">Description</th>
+                                            <th className="px-6 py-4 whitespace-nowrap">Date</th>
+                                            <th className="px-6 py-4 whitespace-nowrap">Minutes</th>
+                                            <th className="px-6 py-4 whitespace-nowrap">Status</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
                                         {transactions.map((tx) => (
                                             <tr key={tx.id} className="hover:bg-gray-50 transition-colors">
                                                 <td className="px-6 py-4 font-bold text-gray-900">{tx.description}</td>
-                                                <td className="px-6 py-4 text-gray-500 text-sm">{new Date(tx.date).toLocaleDateString()} {new Date(tx.date).toLocaleTimeString()}</td>
+                                                <td className="px-6 py-4 text-gray-500 text-sm">{new Date(tx.date).toLocaleDateString()}</td>
                                                 <td className={`px-6 py-4 font-bold ${tx.amount > 0 ? 'text-green-600' : 'text-gray-900'}`}>
                                                   {tx.amount > 0 ? '+' : ''}{tx.amount} mins
                                                 </td>

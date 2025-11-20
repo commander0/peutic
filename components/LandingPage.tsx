@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video } from 'lucide-react';
+import { Shield, Heart, Star, Clock, Users, CheckCircle, ArrowRight, Lock, Globe, Brain, Zap, ChevronDown, Play, MessageCircle, Signal, Video, Menu, X } from 'lucide-react';
 import { TRANSLATIONS, LanguageCode, getTranslation } from '../services/i18n';
 
 interface LandingPageProps {
@@ -10,6 +10,7 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [lang, setLang] = useState<LanguageCode>('en');
   const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [onlineCount, setOnlineCount] = useState(124);
 
   useEffect(() => {
@@ -24,23 +25,36 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
 
   const featuredSpecialists = [
     { name: "Ruby", role: "Anxiety & Panic", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" },
-    { name: "Elena", role: "Women's Health", img: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" }, // Added Elena
+    { name: "Elena", role: "Women's Health", img: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" },
     { name: "James", role: "Men's Health", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=400&h=400", status: "In Session" },
     { name: "Danny", role: "Grief Support", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" },
     { name: "Julia", role: "Relationships", img: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=400&h=400", status: "Available" }
   ];
 
+  // Updated with reliable SVG sources
   const pressLogos = [
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/0/0c/TechCrunch_logo_2013.svg/1200px-TechCrunch_logo_2013.svg.png",
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/The_New_York_Times.svg/1200px-The_New_York_Times.svg.png",
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/5/50/Wired_logo.svg/1200px-Wired_logo.svg.png",
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Bloomberg_L.P._logo.svg/1200px-Bloomberg_L.P._logo.svg.png",
-    "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b3/Forbes_logo.svg/1200px-Forbes_logo.svg.png"
+    "https://upload.wikimedia.org/wikipedia/commons/b/b9/TechCrunch_logo.svg",
+    "https://upload.wikimedia.org/wikipedia/commons/7/77/The_New_York_Times_logo.png", // NYT prefers PNG for web display usually, but this is a reliable path
+    "https://upload.wikimedia.org/wikipedia/commons/9/95/Wired_logo.svg",
+    "https://upload.wikimedia.org/wikipedia/commons/5/5e/Bloomberg_logo.svg",
+    "https://upload.wikimedia.org/wikipedia/commons/0/0c/Forbes_logo.svg"
   ];
 
   return (
-    <div className="min-h-screen bg-[#FFFBEB] font-sans text-gray-900 overflow-x-hidden">
+    <div className="min-h-screen bg-[#FFFBEB] font-sans text-gray-900 overflow-x-hidden relative">
       
+      {/* --- REALISTIC SUNRAY EFFECT --- */}
+      <div className="fixed -top-20 -right-20 w-[800px] h-[800px] pointer-events-none z-0 overflow-hidden opacity-80 mix-blend-soft-light">
+          {/* 1. The Sun Core (Bright Center) */}
+          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-yellow-200 rounded-full blur-[60px] opacity-80"></div>
+          
+          {/* 2. God Rays (Beams) */}
+          <div className="absolute top-0 right-0 w-full h-full bg-[conic-gradient(from_225deg_at_top_right,rgba(255,255,255,0.8)_0deg,transparent_15deg,rgba(255,223,0,0.3)_30deg,transparent_45deg)] blur-xl transform scale-150 origin-top-right"></div>
+          
+          {/* 3. Ambient Warm Glow (Wash) */}
+          <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-bl from-yellow-400/40 via-orange-200/10 to-transparent"></div>
+      </div>
+
       {/* NAVIGATION */}
       <nav className="fixed w-full bg-[#FFFBEB]/80 backdrop-blur-md z-50 border-b border-yellow-100 transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -52,6 +66,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                <span className="text-2xl font-bold tracking-tight">Peutic</span>
             </div>
             
+            {/* Desktop Nav */}
             <div className="hidden md:flex items-center space-x-8">
               <a href="#features" className="text-sm font-bold text-gray-600 hover:text-black transition-colors">{getTranslation(lang, 'nav_features')}</a>
               <a href="#how-it-works" className="text-sm font-bold text-gray-600 hover:text-black transition-colors">{getTranslation(lang, 'nav_how')}</a>
@@ -73,29 +88,50 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
               </div>
             </div>
 
-            <div className="flex items-center gap-4">
+            {/* Desktop CTA */}
+            <div className="hidden md:flex items-center gap-4">
                <button onClick={onLoginClick} className="text-sm font-bold hidden md:block">{getTranslation(lang, 'login')}</button>
                <button onClick={onLoginClick} className="bg-black text-white px-6 py-3 rounded-full font-bold hover:bg-gray-800 transition-transform hover:scale-105 shadow-lg flex items-center gap-2">
                   {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
                </button>
             </div>
+
+            {/* Mobile Menu Toggle */}
+            <button className="md:hidden p-2" onClick={() => setMobileMenuOpen(!mobileMenuOpen)}>
+                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
           </div>
         </div>
+
+        {/* Mobile Menu Dropdown */}
+        {mobileMenuOpen && (
+            <div className="md:hidden bg-white border-b border-yellow-100 p-4 shadow-xl absolute w-full left-0 top-20 animate-float" style={{animation: 'none'}}>
+                <div className="flex flex-col space-y-4">
+                    <a href="#features" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_features')}</a>
+                    <a href="#how-it-works" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_how')}</a>
+                    <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="text-lg font-bold text-gray-900">{getTranslation(lang, 'nav_membership')}</a>
+                    <div className="h-px bg-gray-100 my-2"></div>
+                    <button onClick={onLoginClick} className="text-lg font-bold text-gray-900 text-left">{getTranslation(lang, 'login')}</button>
+                    <button onClick={onLoginClick} className="bg-black text-white px-6 py-3 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2">
+                        {getTranslation(lang, 'cta_start')} <ArrowRight className="w-4 h-4" />
+                    </button>
+                </div>
+            </div>
+        )}
       </nav>
 
       {/* HERO SECTION */}
-      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden">
-          <div className="absolute top-0 right-0 w-2/3 h-full bg-gradient-to-l from-yellow-100/50 to-transparent rounded-l-[100px] -z-10"></div>
+      <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden z-10">
           
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div className="space-y-8 z-10">
+                  <div className="space-y-8 z-10 text-center lg:text-left">
                       <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-yellow-200 shadow-sm animate-float">
                           <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                           <span className="text-xs font-bold tracking-wide text-gray-600">{onlineCount} SPECIALISTS ONLINE NOW</span>
                       </div>
                       
-                      <h1 className="text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1]">
+                      <h1 className="text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1]">
                           {getTranslation(lang, 'hero_title_1')} <br/>
                           <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600 relative">
                               {getTranslation(lang, 'hero_title_2')}
@@ -103,17 +139,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                           </span>
                       </h1>
                       
-                      <p className="text-xl text-gray-600 max-w-lg leading-relaxed">
+                      <p className="text-lg md:text-xl text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
                           {getTranslation(lang, 'hero_subtitle')}
                       </p>
                       
-                      <div className="flex flex-col sm:flex-row gap-4">
+                      <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                           <button onClick={onLoginClick} className="px-8 py-4 bg-black text-white rounded-xl font-bold text-lg shadow-xl shadow-yellow-500/10 hover:bg-gray-900 transition-all hover:scale-105 flex items-center justify-center gap-3">
                               <Play className="w-5 h-5 fill-white" /> {getTranslation(lang, 'cta_start')}
                           </button>
-                          <div className="flex items-center gap-4 px-6 py-4 bg-white/50 rounded-xl border border-white backdrop-blur-sm">
+                          <div className="flex items-center gap-4 px-6 py-4 bg-white/50 rounded-xl border border-white backdrop-blur-sm justify-center">
                               <Shield className="w-6 h-6 text-gray-400" />
-                              <div className="text-xs font-bold text-gray-500">
+                              <div className="text-xs font-bold text-gray-500 text-left">
                                   {getTranslation(lang, 'cta_hipaa')}<br/>
                                   <span className="text-green-600">{getTranslation(lang, 'trust_soc2')}</span>
                               </div>
@@ -121,9 +157,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                       </div>
                   </div>
 
-                  <div className="relative lg:h-[600px] w-full flex items-center justify-center">
+                  <div className="relative lg:h-[600px] w-full flex items-center justify-center mt-12 lg:mt-0">
                       {/* HERO VIDEO UI MOCKUP */}
-                      <div className="relative w-[350px] h-[500px] bg-black rounded-[40px] border-8 border-white shadow-2xl overflow-hidden transform rotate-[-3deg] hover:rotate-0 transition-transform duration-500 z-20">
+                      <div className="relative w-[280px] md:w-[350px] h-[400px] md:h-[500px] bg-black rounded-[40px] border-8 border-white shadow-2xl overflow-hidden transform rotate-0 md:rotate-[-3deg] md:hover:rotate-0 transition-transform duration-500 z-20">
                            {/* Simulated Video Feed */}
                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800" className="absolute inset-0 w-full h-full object-cover" alt="Specialist" />
                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
@@ -154,7 +190,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                       </div>
 
                       {/* Floating Elements */}
-                      <div className="absolute top-20 -right-4 bg-white p-4 rounded-2xl shadow-xl animate-float flex items-center gap-3 z-30">
+                      <div className="hidden md:flex absolute top-20 -right-4 bg-white p-4 rounded-2xl shadow-xl animate-float items-center gap-3 z-30">
                           <div className="bg-green-100 p-2 rounded-full"><CheckCircle className="w-6 h-6 text-green-600" /></div>
                           <div>
                               <p className="text-xs text-gray-400 font-bold uppercase">Status</p>
@@ -162,7 +198,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                           </div>
                       </div>
 
-                      <div className="absolute bottom-32 -left-12 bg-white p-4 rounded-2xl shadow-xl animate-float flex items-center gap-3 z-30" style={{animationDelay: '2s'}}>
+                      <div className="hidden md:flex absolute bottom-32 -left-12 bg-white p-4 rounded-2xl shadow-xl animate-float items-center gap-3 z-30" style={{animationDelay: '2s'}}>
                           <div className="bg-yellow-100 p-2 rounded-full"><Star className="w-6 h-6 text-yellow-600" /></div>
                           <div>
                               <p className="text-xs text-gray-400 font-bold uppercase">Rating</p>
@@ -175,23 +211,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* PRESS BANNER (MARQUEE) */}
-      <section className="py-10 border-y border-yellow-100 bg-white overflow-hidden">
+      <section className="py-10 border-y border-yellow-100 bg-white/80 backdrop-blur-sm overflow-hidden z-10 relative">
           <p className="text-center text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mb-8">Trusted by Industry Leaders</p>
           <div className="relative flex overflow-x-hidden group">
               <div className="animate-marquee whitespace-nowrap flex items-center gap-16 px-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
                   {[...pressLogos, ...pressLogos, ...pressLogos].map((logo, i) => (
-                      <img key={i} src={logo} className="h-8 object-contain inline-block" alt="Press Logo" />
+                      <img key={i} src={logo} className="h-6 md:h-8 object-contain inline-block" alt="Press Logo" />
                   ))}
               </div>
           </div>
       </section>
 
       {/* SCIENCE / STATS */}
-      <section className="py-24 bg-black text-white relative overflow-hidden">
+      <section className="py-24 bg-black text-white relative overflow-hidden z-10">
           <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-peutic-yellow rounded-full blur-[120px] opacity-10"></div>
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
               <div className="text-center max-w-3xl mx-auto mb-16">
-                  <h2 className="text-4xl font-black mb-6">{getTranslation(lang, 'science_title')}</h2>
+                  <h2 className="text-3xl md:text-4xl font-black mb-6">{getTranslation(lang, 'science_title')}</h2>
                   <p className="text-gray-400 text-lg">{getTranslation(lang, 'science_subtitle')}</p>
               </div>
 
@@ -213,14 +249,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* SPECIALIST CAROUSEL */}
-      <section className="py-24 bg-[#FFFBEB]">
+      <section className="py-24 bg-[#FFFBEB] z-10 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex justify-between items-end mb-12">
+              <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
                   <div>
-                    <h2 className="text-4xl font-black mb-4">Meet The Team</h2>
+                    <h2 className="text-3xl md:text-4xl font-black mb-4">Meet The Team</h2>
                     <p className="text-gray-600 max-w-xl">Real humans. Real empathy. Select a specialist that resonates with you.</p>
                   </div>
-                  <button onClick={onLoginClick} className="hidden md:flex items-center gap-2 font-bold hover:gap-3 transition-all">View All <ArrowRight className="w-4 h-4" /></button>
+                  <button onClick={onLoginClick} className="flex items-center gap-2 font-bold hover:gap-3 transition-all">View All <ArrowRight className="w-4 h-4" /></button>
               </div>
 
               <div className="flex gap-6 overflow-x-auto pb-8 no-scrollbar snap-x">
@@ -241,7 +277,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* EXPERIENCE SECTION */}
-      <section id="how-it-works" className="py-24 bg-white">
+      <section id="how-it-works" className="py-24 bg-white z-10 relative">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid md:grid-cols-2 gap-16 items-center">
                   <div className="order-2 md:order-1">
@@ -259,7 +295,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                        </div>
                   </div>
                   <div className="order-1 md:order-2 space-y-8">
-                      <h2 className="text-4xl font-black">{getTranslation(lang, 'why_choose')}</h2>
+                      <h2 className="text-3xl md:text-4xl font-black">{getTranslation(lang, 'why_choose')}</h2>
                       
                       <div className="space-y-6">
                           <div className="flex gap-4 items-start">
@@ -296,12 +332,12 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* PRICING / CTA */}
-      <section id="pricing" className="py-24 bg-black text-white text-center">
+      <section id="pricing" className="py-24 bg-black text-white text-center z-10 relative">
           <div className="max-w-4xl mx-auto px-4">
-              <h2 className="text-5xl font-black mb-8 tracking-tight">Simple, Transparent Pricing.</h2>
-              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-12 inline-block max-w-lg w-full">
+              <h2 className="text-4xl md:text-5xl font-black mb-8 tracking-tight">Simple, Transparent Pricing.</h2>
+              <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-3xl p-8 md:p-12 inline-block max-w-lg w-full">
                   <p className="text-gray-400 font-bold uppercase tracking-widest mb-4">{getTranslation(lang, 'pricing_title')}</p>
-                  <div className="text-7xl font-black text-peutic-yellow mb-4 flex items-start justify-center gap-1">
+                  <div className="text-6xl md:text-7xl font-black text-peutic-yellow mb-4 flex items-start justify-center gap-1">
                       <span className="text-3xl mt-2">$</span>1.49<span className="text-xl text-gray-400 mt-8">/min</span>
                   </div>
                   <p className="text-gray-300 mb-8">{getTranslation(lang, 'pricing_desc')}</p>
@@ -318,7 +354,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-black text-gray-500 py-12 border-t border-gray-800">
+      <footer className="bg-black text-gray-500 py-12 border-t border-gray-800 z-10 relative">
           <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-6">
               <div className="flex items-center gap-2">
                   <Heart className="w-5 h-5 text-gray-600" />

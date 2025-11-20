@@ -78,3 +78,11 @@ export interface JournalEntry {
   date: string;
   content: string;
 }
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  discountPercentage: number; // e.g., 10 for 10% off top-ups
+  uses: number;
+  active: boolean;
+}
