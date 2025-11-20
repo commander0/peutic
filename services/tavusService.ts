@@ -1,5 +1,5 @@
 
-const TAVUS_API_URL = 'https://tavusapi.com/v2/conversations';
+const TAVUS_API_URL = 'https://tavusapi.com/v2';
 const API_KEY = 'ae15b9c744264844a555049b576094d8';
 
 export interface TavusConversationResponse {
@@ -25,7 +25,7 @@ export const createTavusConversation = async (replicaId: string, userName: strin
   };
 
   try {
-    const response = await fetch(TAVUS_API_URL, {
+    const response = await fetch(`${TAVUS_API_URL}/conversations`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -70,5 +70,23 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     }
     console.error("Tavus Service Exception:", error);
     throw error;
+  }
+};
+
+export const listReplicas = async (): Promise<any[]> => {
+  try {
+    const response = await fetch(`${TAVUS_API_URL}/replicas`, {
+      method: 'GET',
+      headers: {
+        'x-api-key': API_KEY,
+      },
+    });
+
+    if (!response.ok) return [];
+    const data = await response.json();
+    return data.data || []; // Assuming standard paginated response or array
+  } catch (error) {
+    console.warn("Failed to fetch real Tavus thumbnails (likely CORS). Using high-fidelity fallbacks.");
+    return [];
   }
 };
