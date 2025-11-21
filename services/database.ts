@@ -2,7 +2,7 @@
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
 // Simulation of a Backend using LocalStorage
-// VERSIONED KEYS TO FORCE RESET
+// VERSIONED KEYS TO FORCE RESET (Updated to v4)
 const DB_KEYS = {
   USER: 'peutic_db_current_user_v4',
   ALL_USERS: 'peutic_db_users_v4', 
