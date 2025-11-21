@@ -69,7 +69,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   };
 
   const featuredSpecialists = [
-    // REVERTED TO ORIGINAL RUBY IMAGE
+    // RESTORED ORIGINAL RUBY (Warm & Inviting Caucasian)
     { name: "Ruby", role: "Anxiety & Panic", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
     { name: "Elena", role: "Women's Health", img: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
     { name: "James", role: "Men's Health", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600&h=600", status: "In Session" },
@@ -188,7 +188,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   <div className="relative lg:h-[600px] w-full flex items-center justify-center mt-12 lg:mt-0 animate-in slide-in-from-right-10 duration-700 fade-in">
                       {/* HERO VIDEO UI MOCKUP */}
                       <div className="relative w-[280px] md:w-[350px] h-[400px] md:h-[500px] bg-black rounded-[40px] border-8 border-white shadow-2xl overflow-hidden transform rotate-0 md:rotate-[-3deg] md:hover:rotate-0 transition-transform duration-500 z-20">
-                           {/* Simulated Video Feed - REVERTED TO ORIGINAL RUBY */}
+                           {/* Simulated Video Feed - RESTORED ORIGINAL RUBY */}
                            <img src="https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800" className="absolute inset-0 w-full h-full object-cover" alt="Specialist" />
                            <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60"></div>
                            

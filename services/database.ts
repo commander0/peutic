@@ -2,25 +2,25 @@
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
 // Simulation of a Backend using LocalStorage
-// VERSIONED KEYS TO FORCE RESET (Updated to v4)
+// VERSIONED KEYS TO FORCE RESET (Updated to v5)
 const DB_KEYS = {
-  USER: 'peutic_db_current_user_v4',
-  ALL_USERS: 'peutic_db_users_v4', 
-  COMPANIONS: 'peutic_db_companions_v4',
-  TRANSACTIONS: 'peutic_db_transactions_v4',
-  SETTINGS: 'peutic_db_settings_v4',
-  LOGS: 'peutic_db_logs_v4',
-  MOODS: 'peutic_db_moods_v4',
-  JOURNALS: 'peutic_db_journals_v4',
-  PROMOS: 'peutic_db_promos_v4',
-  QUEUE: 'peutic_db_queue_v4',
-  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v4',
-  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v4'
+  USER: 'peutic_db_current_user_v5',
+  ALL_USERS: 'peutic_db_users_v5', 
+  COMPANIONS: 'peutic_db_companions_v5',
+  TRANSACTIONS: 'peutic_db_transactions_v5',
+  SETTINGS: 'peutic_db_settings_v5',
+  LOGS: 'peutic_db_logs_v5',
+  MOODS: 'peutic_db_moods_v5',
+  JOURNALS: 'peutic_db_journals_v5',
+  PROMOS: 'peutic_db_promos_v5',
+  QUEUE: 'peutic_db_queue_v5',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v5',
+  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v5'
 };
 
 // Initial Seed Data
 const INITIAL_COMPANIONS: Companion[] = [
-  // Restored Original Ruby Image (Warm & Inviting)
+  // Restored Original Ruby Image (Warm & Inviting Caucasian)
   { id: 'c1', name: 'Ruby', specialty: 'Anxiety & Panic', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Specializing in grounding techniques and immediate stress relief.', replicaId: 're3a705cf66a' },
   { id: 'c2', name: 'Carter', specialty: 'Life Coaching', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Helping you build a roadmap for personal success.', replicaId: 'rca8a38779a8' },
   { id: 'c3', name: 'James', specialty: 'Men\'s Health', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200&h=200', bio: 'A safe space to discuss pressure, expectations, and balance.', replicaId: 'r92debe21318' },
