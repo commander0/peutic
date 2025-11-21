@@ -13,8 +13,8 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     throw new Error("Configuration Error: Missing Tavus API Key");
   }
 
-  // Use provided specific context (Persona) or fall back to generic
-  const systemContext = context || `You are an empathetic, professional, and warm human specialist. You are speaking with ${userName}. Your role is to listen actively, provide emotional support, and help them process their thoughts. Keep your answers concise (2-3 sentences) to keep the conversation flowing naturally. Do not mention you are an AI.`;
+  // Updated system context to explicitly instruction Multilingual Capabilities
+  const systemContext = context || `You are an empathetic, professional, and warm human specialist. You are speaking with ${userName}. Your role is to listen actively, provide emotional support, and help them process their thoughts. You are fluent in all languages. Detect the user's language instantly and respond in that same language with zero latency. Do not mention you are an AI.`;
 
   const body = {
     replica_id: replicaId,
@@ -23,7 +23,8 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     properties: {
       max_call_duration: 3600,
       enable_recording: true,
-      enable_transcription: true
+      enable_transcription: true,
+      language: 'multilingual' // Enable Auto-Detect Multilingual Mode
     }
   };
 
@@ -42,7 +43,6 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     if (!response.ok) {
       const errorMsg = data.message || data.error || response.statusText;
       
-      // Explicitly catch the credit error so the UI can gracefully switch modes
       if (response.status === 402 || errorMsg.includes('out of conversational credits') || errorMsg.includes('quota')) {
         throw new Error("Tavus Billing Error: The account is out of credits.");
       }
@@ -64,7 +64,6 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     };
 
   } catch (error: any) {
-    // Propagate specific billing errors without logging them as system failures
     if (error.message.includes("Tavus Billing Error")) {
         throw error;
     }
@@ -87,7 +86,7 @@ export const listReplicas = async (): Promise<any[]> => {
 
     if (!response.ok) return [];
     const data = await response.json();
-    return data.data || []; // Assuming standard paginated response or array
+    return data.data || []; 
   } catch (error) {
     console.warn("Failed to fetch real Tavus thumbnails (likely CORS). Using high-fidelity fallbacks.");
     return [];
