@@ -1,20 +1,21 @@
+
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
 // Simulation of a Backend using LocalStorage
-// VERSIONED KEYS TO FORCE RESET (Updated to v5)
+// VERSIONED KEYS TO FORCE RESET (Updated to v6)
 const DB_KEYS = {
-  USER: 'peutic_db_current_user_v5',
-  ALL_USERS: 'peutic_db_users_v5', 
-  COMPANIONS: 'peutic_db_companions_v5',
-  TRANSACTIONS: 'peutic_db_transactions_v5',
-  SETTINGS: 'peutic_db_settings_v5',
-  LOGS: 'peutic_db_logs_v5',
-  MOODS: 'peutic_db_moods_v5',
-  JOURNALS: 'peutic_db_journals_v5',
-  PROMOS: 'peutic_db_promos_v5',
-  QUEUE: 'peutic_db_queue_v5',
-  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v5',
-  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v5'
+  USER: 'peutic_db_current_user_v6',
+  ALL_USERS: 'peutic_db_users_v6', 
+  COMPANIONS: 'peutic_db_companions_v6',
+  TRANSACTIONS: 'peutic_db_transactions_v6',
+  SETTINGS: 'peutic_db_settings_v6',
+  LOGS: 'peutic_db_logs_v6',
+  MOODS: 'peutic_db_moods_v6',
+  JOURNALS: 'peutic_db_journals_v6',
+  PROMOS: 'peutic_db_promos_v6',
+  QUEUE: 'peutic_db_queue_v6',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v6',
+  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v6'
 };
 
 // Initial Seed Data
@@ -180,8 +181,17 @@ export class Database {
   }
 
   // --- TRANSACTIONS ---
-  static topUpWallet(minutes: number, cost: number) {
-    const user = this.getUser();
+  // FIXED: Accepts optional targetUserId to top up a specific user instead of the admin.
+  static topUpWallet(minutes: number, cost: number, targetUserId?: string) {
+    let user = null;
+    
+    if (targetUserId) {
+        const allUsers = this.getAllUsers();
+        user = allUsers.find(u => u.id === targetUserId) || null;
+    } else {
+        user = this.getUser();
+    }
+
     if (user) {
       user.balance += minutes;
       this.updateUser(user);
