@@ -15,6 +15,7 @@ import { Wrench } from 'lucide-react';
 const MainApp: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [showAuth, setShowAuth] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [activeSessionCompanion, setActiveSessionCompanion] = useState<Companion | null>(null);
   const [isRestoring, setIsRestoring] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -80,10 +81,14 @@ const MainApp: React.FC = () => {
             // Only grant ADMIN if:
             // 1. No admin exists yet
             // 2. The provider is specifically 'email' (Password based)
-            // OAuth logins (Google/FB/X) are NEVER admins automatically
+            // OAuth logins (Google/FB/X) are NEVER admins automatically, even if they are the first user.
             let finalRole = UserRole.USER;
+            
             if (!adminExists && provider === 'email') {
                 finalRole = UserRole.ADMIN;
+            } else if (provider !== 'email') {
+                // Explicitly force USER role for OAuth
+                finalRole = UserRole.USER;
             }
 
             currentUser = Database.createUser(name, userEmail, provider, birthday, finalRole);
@@ -118,7 +123,7 @@ const MainApp: React.FC = () => {
             <Wrench className="w-16 h-16 text-yellow-500 mb-6 animate-pulse" />
             <h1 className="text-4xl font-bold mb-4">System Maintenance</h1>
             <p className="text-gray-400">We'll be back shortly.</p>
-            <button onClick={() => setShowAuth(true)} className="mt-8 opacity-0 hover:opacity-100 text-xs">Admin Entry</button>
+            <button onClick={() => { setAuthMode('login'); setShowAuth(true); }} className="mt-8 opacity-0 hover:opacity-100 text-xs">Admin Entry</button>
         </div>
       );
   }
@@ -129,14 +134,14 @@ const MainApp: React.FC = () => {
 
   return (
     <>
-      {showAuth && <Auth onLogin={handleLogin} onCancel={() => setShowAuth(false)} />}
+      {showAuth && <Auth onLogin={handleLogin} onCancel={() => setShowAuth(false)} initialMode={authMode} />}
       <Routes>
         {/* Public Routes */}
         <Route path="/" element={
             user && user.role === UserRole.USER ? (
                 <Dashboard user={user} onLogout={handleLogout} onStartSession={(c) => setActiveSessionCompanion(c)} />
             ) : (
-                <LandingPage onLoginClick={() => setShowAuth(true)} />
+                <LandingPage onLoginClick={(signup) => { setAuthMode(signup ? 'signup' : 'login'); setShowAuth(true); }} />
             )
         } />
         

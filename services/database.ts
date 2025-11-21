@@ -13,11 +13,13 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals',
   PROMOS: 'peutic_db_promos',
   QUEUE: 'peutic_db_queue',
-  ACTIVE_SESSIONS: 'peutic_db_active_sessions'
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions',
+  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts'
 };
 
 // Initial Seed Data
 const INITIAL_COMPANIONS: Companion[] = [
+  // Restored Original Ruby Image (Warm & Inviting)
   { id: 'c1', name: 'Ruby', specialty: 'Anxiety & Panic', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Specializing in grounding techniques and immediate stress relief.', replicaId: 're3a705cf66a' },
   { id: 'c2', name: 'Carter', specialty: 'Life Coaching', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Helping you build a roadmap for personal success.', replicaId: 'rca8a38779a8' },
   { id: 'c3', name: 'James', specialty: 'Men\'s Health', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=200&h=200', bio: 'A safe space to discuss pressure, expectations, and balance.', replicaId: 'r92debe21318' },
@@ -56,6 +58,11 @@ export class Database {
 
   static createUser(name: string, email: string, provider: 'email' | 'google' | 'facebook' | 'x', birthday?: string, role: UserRole = UserRole.USER): User {
     const users = this.getAllUsers();
+    // SECURITY: OAuth users are ALWAYS guests/users. Only 'email' can trigger Admin creation.
+    if (role === UserRole.ADMIN && provider !== 'email') {
+        role = UserRole.USER; 
+    }
+
     const newUser: User = {
       id: `u_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
@@ -72,6 +79,7 @@ export class Database {
     users.push(newUser);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     this.saveUserSession(newUser);
+    this.sendEmail(email, 'Welcome to Peutic', 'Your account has been successfully created.');
     return newUser;
   }
 
@@ -107,6 +115,42 @@ export class Database {
 
   static hasAdmin(): boolean {
       return this.getAllUsers().some(u => u.role === UserRole.ADMIN);
+  }
+
+  // --- ADMIN SECURITY ---
+  static checkAdminLockout(): number | null {
+      const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
+      if (!attemptsStr) return null;
+      const data = JSON.parse(attemptsStr);
+      if (data.count >= 5) {
+          const now = Date.now();
+          const diff = now - data.lastAttempt;
+          if (diff < 24 * 60 * 60 * 1000) { // 24 Hours
+              return Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 1000)); // Mins remaining
+          } else {
+              localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS); // Reset after 24h
+              return null;
+          }
+      }
+      return null;
+  }
+
+  static recordAdminFailure() {
+      const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
+      let data = attemptsStr ? JSON.parse(attemptsStr) : { count: 0, lastAttempt: Date.now() };
+      data.count += 1;
+      data.lastAttempt = Date.now();
+      localStorage.setItem(DB_KEYS.ADMIN_ATTEMPTS, JSON.stringify(data));
+  }
+
+  static resetAdminFailure() {
+      localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS);
+  }
+
+  // --- EMAIL SIMULATION ---
+  static sendEmail(to: string, subject: string, body: string) {
+      this.logSystemEvent('INFO', 'Email Sent', `Sent "${subject}" to ${to}`);
+      console.log(`[EMAIL SIMULATION] To: ${to} | Subject: ${subject} | Body: ${body}`);
   }
 
   // --- COMPANION MANAGEMENT ---
@@ -333,3 +377,4 @@ export class Database {
       this.logSystemEvent('INFO', 'Data Export', `Admin exported ${type} database`);
   }
 }
+    
