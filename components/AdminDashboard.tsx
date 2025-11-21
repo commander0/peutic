@@ -9,7 +9,7 @@ import {
     Search, Edit2, Ban, Zap, ShieldAlert, 
     Terminal, Globe, AlertOctagon, Megaphone, Menu, X, Gift, Download, Tag,
     Clock, Wifi, WifiOff, Server, Cpu, HardDrive, Eye, Heart, Lock, CheckCircle, AlertTriangle, 
-    FileText, MessageSquare, Repeat, Shield, Plus, Trash2, Send, Power
+    FileText, MessageSquare, Repeat, Shield, Plus, Trash2, Send, Power, Image as ImageIcon
 } from 'lucide-react';
 import { Database } from '../services/database';
 import { User, UserRole, Companion, Transaction, GlobalSettings, SystemLog, ServerMetric, PromoCode } from '../types';
@@ -34,6 +34,30 @@ const StatCard = ({ title, value, icon: Icon, subValue, subLabel }: any) => (
       )}
   </div>
 );
+
+// --- AVATAR COMPONENT FOR ADMIN ---
+const AvatarImage: React.FC<{ src: string; alt: string; className?: string; onError?: (e: any) => void }> = ({ src, alt, className, onError }) => {
+    const [imgSrc, setImgSrc] = useState(src);
+
+    useEffect(() => { setImgSrc(src); }, [src]);
+
+    const handleError = (e: any) => {
+        const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=FACC15&color=000&size=512`;
+        if (imgSrc !== fallback) {
+            setImgSrc(fallback);
+        }
+        if (onError) onError(e);
+    };
+
+    return (
+        <img 
+            src={imgSrc} 
+            alt={alt} 
+            className={className} 
+            onError={handleError} 
+        />
+    );
+};
 
 const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'specialists' | 'financials' | 'marketing' | 'settings' | 'security'>('overview');
@@ -60,6 +84,11 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [fundAmount, setFundAmount] = useState(0);
+
+  // Image Edit Modal
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
+  const [newImageUrl, setNewImageUrl] = useState('');
 
   // Refresh Loop
   useEffect(() => {
@@ -102,7 +131,6 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const handleAddFunds = () => {
       if (selectedUser && fundAmount > 0) {
-          // FIXED: Passed selectedUser.id to ensure funds go to the user, not the admin
           Database.topUpWallet(fundAmount, 0, selectedUser.id); 
           Database.logSystemEvent('WARNING', 'Admin Grant', `Granted ${fundAmount} mins to ${selectedUser.email}`);
           setShowUserModal(false);
@@ -122,6 +150,22 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       if (comp) {
           const updated = { ...comp, status };
           Database.updateCompanion(updated);
+      }
+  };
+
+  const openImageModal = (companion: Companion) => {
+      setSelectedCompanion(companion);
+      setNewImageUrl(companion.imageUrl);
+      setShowImageModal(true);
+  };
+
+  const handleUpdateImage = () => {
+      if (selectedCompanion && newImageUrl) {
+          const updated = { ...selectedCompanion, imageUrl: newImageUrl };
+          Database.updateCompanion(updated);
+          Database.logSystemEvent('INFO', 'Companion Update', `Updated image for ${selectedCompanion.name}`);
+          setShowImageModal(false);
+          setSelectedCompanion(null);
       }
   };
 
@@ -297,9 +341,13 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           {activeTab === 'specialists' && (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                   {companions.map(c => (
-                      <div key={c.id} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all shadow-lg group">
+                      <div key={c.id} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden hover:border-gray-700 transition-all shadow-lg group relative">
                           <div className="h-48 bg-gray-800 relative">
-                              <img src={c.imageUrl} alt={c.name} className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" />
+                              <AvatarImage 
+                                  src={c.imageUrl} 
+                                  alt={c.name} 
+                                  className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity" 
+                              />
                               <div className="absolute inset-0 bg-gradient-to-t from-gray-900 to-transparent"></div>
                               <div className={`absolute top-3 right-3 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md ${c.status === 'AVAILABLE' ? 'bg-green-500 text-black' : c.status === 'BUSY' ? 'bg-yellow-500 text-black' : 'bg-red-500 text-white'}`}>
                                   {c.status}
@@ -308,6 +356,13 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                   <h3 className="text-xl font-bold text-white">{c.name}</h3>
                                   <p className="text-xs text-gray-400">{c.specialty}</p>
                               </div>
+                              <button 
+                                  onClick={() => openImageModal(c)}
+                                  className="absolute top-3 left-3 p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-white hover:text-black transition-colors z-10"
+                                  title="Edit Avatar Image"
+                              >
+                                  <ImageIcon className="w-4 h-4" />
+                              </button>
                           </div>
                           <div className="p-6">
                               <div className="flex justify-between items-center mb-6 text-xs font-mono text-gray-500">
@@ -601,6 +656,38 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   <div className="flex gap-3">
                       <button onClick={() => setShowUserModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">Cancel</button>
                       <button onClick={handleAddFunds} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-900/20">Confirm Grant</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* IMAGE EDIT MODAL */}
+      {showImageModal && selectedCompanion && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-gray-900 border border-gray-800 w-full max-w-md rounded-3xl p-8 text-center shadow-2xl">
+                  <h3 className="text-2xl font-bold text-white mb-2">Update Avatar Image</h3>
+                  <p className="text-gray-400 mb-6 text-sm">Change the display image for {selectedCompanion.name}.</p>
+                  
+                  <div className="mb-6 flex justify-center">
+                      <div className="w-24 h-24 rounded-full bg-gray-800 overflow-hidden border-4 border-yellow-500">
+                          <AvatarImage src={newImageUrl || selectedCompanion.imageUrl} alt="Preview" className="w-full h-full object-cover" />
+                      </div>
+                  </div>
+
+                  <div className="mb-6">
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2 text-left">Image URL</label>
+                      <input 
+                          type="text" 
+                          className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-yellow-500 outline-none"
+                          placeholder="https://..."
+                          value={newImageUrl}
+                          onChange={e => setNewImageUrl(e.target.value)}
+                      />
+                  </div>
+
+                  <div className="flex gap-3">
+                      <button onClick={() => setShowImageModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">Cancel</button>
+                      <button onClick={handleUpdateImage} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-900/20">Save Changes</button>
                   </div>
               </div>
           </div>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types';
 import { 
@@ -24,6 +25,27 @@ declare global {
     Stripe?: any;
   }
 }
+
+// --- AVATAR COMPONENT WITH FALLBACK ---
+const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
+    const [imgSrc, setImgSrc] = useState(src);
+
+    useEffect(() => { setImgSrc(src); }, [src]);
+
+    const handleError = () => {
+        // Fallback to a reliable generator if the main image fails
+        setImgSrc(`https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=FACC15&color=000&size=512`);
+    };
+
+    return (
+        <img 
+            src={imgSrc} 
+            alt={alt} 
+            className={className} 
+            onError={handleError} 
+        />
+    );
+};
 
 // --- CONFETTI COMPONENT ---
 const Confetti: React.FC = () => {
@@ -506,8 +528,8 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
                     {/* Right: Games */}
                     <div className="w-full lg:w-2/3 bg-white rounded-3xl border border-gray-200 shadow-inner p-2 flex flex-col">
                         <div className="flex justify-center gap-2 mb-2 bg-gray-50 p-1 rounded-xl self-center">
-                            <button onClick={() => setSelectedGame('cloud')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'cloud' ? 'bg-sky-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'}`}><Cloud className="w-4 h-4"/> Cloud Hop</button>
-                            <button onClick={() => setSelectedGame('mindful')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'mindful' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-500 hover:bg-gray-200'}`}><Sparkles className="w-4 h-4"/> Mindful Match</button>
+                            <button onClick={() => setSelectedGame('cloud')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'cloud' ? 'bg-sky-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}><Cloud className="w-4 h-4"/> Cloud Hop</button>
+                            <button onClick={() => setSelectedGame('mindful')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'mindful' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}><Sparkles className="w-4 h-4"/> Mindful Match</button>
                         </div>
                         <div className="flex-1 overflow-hidden rounded-2xl relative border border-gray-100">
                             {selectedGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
@@ -519,12 +541,12 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
     );
 };
 
-// ... (PaymentModal and BreathingExercise remain unchanged from previous version but included for completeness in file write) ...
 const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, cost: number) => void; initialError?: string }> = ({ onClose, onSuccess, initialError }) => {
     const [amount, setAmount] = useState(20);
     const [isCustom, setIsCustom] = useState(false);
     const [processing, setProcessing] = useState(false);
     const [error, setError] = useState<string | null>(initialError || null);
+    
     const stripeRef = useRef<any>(null);
     const elementsRef = useRef<any>(null);
     const cardElementRef = useRef<any>(null);
@@ -533,11 +555,14 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
     const pricePerMin = settings.pricePerMinute;
 
     useEffect(() => {
-        if (!window.Stripe) { setError("Stripe failed to load."); return; }
+        if (!window.Stripe) { setError("Stripe failed to load. Please refresh."); return; }
         if (!stripeRef.current) {
             stripeRef.current = window.Stripe(STRIPE_PUBLISHABLE_KEY);
             elementsRef.current = stripeRef.current.elements();
-            const style = { base: { color: "#32325d", fontFamily: '"Manrope", sans-serif', fontSize: "16px" } };
+            const style = {
+                base: { color: "#32325d", fontFamily: '"Manrope", sans-serif', fontSmoothing: "antialiased", fontSize: "16px", "::placeholder": { color: "#aab7c4" } },
+                invalid: { color: "#fa755a", iconColor: "#fa755a" }
+            };
             if (!cardElementRef.current) {
                 cardElementRef.current = elementsRef.current.create("card", { style: style, hidePostalCode: true });
                 setTimeout(() => { if (mountNodeRef.current) cardElementRef.current.mount(mountNodeRef.current); }, 100);
@@ -549,39 +574,51 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
         e.preventDefault();
         setProcessing(true);
         setError(null);
-        if (!amount || amount <= 0) { setError("Invalid amount."); setProcessing(false); return; }
-        if (!stripeRef.current || !cardElementRef.current) { setError("Payment error."); setProcessing(false); return; }
+        if (!amount || amount <= 0) { setError("Please enter a valid amount."); setProcessing(false); return; }
+        if (!stripeRef.current || !cardElementRef.current) { setError("Payment system not initialized."); setProcessing(false); return; }
         try {
             const result = await stripeRef.current.createToken(cardElementRef.current);
             if (result.error) { setError(result.error.message); setProcessing(false); } else {
                 setTimeout(() => { setProcessing(false); const minutesAdded = Math.floor(amount / pricePerMin); onSuccess(minutesAdded, amount); }, 1500);
             }
-        } catch (err: any) { setError(err.message); setProcessing(false); }
+        } catch (err: any) { setError(err.message || "Payment failed."); setProcessing(false); }
     };
 
     return (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-8">
-                <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl font-bold">Add Credits</h3>
-                    <button onClick={onClose}><X className="w-5 h-5"/></button>
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in duration-300">
+                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+                    <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-green-600" /><span className="font-bold text-gray-700">Secure Checkout</span></div>
+                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition"><X className="w-5 h-5" /></button>
                 </div>
-                <div className="mb-6 flex flex-wrap gap-2 justify-center">
-                    {[20, 50, 100, 250].map((val) => (
-                        <button key={val} onClick={() => { setAmount(val); setIsCustom(false); }} className={`px-4 py-2 rounded-xl font-bold border ${amount === val && !isCustom ? 'bg-black text-white' : 'hover:bg-gray-100'}`}>${val}</button>
-                    ))}
-                    <button onClick={() => { setIsCustom(true); setAmount(0); }} className={`px-4 py-2 rounded-xl font-bold border ${isCustom ? 'bg-black text-white' : 'hover:bg-gray-100'}`}>Custom</button>
+                <div className="p-8">
+                    <div className="mb-8 text-center">
+                        <p className="text-gray-500 text-sm mb-4 font-medium">Select Amount to Add</p>
+                        {!isCustom && <h2 className="text-5xl font-extrabold tracking-tight mb-6">${amount.toFixed(2)}</h2>}
+                        <div className="flex justify-center gap-2 mb-6 flex-wrap">
+                            {[20, 50, 100, 250].map((val) => (
+                                <button key={val} type="button" onClick={() => { setAmount(val); setIsCustom(false); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!isCustom && amount === val ? 'bg-black text-white shadow-lg transform scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>${val}</button>
+                            ))}
+                            <button type="button" onClick={() => { setIsCustom(true); setAmount(0); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isCustom ? 'bg-black text-white shadow-lg transform scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Custom</button>
+                        </div>
+                        {isCustom && (
+                            <div className="mb-6 animate-in fade-in zoom-in duration-300">
+                                <div className="relative max-w-[180px] mx-auto">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">$</span>
+                                    <input type="number" min="1" step="1" value={amount === 0 ? '' : amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-300 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none text-2xl font-bold text-center" placeholder="0.00" autoFocus />
+                                </div>
+                            </div>
+                        )}
+                        <p className="text-xs text-gray-400 mt-2">Adds approx. <span className="font-bold text-black">{Math.floor((amount || 0) / pricePerMin)} mins</span> of talk time.</p>
+                    </div>
+                    {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg flex items-center gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0" /><span>{error}</span></div>}
+                    <form onSubmit={handleSubmit} className="space-y-6">
+                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200"><div ref={mountNodeRef} className="p-2" /></div>
+                        <button type="submit" disabled={processing || !window.Stripe || (amount <= 0)} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${processing || (amount <= 0) ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-peutic-yellow text-black hover:bg-yellow-400 hover:scale-[1.02]'}`}>
+                            {processing ? <span className="animate-pulse">Processing Securely...</span> : <><Lock className="w-5 h-5" /> Pay ${(amount || 0).toFixed(2)}</>}
+                        </button>
+                    </form>
                 </div>
-                {isCustom && <input type="number" value={amount} onChange={e => setAmount(Number(e.target.value))} className="w-full p-3 border rounded-xl mb-6 text-center font-bold text-2xl" placeholder="0.00" />}
-                
-                {error && <div className="text-red-500 text-sm mb-4 bg-red-50 p-2 rounded">{error}</div>}
-                
-                <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="p-4 border rounded-xl"><div ref={mountNodeRef} /></div>
-                    <button type="submit" disabled={processing} className="w-full bg-peutic-yellow py-4 rounded-xl font-bold hover:bg-yellow-400 disabled:opacity-50">
-                        {processing ? 'Processing...' : `Pay $${amount}`}
-                    </button>
-                </form>
             </div>
         </div>
     );
@@ -599,10 +636,14 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     }, []);
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-             <div className="relative w-64 h-64 flex items-center justify-center">
-                <button onClick={onClose} className="absolute -top-12 right-0 text-white"><X /></button>
-                <div className="absolute inset-0 bg-yellow-400/20 rounded-full animate-breathe"></div>
-                <h2 className="text-4xl font-bold text-white relative z-10">{text}</h2>
+             <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
+                <button onClick={onClose} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
+                <div className="absolute inset-0 bg-peutic-yellow/20 rounded-full animate-breathe"></div>
+                <div className="absolute inset-12 bg-peutic-yellow/40 rounded-full animate-breathe" style={{ animationDelay: '1s' }}></div>
+                <div className="relative z-10 text-center text-white">
+                    <h2 className="text-4xl font-bold mb-2">{text}</h2>
+                    <p className="text-white/60">Follow the rhythm</p>
+                </div>
              </div>
         </div>
     );
@@ -610,20 +651,20 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 // --- PLAY MODAL (GAME SELECTOR) ---
 const PlayModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const [activeGame, setActiveGame] = useState<'mindful' | 'cloud'>('cloud');
+    const [activeGame, setActiveGame] = useState<'mindful' | 'cloud'>('mindful');
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-[#FFFBEB] w-full max-w-4xl h-[600px] rounded-3xl p-6 shadow-2xl relative flex flex-col border border-yellow-200">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="flex gap-2 bg-white p-1 rounded-xl border border-yellow-100">
-                        <button onClick={() => setActiveGame('cloud')} className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${activeGame === 'cloud' ? 'bg-sky-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}><Cloud className="w-4 h-4"/> Cloud Hop</button>
-                        <button onClick={() => setActiveGame('mindful')} className={`px-4 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${activeGame === 'mindful' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}><Sparkles className="w-4 h-4"/> Mindful Match</button>
+            <div className="bg-[#FFFBEB] w-full max-w-3xl h-[600px] rounded-3xl p-6 shadow-2xl relative flex flex-col">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex gap-2">
+                        <button onClick={() => setActiveGame('mindful')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${activeGame === 'mindful' ? 'bg-yellow-400 text-black shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>Mindful Match</button>
+                        <button onClick={() => setActiveGame('cloud')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${activeGame === 'cloud' ? 'bg-sky-400 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>Cloud Hop</button>
                     </div>
-                    <button onClick={onClose} className="p-2 hover:bg-yellow-100 rounded-full transition-colors"><X className="w-6 h-6 text-gray-500" /></button>
+                    <button onClick={onClose} className="p-2 hover:bg-yellow-100 rounded-full"><X className="w-5 h-5" /></button>
                 </div>
                 
-                <div className="flex-1 overflow-hidden rounded-2xl bg-white shadow-inner border border-yellow-100 relative">
+                <div className="flex-1 overflow-hidden rounded-2xl bg-white shadow-inner border border-yellow-100">
                     {activeGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
                 </div>
             </div>
@@ -635,7 +676,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
   const [showPayment, setShowPayment] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
-  const [showPlay, setShowPlay] = useState(false); 
+  const [showPlay, setShowPlay] = useState(false); // Renamed from showGame for clarity
   const [showQueue, setShowQueue] = useState(false);
   const [pendingCompanion, setPendingCompanion] = useState<Companion | null>(null);
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
@@ -666,6 +707,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
         if (dbUser) setBalance(dbUser.balance);
         const txs = Database.getUserTransactions(user.id);
         setTransactions(txs);
+        // We don't setCompanions here instantly to allow skeleton demo on mount
         if (!loadingCompanions) setCompanions(Database.getCompanions());
       };
 
@@ -757,10 +799,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
         </div>
       </nav>
 
-      {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         <div className="flex flex-col md:flex-row gap-8">
-           {/* Sidebar */}
            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
                 <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-yellow-100 text-center flex md:block items-center gap-4 md:gap-0">
                     <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gray-200 mx-auto md:mb-4 overflow-hidden border-4 border-white shadow-lg flex-shrink-0">
@@ -789,11 +829,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                 </div>
            </div>
 
-           {/* Content */}
            <div className="flex-1">
                 {activeTab === 'hub' && (
                     <div className="space-y-10 animate-in fade-in duration-500">
-                        {/* Daily Wellness */}
                         <div>
                             <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Activity className="w-4 h-4" /> Daily Wellness</h4>
                             <div className="bg-white rounded-2xl border border-yellow-100 p-6 shadow-sm mb-6 relative overflow-hidden">
@@ -839,7 +877,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                             </div>
                         </div>
 
-                        {/* Specialist Grid */}
                         <div>
                              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 flex items-center gap-2"><Sparkles className="w-4 h-4" /> Specialist Network</h4>
                             <div className="bg-white border border-yellow-200 p-4 rounded-xl mb-6 flex items-start gap-3 shadow-sm">
@@ -865,7 +902,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                     filteredCompanions.map(companion => (
                                         <div key={companion.id} className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden hover:shadow-xl transition-all duration-300 group">
                                             <div className="h-64 bg-gray-200 relative overflow-hidden">
-                                                <img src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                                <AvatarImage 
+                                                    src={companion.imageUrl} 
+                                                    alt={companion.name} 
+                                                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
+                                                />
                                                 <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold shadow-sm ${companion.status === 'AVAILABLE' ? 'bg-green-500 text-white' : companion.status === 'OFFLINE' ? 'bg-red-500 text-white' : 'bg-gray-500 text-white'}`}>{companion.status}</div>
                                                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4">
                                                     <h3 className="font-bold text-xl text-white">{companion.name}</h3>
