@@ -9,7 +9,7 @@ import {
     Search, Edit2, Ban, Zap, ShieldAlert, 
     Terminal, Globe, AlertOctagon, Megaphone, Menu, X, Gift, Download, Tag,
     Clock, Wifi, WifiOff, Server, Cpu, HardDrive, Eye, Heart, Lock, CheckCircle, AlertTriangle, 
-    FileText, MessageSquare, Repeat, Shield, Plus, Trash2
+    FileText, MessageSquare, Repeat, Shield, Plus, Trash2, Send, Power
 } from 'lucide-react';
 import { Database } from '../services/database';
 import { User, UserRole, Companion, Transaction, GlobalSettings, SystemLog, ServerMetric, PromoCode } from '../types';
@@ -52,6 +52,9 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [userFilter, setUserFilter] = useState('ALL');
   const [newPromo, setNewPromo] = useState({ code: '', discount: 10 });
+  const [broadcastSubject, setBroadcastSubject] = useState('');
+  const [broadcastBody, setBroadcastBody] = useState('');
+  const [broadcastSent, setBroadcastSent] = useState(false);
   
   // User Edit Modal
   const [showUserModal, setShowUserModal] = useState(false);
@@ -143,6 +146,21 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           Database.saveSettings({ ...settings, broadcastMessage: msg });
           Database.logSystemEvent('INFO', 'Broadcast Update', `Message: ${msg || 'Cleared'}`);
       }
+  };
+
+  const handleSendEmailBlast = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!broadcastSubject || !broadcastBody) return;
+      
+      // Simulate sending to all users
+      const recipientCount = users.length;
+      Database.logSystemEvent('INFO', 'Email Marketing', `Email blast sent to ${recipientCount} users. Subject: ${broadcastSubject}`);
+      
+      setBroadcastSent(true);
+      setBroadcastSubject('');
+      setBroadcastBody('');
+      
+      setTimeout(() => setBroadcastSent(false), 3000);
   };
 
   // --- RENDER HELPERS ---
@@ -354,8 +372,8 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
           {/* TAB: MARKETING CMS */}
           {activeTab === 'marketing' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  <div className="lg:col-span-1 bg-gray-900 border border-gray-800 rounded-2xl p-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
                       <h3 className="font-bold text-white text-lg mb-6 flex items-center gap-2"><Megaphone className="w-5 h-5 text-yellow-500"/> Create Promo Code</h3>
                       <form onSubmit={handleCreatePromo} className="space-y-4">
                           <div>
@@ -382,26 +400,54 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                               <Plus className="w-4 h-4" /> Create Code
                           </button>
                       </form>
-                  </div>
 
-                  <div className="lg:col-span-2 bg-gray-900 border border-gray-800 rounded-2xl p-8">
-                      <h3 className="font-bold text-white text-lg mb-6">Active Campaigns</h3>
-                      {promos.length === 0 ? (
-                          <div className="text-gray-500 text-center py-12 border border-dashed border-gray-800 rounded-xl">No active promo codes</div>
-                      ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="mt-8">
+                          <h3 className="font-bold text-white text-lg mb-4">Active Campaigns</h3>
+                          <div className="space-y-2">
                               {promos.map(p => (
-                                  <div key={p.id} className="bg-black border border-gray-800 p-4 rounded-xl flex justify-between items-center group hover:border-yellow-500/50 transition-colors">
-                                      <div>
-                                          <p className="text-xl font-black text-white tracking-wider">{p.code}</p>
-                                          <p className="text-xs text-gray-500">{p.discountPercentage}% Discount • {p.uses} uses</p>
-                                      </div>
-                                      <button onClick={() => handleDeletePromo(p.id)} className="p-2 text-gray-600 hover:text-red-500 hover:bg-red-900/20 rounded-lg transition-colors">
-                                          <Trash2 className="w-5 h-5" />
-                                      </button>
+                                  <div key={p.id} className="bg-black border border-gray-800 p-3 rounded-lg flex justify-between items-center">
+                                      <div><span className="font-mono font-bold text-yellow-500">{p.code}</span> <span className="text-xs text-gray-500">({p.discountPercentage}%)</span></div>
+                                      <button onClick={() => handleDeletePromo(p.id)} className="text-gray-600 hover:text-red-500"><Trash2 className="w-4 h-4"/></button>
                                   </div>
                               ))}
                           </div>
+                      </div>
+                  </div>
+
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
+                      <h3 className="font-bold text-white text-lg mb-6 flex items-center gap-2"><Send className="w-5 h-5 text-blue-500"/> News & Updates Blast</h3>
+                      {broadcastSent ? (
+                          <div className="bg-green-900/20 border border-green-900 p-4 rounded-xl text-center">
+                              <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                              <p className="text-green-400 font-bold">Update Sent to {users.length} Users</p>
+                          </div>
+                      ) : (
+                          <form onSubmit={handleSendEmailBlast} className="space-y-4">
+                              <div>
+                                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Email Subject</label>
+                                  <input 
+                                      required
+                                      type="text" 
+                                      placeholder="Important Update: New Features..." 
+                                      className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-blue-500 outline-none"
+                                      value={broadcastSubject}
+                                      onChange={e => setBroadcastSubject(e.target.value)}
+                                  />
+                              </div>
+                              <div>
+                                  <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Message Body</label>
+                                  <textarea 
+                                      required
+                                      className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-blue-500 outline-none h-32 resize-none"
+                                      placeholder="Dear user..."
+                                      value={broadcastBody}
+                                      onChange={e => setBroadcastBody(e.target.value)}
+                                  ></textarea>
+                              </div>
+                              <button className="w-full bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-500 flex items-center justify-center gap-2">
+                                  <Send className="w-4 h-4" /> Send Broadcast
+                              </button>
+                          </form>
                       )}
                   </div>
               </div>
@@ -426,7 +472,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                               <button 
                                   key={f}
                                   onClick={() => setUserFilter(f)}
-                                  className={`px-4 py-2 rounded-lg text-xs font-bold border ${userFilter === f ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-black text-gray-500 border-gray-700'}`}
+                                  className={`px-4 py-2 rounded-lg text-xs font-bold border transition-colors ${userFilter === f ? 'bg-yellow-500 text-black border-yellow-500' : 'bg-black text-gray-500 border-gray-700 hover:border-gray-500'}`}
                               >
                                   {f}
                               </button>
@@ -438,9 +484,9 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                           <thead className="bg-black text-gray-500 font-bold text-xs uppercase tracking-wider">
                               <tr>
                                   <th className="px-6 py-4">Identity</th>
-                                  <th className="px-6 py-4">Method</th>
+                                  <th className="px-6 py-4">Provider</th>
                                   <th className="px-6 py-4">Balance</th>
-                                  <th className="px-6 py-4">Role</th>
+                                  <th className="px-6 py-4">Status</th>
                                   <th className="px-6 py-4 text-right">Actions</th>
                               </tr>
                           </thead>
@@ -449,23 +495,28 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                   <tr key={u.id} className="hover:bg-white/5 transition-colors">
                                       <td className="px-6 py-4">
                                           <div className="flex items-center gap-3">
-                                              <img src={u.avatar} className="w-8 h-8 rounded-full" alt="" />
+                                              <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden">
+                                                  <img src={u.avatar} className="w-full h-full" alt=""/>
+                                              </div>
                                               <div>
-                                                  <p className="font-bold text-white">{u.name}</p>
+                                                  <p className="font-bold text-white text-sm">{u.name}</p>
                                                   <p className="text-xs text-gray-500">{u.email}</p>
                                               </div>
                                           </div>
                                       </td>
                                       <td className="px-6 py-4">
-                                          <span className="text-xs font-mono text-gray-400 uppercase">{u.provider || 'email'}</span>
+                                          <span className="text-xs font-mono text-gray-400 uppercase bg-gray-800 px-2 py-1 rounded">{u.provider || 'email'}</span>
                                       </td>
-                                      <td className="px-6 py-4 font-mono text-yellow-500">{u.balance}m</td>
+                                      <td className="px-6 py-4 font-mono text-yellow-500 font-bold">{u.balance}m</td>
                                       <td className="px-6 py-4">
-                                          <span className={`text-[10px] font-bold px-2 py-1 rounded ${u.role === 'ADMIN' ? 'bg-purple-900 text-purple-200' : 'bg-gray-800 text-gray-400'}`}>{u.role}</span>
+                                          {u.subscriptionStatus === 'BANNED' ? 
+                                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-red-900/50 text-red-400 border border-red-900">BANNED</span> : 
+                                              <span className="text-[10px] font-bold px-2 py-1 rounded bg-green-900/50 text-green-400 border border-green-900">ACTIVE</span>
+                                          }
                                       </td>
                                       <td className="px-6 py-4 text-right flex justify-end gap-2">
-                                          <button onClick={() => openFundModal(u)} className="p-2 hover:bg-green-900/30 text-green-500 rounded"><Gift className="w-4 h-4"/></button>
-                                          <button onClick={() => toggleUserBan(u)} className="p-2 hover:bg-red-900/30 text-red-500 rounded"><Ban className="w-4 h-4"/></button>
+                                          <button onClick={() => openFundModal(u)} className="p-2 hover:bg-green-900/30 text-green-500 rounded-lg transition-colors" title="Grant Funds"><Gift className="w-4 h-4"/></button>
+                                          <button onClick={() => toggleUserBan(u)} className="p-2 hover:bg-red-900/30 text-red-500 rounded-lg transition-colors" title="Ban User"><Ban className="w-4 h-4"/></button>
                                       </td>
                                   </tr>
                               ))}
@@ -479,15 +530,21 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
           {activeTab === 'settings' && (
               <div className="grid md:grid-cols-2 gap-8">
                   <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
-                      <h3 className="font-bold text-white text-xl mb-6 flex items-center gap-2"><Globe className="w-5 h-5 text-yellow-500" /> Global Configuration</h3>
-                      <div className="space-y-6">
+                      <h3 className="font-bold text-white text-xl mb-6 flex items-center gap-2"><Settings className="w-5 h-5 text-yellow-500" /> Global Configuration</h3>
+                      <div className="space-y-4">
                           <div className="flex items-center justify-between p-4 bg-black rounded-xl border border-gray-800">
-                              <div><p className="font-bold text-white">Maintenance Mode</p><p className="text-xs text-gray-500">Lockdown site</p></div>
-                              <button onClick={() => toggleSetting('maintenanceMode')} className={`w-12 h-6 rounded-full relative ${settings.maintenanceMode ? 'bg-red-500' : 'bg-gray-700'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.maintenanceMode ? 'left-7' : 'left-1'}`}></div></button>
+                              <div className="flex items-center gap-3">
+                                  <Power className={`w-5 h-5 ${settings.maintenanceMode ? 'text-red-500' : 'text-gray-500'}`} />
+                                  <div><p className="font-bold text-white">Maintenance Mode</p><p className="text-xs text-gray-500">Emergency lockdown</p></div>
+                              </div>
+                              <button onClick={() => toggleSetting('maintenanceMode')} className={`w-12 h-6 rounded-full relative transition-colors ${settings.maintenanceMode ? 'bg-red-500' : 'bg-gray-700'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.maintenanceMode ? 'left-7' : 'left-1'}`}></div></button>
                           </div>
                           <div className="flex items-center justify-between p-4 bg-black rounded-xl border border-gray-800">
-                              <div><p className="font-bold text-white">Multilingual AI</p><p className="text-xs text-gray-500">Tavus auto-detect</p></div>
-                              <button onClick={() => toggleSetting('multilingualMode')} className={`w-12 h-6 rounded-full relative ${settings.multilingualMode ? 'bg-green-500' : 'bg-gray-700'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.multilingualMode ? 'left-7' : 'left-1'}`}></div></button>
+                              <div className="flex items-center gap-3">
+                                  <Globe className={`w-5 h-5 ${settings.multilingualMode ? 'text-green-500' : 'text-gray-500'}`} />
+                                  <div><p className="font-bold text-white">Multilingual AI</p><p className="text-xs text-gray-500">Auto-detect languages</p></div>
+                              </div>
+                              <button onClick={() => toggleSetting('multilingualMode')} className={`w-12 h-6 rounded-full relative transition-colors ${settings.multilingualMode ? 'bg-green-500' : 'bg-gray-700'}`}><div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${settings.multilingualMode ? 'left-7' : 'left-1'}`}></div></button>
                           </div>
                           <div>
                               <label className="text-xs font-bold uppercase text-gray-500 mb-2 block">Broadcast Message</label>
@@ -500,7 +557,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   </div>
               </div>
           )}
-          
+
           {/* TAB: SECURITY */}
           {activeTab === 'security' && (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
@@ -527,22 +584,22 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       {/* USER MODAL */}
       {showUserModal && selectedUser && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-gray-900 border border-gray-800 w-full max-w-md rounded-3xl p-8 text-center">
+              <div className="bg-gray-900 border border-gray-800 w-full max-w-md rounded-3xl p-8 text-center shadow-2xl">
                   <h3 className="text-2xl font-bold text-white mb-2">Grant Credits</h3>
-                  <p className="text-gray-400 mb-6">Add free credits to {selectedUser.name}'s wallet.</p>
-                  <div className="flex items-center justify-center gap-4 mb-6">
-                      <button onClick={() => setFundAmount(Math.max(0, fundAmount - 10))} className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-white"><X className="w-4 h-4 rotate-45" /></button>
+                  <p className="text-gray-400 mb-6 text-sm">Add promotional funds to {selectedUser.name}'s wallet.</p>
+                  <div className="flex items-center justify-center gap-2 mb-6">
+                      <button onClick={() => setFundAmount(Math.max(0, fundAmount - 10))} className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-white"><Settings className="w-4 h-4" /></button>
                       <input 
                           type="number" 
                           className="w-32 p-4 text-3xl font-black bg-black border border-gray-700 rounded-xl text-center text-white focus:border-yellow-500 outline-none"
                           value={fundAmount}
                           onChange={e => setFundAmount(Number(e.target.value))}
                       />
-                      <button onClick={() => setFundAmount(fundAmount + 10)} className="p-2 bg-gray-800 hover:bg-gray-700 rounded-full text-white"><Plus className="w-4 h-4" /></button>
+                      <button onClick={() => setFundAmount(fundAmount + 10)} className="p-2 rounded-full bg-gray-800 hover:bg-gray-700 text-white"><Plus className="w-4 h-4" /></button>
                   </div>
                   <div className="flex gap-3">
-                      <button onClick={() => setShowUserModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700">Cancel</button>
-                      <button onClick={handleAddFunds} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400">Grant Funds</button>
+                      <button onClick={() => setShowUserModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">Cancel</button>
+                      <button onClick={handleAddFunds} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-900/20">Confirm Grant</button>
                   </div>
               </div>
           </div>

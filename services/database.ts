@@ -1,4 +1,3 @@
-
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
 // Simulation of a Backend using LocalStorage
@@ -151,7 +150,7 @@ export class Database {
   // --- EMAIL SIMULATION ---
   static sendEmail(to: string, subject: string, body: string) {
       this.logSystemEvent('INFO', 'Email Sent', `Sent "${subject}" to ${to}`);
-      console.log(`[EMAIL SIMULATION] To: ${to} | Subject: ${subject} | Body: ${body}`);
+      console.log(`%c[EMAIL SIMULATION] To: ${to}\nSubject: ${subject}\nBody: ${body}`, "color: #FACC15; font-weight: bold; background: #000; padding: 4px;");
   }
 
   // --- COMPANION MANAGEMENT ---
