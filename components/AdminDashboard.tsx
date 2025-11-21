@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -14,6 +13,21 @@ import {
 import { Database } from '../services/database';
 import { User, UserRole, Companion, Transaction, GlobalSettings, SystemLog, ServerMetric, PromoCode } from '../types';
 
+// --- MOVED STATCARD OUTSIDE TO PREVENT RENDER CRASHES ---
+const StatCard = ({ title, value, icon: Icon }: any) => (
+  <div className="bg-gray-800/50 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-xl group hover:border-yellow-500/50 transition-all">
+      <div className="flex justify-between items-start">
+          <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{title}</p>
+              <h3 className="text-3xl font-black text-white">{value}</h3>
+          </div>
+          <div className={`p-3 rounded-xl bg-black border border-white/10 group-hover:text-yellow-500 transition-colors`}>
+              <Icon className="w-6 h-6 text-gray-300 group-hover:text-yellow-500" />
+          </div>
+      </div>
+  </div>
+);
+
 const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'specialists' | 'financials' | 'marketing' | 'settings' | 'security'>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -27,19 +41,10 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [metrics, setMetrics] = useState<ServerMetric[]>([]);
   const [promos, setPromos] = useState<PromoCode[]>([]);
   
-  // Session Metrics State
-  const [sessionStats, setSessionStats] = useState({
-      avgDuration: '18m 30s',
-      totalMinutesToday: 1420,
-      peakConcurrency: 42,
-      bandwidthUsage: '1.2 GB/s'
-  });
-
   // UI States
   const [searchTerm, setSearchTerm] = useState('');
   const [userFilter, setUserFilter] = useState('ALL');
   const [editingCompanion, setEditingCompanion] = useState<Companion | null>(null);
-  const [lastRefresh, setLastRefresh] = useState(new Date());
   const [newPromoCode, setNewPromoCode] = useState({ code: '', discount: 10 });
   
   // Modal States
@@ -56,7 +61,6 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         setLogs(Database.getSystemLogs());
         setMetrics(Database.getServerMetrics());
         setPromos(Database.getPromoCodes());
-        setLastRefresh(new Date());
     };
     refresh();
     const interval = setInterval(refresh, 2000);
@@ -64,14 +68,6 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   }, []);
 
   // --- Actions ---
-
-  const handleRoleToggle = (user: User) => {
-      const newRole = user.role === UserRole.ADMIN ? UserRole.USER : UserRole.ADMIN;
-      if (confirm(`Change ${user.name}'s role to ${newRole}?`)) {
-          Database.updateUser({ ...user, role: newRole });
-          Database.logSystemEvent('WARNING', 'Role Change', `Changed ${user.email} to ${newRole}`);
-      }
-  };
 
   const handleBanUser = (user: User) => {
     if (confirm(`Are you sure you want to ${user.subscriptionStatus === 'BANNED' ? 'unban' : 'ban'} ${user.name}?`)) {
@@ -102,23 +98,6 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       }
   };
 
-  const handleStatusChange = (id: string, status: 'AVAILABLE' | 'BUSY' | 'OFFLINE') => {
-      const comp = companions.find(c => c.id === id);
-      if (comp) {
-          const updated = { ...comp, status };
-          Database.updateCompanion(updated);
-      }
-  };
-
-  const handleUpdateProfile = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (editingCompanion) {
-          Database.updateCompanion(editingCompanion);
-          setEditingCompanion(null);
-          Database.logSystemEvent('INFO', 'Specialist Update', `Updated profile for ${editingCompanion.name}`);
-      }
-  };
-
   const handleBroadcast = () => {
       const msg = prompt("Enter new global broadcast message:", settings.broadcastMessage);
       if (msg !== null) {
@@ -129,17 +108,6 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const toggleSetting = (key: keyof GlobalSettings) => {
       const newVal = !settings[key];
       Database.saveSettings({ ...settings, [key]: newVal });
-  };
-
-  const handleCreatePromo = () => {
-      if (newPromoCode.code) {
-          Database.createPromoCode(newPromoCode.code, newPromoCode.discount);
-          setNewPromoCode({ code: '', discount: 10 });
-      }
-  };
-
-  const handleDeletePromo = (id: string) => {
-      Database.deletePromoCode(id);
   };
 
   const openFundModal = (u: User) => {
@@ -160,20 +128,6 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       if (userFilter === 'BANNED') return matchesSearch && u.subscriptionStatus === 'BANNED';
       return matchesSearch;
   });
-
-  const StatCard = ({ title, value, icon: Icon, color }: any) => (
-      <div className="bg-gray-800/50 backdrop-blur-xl border border-white/10 p-6 rounded-2xl shadow-xl group hover:border-yellow-500/50 transition-all">
-          <div className="flex justify-between items-start">
-              <div>
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">{title}</p>
-                  <h3 className="text-3xl font-black text-white">{value}</h3>
-              </div>
-              <div className={`p-3 rounded-xl bg-black border border-white/10 group-hover:text-yellow-500 transition-colors`}>
-                  <Icon className="w-6 h-6 text-gray-300 group-hover:text-yellow-500" />
-              </div>
-          </div>
-      </div>
-  );
 
   return (
     <div className="min-h-screen bg-[#050505] text-gray-200 font-sans flex overflow-hidden">
@@ -260,31 +214,35 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                           <div className="lg:col-span-2 bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
                               <h3 className="font-bold text-white mb-6 flex items-center gap-2"><Activity className="w-5 h-5 text-yellow-500"/> Live System Load</h3>
                               <div className="h-[300px]">
-                                  <ResponsiveContainer width="100%" height="100%">
-                                      <AreaChart data={metrics}>
-                                          <defs>
-                                              <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
-                                                  <stop offset="5%" stopColor="#EAB308" stopOpacity={0.8}/>
-                                                  <stop offset="95%" stopColor="#EAB308" stopOpacity={0}/>
-                                              </linearGradient>
-                                          </defs>
-                                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                                          <XAxis dataKey="time" stroke="#6B7280" fontSize={10} />
-                                          <YAxis stroke="#6B7280" fontSize={10} />
-                                          <Tooltip contentStyle={{ backgroundColor: '#000', color: '#fff', border: '1px solid #333' }} />
-                                          <Area type="monotone" dataKey="cpu" stroke="#EAB308" fill="url(#colorCpu)" />
-                                      </AreaChart>
-                                  </ResponsiveContainer>
+                                  {metrics.length > 0 ? (
+                                      <ResponsiveContainer width="100%" height="100%">
+                                          <AreaChart data={metrics}>
+                                              <defs>
+                                                  <linearGradient id="colorCpu" x1="0" y1="0" x2="0" y2="1">
+                                                      <stop offset="5%" stopColor="#EAB308" stopOpacity={0.8}/>
+                                                      <stop offset="95%" stopColor="#EAB308" stopOpacity={0}/>
+                                                  </linearGradient>
+                                              </defs>
+                                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                                              <XAxis dataKey="time" stroke="#6B7280" fontSize={10} />
+                                              <YAxis stroke="#6B7280" fontSize={10} />
+                                              <Tooltip contentStyle={{ backgroundColor: '#000', color: '#fff', border: '1px solid #333' }} />
+                                              <Area type="monotone" dataKey="cpu" stroke="#EAB308" fill="url(#colorCpu)" />
+                                          </AreaChart>
+                                      </ResponsiveContainer>
+                                  ) : (
+                                      <div className="h-full flex items-center justify-center text-gray-500">Loading Telemetry...</div>
+                                  )}
                               </div>
                           </div>
 
                           <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
                               <h3 className="font-bold text-white mb-6">Network Status</h3>
                               <div className="space-y-6">
-                                  {[
-                                      { label: 'CPU Load', val: metrics[0]?.cpu, color: 'bg-blue-500' },
-                                      { label: 'Memory Usage', val: metrics[0]?.memory, color: 'bg-purple-500' },
-                                      { label: 'API Latency (ms)', val: metrics[0]?.latency, color: 'bg-green-500', max: 200 }
+                                  {metrics.length > 0 && [
+                                      { label: 'CPU Load', val: metrics[0].cpu, color: 'bg-blue-500' },
+                                      { label: 'Memory Usage', val: metrics[0].memory, color: 'bg-purple-500' },
+                                      { label: 'API Latency (ms)', val: metrics[0].latency, color: 'bg-green-500', max: 200 }
                                   ].map((m, i) => (
                                       <div key={i}>
                                           <div className="flex justify-between text-sm mb-1">
