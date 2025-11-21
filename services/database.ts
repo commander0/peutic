@@ -2,19 +2,20 @@
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
 // Simulation of a Backend using LocalStorage
+// VERSIONED KEYS TO FORCE RESET
 const DB_KEYS = {
-  USER: 'peutic_db_current_user',
-  ALL_USERS: 'peutic_db_users', 
-  COMPANIONS: 'peutic_db_companions',
-  TRANSACTIONS: 'peutic_db_transactions',
-  SETTINGS: 'peutic_db_settings',
-  LOGS: 'peutic_db_logs',
-  MOODS: 'peutic_db_moods',
-  JOURNALS: 'peutic_db_journals',
-  PROMOS: 'peutic_db_promos',
-  QUEUE: 'peutic_db_queue',
-  ACTIVE_SESSIONS: 'peutic_db_active_sessions',
-  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts'
+  USER: 'peutic_db_current_user_v2',
+  ALL_USERS: 'peutic_db_users_v2', 
+  COMPANIONS: 'peutic_db_companions_v2',
+  TRANSACTIONS: 'peutic_db_transactions_v2',
+  SETTINGS: 'peutic_db_settings_v2',
+  LOGS: 'peutic_db_logs_v2',
+  MOODS: 'peutic_db_moods_v2',
+  JOURNALS: 'peutic_db_journals_v2',
+  PROMOS: 'peutic_db_promos_v2',
+  QUEUE: 'peutic_db_queue_v2',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v2',
+  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v2'
 };
 
 // Initial Seed Data
@@ -377,4 +378,3 @@ export class Database {
       this.logSystemEvent('INFO', 'Data Export', `Admin exported ${type} database`);
   }
 }
-    

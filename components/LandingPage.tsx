@@ -145,20 +145,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                               <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
                               <span className="text-xs font-bold tracking-wide text-gray-600">{onlineCount} SPECIALISTS ONLINE</span>
                           </div>
-                          {/* Updated Est. 2005 Badge - YELLOW */}
+                          {/* Updated Est. 2005 Badge - YELLOW BG / BLACK TEXT */}
                           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-[#FACC15] text-black shadow-sm">
                               <Award className="w-3 h-3 text-black" />
                               <span className="text-xs font-bold tracking-wide">Est. 2005</span>
                           </div>
                       </div>
                       
-                      <h1 className="text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1]">
-                          {getTranslation(lang, 'hero_title_1')} <br/>
-                          <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600 relative">
-                              {getTranslation(lang, 'hero_title_2')}
-                              <svg className="absolute w-full h-3 -bottom-1 left-0 text-yellow-300 -z-10 opacity-50" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" /></svg>
-                          </span>
-                      </h1>
+                      <div className="relative inline-block">
+                          <h1 className="text-4xl md:text-5xl lg:text-7xl font-black tracking-tighter leading-[1.1]">
+                              {getTranslation(lang, 'hero_title_1')} <br/>
+                              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-500 to-yellow-600 relative">
+                                  {getTranslation(lang, 'hero_title_2')}
+                                  <svg className="absolute w-full h-3 -bottom-1 left-0 text-yellow-300 -z-10 opacity-50" viewBox="0 0 100 10" preserveAspectRatio="none"><path d="M0 5 Q 50 10 100 5" stroke="currentColor" strokeWidth="8" fill="none" /></svg>
+                              </span>
+                          </h1>
+                      </div>
                       
                       <p className="text-lg md:text-xl text-gray-600 max-w-lg mx-auto lg:mx-0 leading-relaxed">
                           {getTranslation(lang, 'hero_subtitle')}
