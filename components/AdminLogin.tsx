@@ -38,6 +38,8 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     setTimeout(() => {
         const user = Database.getUserByEmail(email);
         // Verify User Exists + Role = Admin
+        // Note: In this frontend-only demo, we verify existence and role. 
+        // In a real backend, you would validate the password hash here.
         if (user && user.role === UserRole.ADMIN) {
             Database.resetAdminFailure();
             Database.logSystemEvent('SECURITY', 'Admin Login', `Admin ${user.email} logged into Command Center`);
@@ -74,8 +76,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
       }
 
       // 3. Create User and Force Admin Role
-      // Note: In a real backend, we would hash the password here. 
-      // In this simulation, we create the user identity.
       const u = Database.createUser('System Admin', newAdminEmail, 'email', undefined, UserRole.ADMIN);
       
       Database.logSystemEvent('SUCCESS', 'Admin Initialized', `Admin root account created: ${newAdminEmail}`);

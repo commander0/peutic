@@ -5,7 +5,7 @@ import {
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
   Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
-  Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw
+  Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -124,7 +124,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     }, [solved, cards, onWin]);
 
     return (
-        <div className="bg-white/50 rounded-2xl p-4 border border-yellow-100">
+        <div className="bg-white/50 rounded-2xl p-4 border border-yellow-100 h-full flex flex-col">
             <div className="flex justify-between items-center mb-4">
                 <div>
                     <h3 className="font-bold text-gray-900">Mindful Match</h3>
@@ -137,7 +137,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
             </div>
 
             {won ? (
-                <div className="text-center py-12 animate-float" style={{animation: 'none'}}>
+                <div className="flex-1 flex flex-col items-center justify-center text-center animate-float" style={{animation: 'none'}}>
                     <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <Trophy className="w-8 h-8 text-green-600" />
                     </div>
@@ -146,7 +146,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
                     <button onClick={initGame} className="bg-black text-white px-6 py-2 rounded-xl font-bold text-sm hover:bg-gray-800">Play Again</button>
                 </div>
             ) : (
-                <div className="grid grid-cols-4 gap-2 sm:gap-3">
+                <div className="grid grid-cols-4 gap-2 sm:gap-3 flex-1 content-center">
                     {cards.map((card, index) => {
                         const isVisible = flipped.includes(index) || solved.includes(index);
                         const Icon = card.icon;
@@ -174,6 +174,162 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     );
 };
 
+// --- CLOUD HOP GAME COMPONENT ---
+const CloudHopGame: React.FC = () => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [score, setScore] = useState(0);
+    const [gameOver, setGameOver] = useState(false);
+    const [gameStarted, setGameStarted] = useState(false);
+
+    useEffect(() => {
+        if (!gameStarted) return;
+        
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        // Game Constants
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = -10;
+        const SPEED = 3;
+        
+        // State
+        let playerY = canvas.height - 50;
+        let playerX = 50;
+        let velocityY = 0;
+        let platforms = [{ x: 0, y: canvas.height - 20, width: canvas.width, height: 20 }];
+        let frames = 0;
+        let myReq: number;
+        let currentScore = 0;
+
+        // Input
+        const jump = () => {
+            if (playerY > 0) velocityY = JUMP_FORCE;
+        };
+        
+        const handleInput = (e: any) => {
+            e.preventDefault();
+            jump();
+        };
+        
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', handleInput);
+        window.addEventListener('keydown', (e) => { if(e.code === 'Space') jump(); });
+
+        const update = () => {
+            frames++;
+            
+            // Player Physics
+            velocityY += GRAVITY;
+            playerY += velocityY;
+
+            // Platform Spawning
+            if (frames % 100 === 0) {
+                const width = Math.random() * 100 + 50;
+                const y = Math.random() * (canvas.height - 150) + 50;
+                platforms.push({ x: canvas.width, y, width, height: 20 });
+            }
+
+            // Platform Logic
+            platforms.forEach((p, i) => {
+                p.x -= SPEED;
+                // Collision
+                if (
+                    playerY + 30 >= p.y && 
+                    playerY + 30 <= p.y + p.height + 10 &&
+                    playerX + 30 > p.x && 
+                    playerX < p.x + p.width &&
+                    velocityY > 0
+                ) {
+                    velocityY = 0;
+                    playerY = p.y - 30;
+                }
+                // Remove off-screen
+                if (p.x + p.width < 0) {
+                    platforms.splice(i, 1);
+                    currentScore++;
+                    setScore(currentScore);
+                }
+            });
+
+            // Floor Collision (Game Over)
+            if (playerY > canvas.height) {
+                setGameOver(true);
+                setGameStarted(false);
+                cancelAnimationFrame(myReq);
+                return;
+            }
+
+            // Draw
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Player (Cute Cloud)
+            ctx.fillStyle = '#FFF';
+            ctx.beginPath();
+            ctx.arc(playerX + 15, playerY + 15, 15, 0, Math.PI * 2);
+            ctx.fill();
+            // Eyes
+            ctx.fillStyle = '#000';
+            ctx.beginPath();
+            ctx.arc(playerX + 10, playerY + 12, 2, 0, Math.PI * 2);
+            ctx.arc(playerX + 20, playerY + 12, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw Platforms
+            ctx.fillStyle = '#FACC15'; // Yellow platforms
+            platforms.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.width, p.height);
+            });
+
+            myReq = requestAnimationFrame(update);
+        };
+
+        update();
+
+        return () => {
+            cancelAnimationFrame(myReq);
+            canvas.removeEventListener('mousedown', handleInput);
+            canvas.removeEventListener('touchstart', handleInput);
+            window.removeEventListener('keydown', (e) => { if(e.code === 'Space') jump(); });
+        };
+    }, [gameStarted]);
+
+    const startGame = () => {
+        setGameOver(false);
+        setScore(0);
+        setGameStarted(true);
+    };
+
+    return (
+        <div className="bg-sky-300/50 rounded-2xl p-4 border border-sky-200 h-full relative overflow-hidden min-h-[300px]">
+            <div className="flex justify-between items-center mb-2 absolute top-4 left-4 right-4 z-10">
+                <div>
+                    <h3 className="font-bold text-sky-900">Cloud Hop</h3>
+                    <p className="text-xs text-sky-700">Tap/Space to jump.</p>
+                </div>
+                <span className="text-xl font-black text-white drop-shadow-md">{score}</span>
+            </div>
+            
+            <canvas 
+                ref={canvasRef} 
+                width={400} 
+                height={300} 
+                className="w-full h-full bg-sky-400 rounded-xl cursor-pointer shadow-inner absolute inset-0"
+            />
+
+            {(!gameStarted || gameOver) && (
+                <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center z-20 backdrop-blur-sm rounded-xl">
+                    {gameOver && <p className="text-white font-black text-2xl mb-2">Game Over</p>}
+                    <button onClick={startGame} className="bg-white text-sky-600 px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform shadow-xl flex items-center gap-2">
+                        {gameOver ? <RefreshCw className="w-4 h-4"/> : <Play className="w-4 h-4"/>} {gameOver ? 'Try Again' : 'Start Hopping'}
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
 // --- SKELETON LOADER ---
 const SpecialistSkeleton = () => (
   <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-[400px]">
@@ -191,6 +347,7 @@ const SpecialistSkeleton = () => (
 const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady: () => void }> = ({ userId, onLeave, onReady }) => {
     const [position, setPosition] = useState<number>(0);
     const [estWait, setEstWait] = useState<number>(5);
+    const [selectedGame, setSelectedGame] = useState<'mindful' | 'cloud'>('mindful');
 
     useEffect(() => {
         const pos = Database.joinQueue(userId);
@@ -218,12 +375,12 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
 
     return (
         <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-[#FFFBEB] w-full max-w-2xl rounded-3xl p-6 md:p-8 text-center relative shadow-2xl border border-yellow-500/50 my-8">
+            <div className="bg-[#FFFBEB] w-full max-w-3xl rounded-3xl p-6 md:p-8 text-center relative shadow-2xl border border-yellow-500/50 my-8">
                 <div className="absolute top-0 left-0 w-full h-2 bg-gray-100 overflow-hidden rounded-t-3xl">
                     <div className="h-full bg-peutic-yellow animate-marquee w-1/2"></div>
                 </div>
                 <div className="flex flex-col md:flex-row gap-8">
-                    <div className="flex-1">
+                    <div className="flex-1 flex flex-col justify-center">
                         <div className="w-16 h-16 bg-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
                             <Hourglass className="w-8 h-8 text-peutic-yellow animate-spin-slow" />
                         </div>
@@ -242,15 +399,21 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
                         </div>
                         <button onClick={handleLeave} className="text-gray-400 hover:text-red-500 font-bold text-xs transition-colors mb-6 md:mb-0">Leave Queue</button>
                     </div>
-                    <div className="flex-1 border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-6">
-                        <div className="bg-yellow-50 rounded-xl p-3 mb-4 text-left flex items-start gap-2">
-                            <Gamepad2 className="w-4 h-4 text-yellow-700 mt-0.5" />
-                            <div>
-                                <p className="text-xs font-bold text-yellow-800">While you wait...</p>
-                                <p className="text-[10px] text-yellow-700">Play this quick game to center your thoughts.</p>
+                    <div className="flex-1 border-t md:border-t-0 md:border-l border-gray-200 pt-6 md:pt-0 md:pl-6 flex flex-col h-[400px]">
+                        <div className="bg-yellow-50 rounded-xl p-2 mb-4 text-left flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Gamepad2 className="w-4 h-4 text-yellow-700" />
+                                <p className="text-xs font-bold text-yellow-800">Relax & Play</p>
+                            </div>
+                            <div className="flex bg-white rounded-lg p-1 border border-yellow-200">
+                                <button onClick={() => setSelectedGame('mindful')} className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${selectedGame === 'mindful' ? 'bg-yellow-400 text-black' : 'text-gray-500 hover:bg-gray-100'}`}>Focus</button>
+                                <button onClick={() => setSelectedGame('cloud')} className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${selectedGame === 'cloud' ? 'bg-sky-400 text-white' : 'text-gray-500 hover:bg-gray-100'}`}>Hop</button>
                             </div>
                         </div>
-                        <MindfulMatchGame />
+                        
+                        <div className="flex-1 overflow-hidden rounded-2xl bg-white shadow-inner border border-yellow-100 relative">
+                            {selectedGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
+                        </div>
                     </div>
                 </div>
             </div>
@@ -366,11 +529,34 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     );
 };
 
+// --- PLAY MODAL (GAME SELECTOR) ---
+const PlayModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [activeGame, setActiveGame] = useState<'mindful' | 'cloud'>('mindful');
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[#FFFBEB] w-full max-w-3xl h-[600px] rounded-3xl p-6 shadow-2xl relative flex flex-col border border-yellow-200">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex gap-2 bg-white p-1 rounded-xl border border-yellow-100">
+                        <button onClick={() => setActiveGame('mindful')} className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeGame === 'mindful' ? 'bg-yellow-400 text-black shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}>Focus Mode</button>
+                        <button onClick={() => setActiveGame('cloud')} className={`px-4 py-2 rounded-lg font-bold text-sm transition-all ${activeGame === 'cloud' ? 'bg-sky-400 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}>Cloud Hop</button>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-yellow-100 rounded-full transition-colors"><X className="w-6 h-6 text-gray-500" /></button>
+                </div>
+                
+                <div className="flex-1 overflow-hidden rounded-2xl bg-white shadow-inner border border-yellow-100 relative">
+                    {activeGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession }) => {
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
   const [showPayment, setShowPayment] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
-  const [showGame, setShowGame] = useState(false);
+  const [showPlay, setShowPlay] = useState(false); 
   const [showQueue, setShowQueue] = useState(false);
   const [pendingCompanion, setPendingCompanion] = useState<Companion | null>(null);
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
@@ -379,7 +565,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [balance, setBalance] = useState(user.balance);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [companions, setCompanions] = useState<Companion[]>([]);
-  const [loadingCompanions, setLoadingCompanions] = useState(true); // Loading state for skeleton
+  const [loadingCompanions, setLoadingCompanions] = useState(true); 
   const [timeGreeting, setTimeGreeting] = useState('Hello');
 
   const [mood, setMood] = useState<'Happy'|'Calm'|'Neutral'|'Sad'|'Anxious' | null>(null);
@@ -401,7 +587,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
         if (dbUser) setBalance(dbUser.balance);
         const txs = Database.getUserTransactions(user.id);
         setTransactions(txs);
-        // We don't setCompanions here instantly to allow skeleton demo on mount
         if (!loadingCompanions) setCompanions(Database.getCompanions());
       };
 
@@ -557,9 +742,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform"><BookOpen className="w-5 h-5" /></div>
                                         <div className="text-left hidden sm:block"><span className="block font-bold text-sm">Journal</span><span className="text-xs opacity-70">Private Notes</span></div>
                                     </button>
-                                    <button onClick={() => setShowGame(true)} className="flex items-center gap-3 p-4 rounded-xl bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors border border-yellow-200 group">
+                                    <button onClick={() => setShowPlay(true)} className="flex items-center gap-3 p-4 rounded-xl bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors border border-yellow-200 group">
                                         <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform"><Gamepad2 className="w-5 h-5" /></div>
-                                        <div className="text-left hidden sm:block"><span className="block font-bold text-sm">Play Game</span><span className="text-xs opacity-70">Mindful Match</span></div>
+                                        <div className="text-left hidden sm:block"><span className="block font-bold text-sm">Play</span><span className="text-xs opacity-70">Games</span></div>
                                     </button>
                                 </div>
                                 {showJournal && (
@@ -585,7 +770,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                 <div className="relative w-full md:w-auto"><Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search specialists..." className="w-full md:w-64 pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
                             </div>
 
-                            {/* SPECIALIST GRID WITH SKELETON LOADING */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {loadingCompanions ? (
                                     <>
@@ -657,7 +841,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       {showQueue && <WaitingRoomModal userId={user.id} onLeave={() => setShowQueue(false)} onReady={handleQueueReady} />}
       {showPayment && <PaymentModal onClose={() => setShowPayment(false)} onSuccess={handlePaymentSuccess} initialError={paymentError} />}
       {showBreathing && <BreathingExercise onClose={() => setShowBreathing(false)} />}
-      {showGame && <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4"><div className="bg-[#FFFBEB] w-full max-w-lg rounded-3xl p-6 shadow-2xl relative"><button onClick={() => setShowGame(false)} className="absolute top-4 right-4 p-2 hover:bg-yellow-100 rounded-full"><X className="w-5 h-5" /></button><MindfulMatchGame /></div></div>}
+      {showPlay && <PlayModal onClose={() => setShowPlay(false)} />}
     </div>
   );
 };
