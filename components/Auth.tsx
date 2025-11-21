@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
 import { Heart, Lock, Mail, ArrowRight, Check, Facebook, AlertCircle, Key, RefreshCcw, ChevronRight, Calendar, User, X as XIcon, Shield } from 'lucide-react';
 import { Database } from '../services/database';
-import { Shield as ShieldIcon } from 'lucide-react';
 
 interface AuthProps {
-  onLogin: (role: UserRole, name: string, avatar?: string, email?: string, birthday?: string) => void;
+  // Updated signature to accept provider
+  onLogin: (role: UserRole, name: string, avatar?: string, email?: string, birthday?: string, provider?: 'email' | 'google' | 'facebook' | 'x') => void;
   onCancel: () => void;
 }
 
@@ -48,14 +49,12 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
   useEffect(() => {
       window.fbAsyncInit = function() {
         window.FB.init({
-          appId: '1143120088010234', // User Provided App ID
+          appId: '1143120088010234', 
           cookie: true,
           xfbml: true,
           version: 'v18.0'
         });
       };
-
-      // Load the SDK asynchronously
       (function(d, s, id) {
         var js, fjs = d.getElementsByTagName(s)[0];
         if (d.getElementById(id)) return;
@@ -86,8 +85,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
             const data = parseJwt(response.credential);
             if (data.email) {
                 const fullName = data.name || "Buddy";
-                // Auto-login successful Google users
-                onLogin(UserRole.USER, fullName, data.picture, data.email);
+                // PASS PROVIDER 'google'
+                onLogin(UserRole.USER, fullName, data.picture, data.email, undefined, 'google');
             }
         } catch (err) {
             console.error("Google Parse Error");
@@ -101,6 +100,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                 callback: handleGoogleCredentialResponse,
                 auto_select: false,
                 cancel_on_tap_outside: true,
+                use_fedcm_for_prompt: false, // FIXED: Disable FedCM to prevent NotAllowedError
             });
         } catch (e) {
             console.error("Google Auth Init Error:", e);
@@ -111,7 +111,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
   const handleGoogleClick = () => {
       if (window.google) {
           window.google.accounts.id.prompt((notification: any) => {
-             // Prompt Logic
+              if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+                  // Fallback or log if prompt is skipped
+                  console.log("Google prompt skipped or not displayed:", notification);
+              }
           });
       }
   };
@@ -133,7 +136,8 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                  const name = profile.name || "Buddy";
                  const pic = profile.picture?.data?.url;
                  const fbEmail = profile.email || `${profile.id}@facebook.com`;
-                 onLogin(UserRole.USER, name, pic, fbEmail);
+                 // PASS PROVIDER 'facebook'
+                 onLogin(UserRole.USER, name, pic, fbEmail, undefined, 'facebook');
              });
           } else {
              setLoading(false);
@@ -143,20 +147,17 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
       }, {scope: 'public_profile,email'});
   };
 
-  // --- X (TWITTER) SIMULATED POPUP (No Backend) ---
+  // --- X (TWITTER) SIMULATED POPUP ---
   const handleRealXLogin = () => {
-      // Without a backend, we can't do real OAuth 2.0 code exchange securely.
-      // We simulate the POPUP flow to avoid crashing the main page.
       setLoading(true);
       setAuthProvider('X');
-      
       setTimeout(() => {
           setLoading(false);
           setAuthProvider(null);
-          onLogin(UserRole.USER, "Buddy", undefined, "x-user@example.com");
+          // PASS PROVIDER 'x'
+          onLogin(UserRole.USER, "Buddy", undefined, "x-user@example.com", undefined, 'x');
       }, 1500);
   };
-
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -179,30 +180,23 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
 
     setLoading(true);
     
-    // Simulate Network Delay
     setTimeout(() => {
       if (isLogin) {
-          // STRICT DATABASE CHECK
           const existingUser = Database.getUserByEmail(email);
-          
           if (existingUser) {
-              // In a real app, we would check password hash here. 
-              // For this demo, existence validates access.
-              onLogin(existingUser.role, existingUser.name, existingUser.avatar, email);
+              // PASS PROVIDER 'email' (inferred)
+              onLogin(existingUser.role, existingUser.name, existingUser.avatar, email, undefined, 'email');
           } else {
               setLoading(false);
               setError("Invalid email address or password.");
           }
       } else {
-          // SIGN UP FLOW
           const existingUser = Database.getUserByEmail(email);
           if (existingUser) {
               setLoading(false);
               setError("An account with this email already exists.");
               return;
           }
-
-          // Proceed to Onboarding
           setLoading(false);
           setShowOnboarding(true);
       }
@@ -212,24 +206,9 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
   const finishOnboarding = () => {
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const formattedName = fullName.charAt(0).toUpperCase() + fullName.slice(1);
-      onLogin(UserRole.USER, formattedName, undefined, email, birthday);
+      // PASS PROVIDER 'email'
+      onLogin(UserRole.USER, formattedName, undefined, email, birthday, 'email');
   };
-
-  const toggleTopic = (topic: string) => {
-      if (selectedTopics.includes(topic)) {
-          setSelectedTopics(selectedTopics.filter(t => t !== topic));
-      } else {
-          if (selectedTopics.length < 5) {
-            setSelectedTopics([...selectedTopics, topic]);
-          }
-      }
-  };
-
-  // Password Reset Logic (Simulated)
-  const handleForgotPasswordStep1 = (e: React.FormEvent) => { e.preventDefault(); setResetStep(1); setSuccessMsg(`Code sent to ${email}`); };
-  const handleForgotPasswordStep2 = (e: React.FormEvent) => { e.preventDefault(); if(resetCode === '123456') setResetStep(2); else setError('Invalid Code'); };
-  const handleForgotPasswordStep3 = (e: React.FormEvent) => { e.preventDefault(); setIsResettingPassword(false); setSuccessMsg('Password reset. Please login.'); };
-
 
   // --- RENDER ONBOARDING ---
   if (showOnboarding) {
@@ -261,7 +240,10 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                             <h2 className="text-3xl font-bold mb-2">Topics</h2>
                             <div className="flex flex-wrap gap-3 mb-10 mt-4">
                                 {["Anxiety", "Stress", "Career", "Relationships", "Grief"].map(t => (
-                                    <button key={t} onClick={() => toggleTopic(t)} className={`px-4 py-2 border rounded-full font-bold ${selectedTopics.includes(t) ? 'bg-black text-white' : 'bg-white'}`}>{t}</button>
+                                    <button key={t} onClick={() => { 
+                                        if (selectedTopics.includes(t)) setSelectedTopics(selectedTopics.filter(topic => topic !== t));
+                                        else if (selectedTopics.length < 5) setSelectedTopics([...selectedTopics, t]);
+                                    }} className={`px-4 py-2 border rounded-full font-bold ${selectedTopics.includes(t) ? 'bg-black text-white' : 'bg-white'}`}>{t}</button>
                                 ))}
                             </div>
                             <button onClick={() => setOnboardingStep(3)} className="w-full bg-black text-white py-4 rounded-xl font-bold">Next</button>
@@ -281,6 +263,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
 
   return (
     <div className="fixed inset-0 bg-[#FFFBEB] z-50 flex flex-col md:flex-row">
+      {/* Left Side */}
       <div className="hidden md:block w-1/2 bg-black relative overflow-hidden">
         <img src="https://picsum.photos/id/64/1000/1000?grayscale" alt="Background" className="absolute inset-0 w-full h-full object-cover opacity-60" />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent"></div>
@@ -289,6 +272,7 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
         </div>
       </div>
 
+      {/* Right Side */}
       <div className="w-full md:w-1/2 p-8 md:p-20 flex flex-col justify-center relative bg-[#FFFBEB] overflow-y-auto">
         <button onClick={onCancel} className="absolute top-8 right-8 text-sm text-gray-500 hover:text-black font-bold">Back</button>
         
@@ -300,19 +284,19 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
                     {successMsg && <div className="text-green-600 mb-4 font-bold">{successMsg}</div>}
                     
                     {resetStep === 0 && (
-                        <form onSubmit={handleForgotPasswordStep1}>
+                        <form onSubmit={(e) => { e.preventDefault(); setResetStep(1); setSuccessMsg(`Code sent to ${email}`); }}>
                              <input type="email" className="w-full p-3 mb-4 border rounded-xl" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
                              <button className="w-full bg-black text-white py-3 rounded-xl font-bold">Send Code</button>
                         </form>
                     )}
                     {resetStep === 1 && (
-                        <form onSubmit={handleForgotPasswordStep2}>
+                        <form onSubmit={(e) => { e.preventDefault(); if(resetCode === '123456') setResetStep(2); else setError('Invalid Code'); }}>
                              <input type="text" className="w-full p-3 mb-4 border rounded-xl" placeholder="123456" value={resetCode} onChange={e => setResetCode(e.target.value)} />
                              <button className="w-full bg-black text-white py-3 rounded-xl font-bold">Verify</button>
                         </form>
                     )}
                     {resetStep === 2 && (
-                        <form onSubmit={handleForgotPasswordStep3}>
+                        <form onSubmit={(e) => { e.preventDefault(); setIsResettingPassword(false); setSuccessMsg('Password reset. Please login.'); }}>
                              <input type="password" className="w-full p-3 mb-4 border rounded-xl" placeholder="New Password" value={newPassword} onChange={e => setNewPassword(e.target.value)} />
                              <input type="password" className="w-full p-3 mb-4 border rounded-xl" placeholder="Confirm" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} />
                              <button className="w-full bg-black text-white py-3 rounded-xl font-bold">Update</button>
@@ -333,17 +317,14 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel }) => {
 
                     {/* OAUTH GRID */}
                     <div className="grid grid-cols-3 gap-4 mb-8">
-                        {/* GOOGLE - Custom SVG */}
                         <button type="button" onClick={handleGoogleClick} className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-white bg-white">
-                            <svg width="24" height="24" viewBox="0 0 24 24"><path d="M23.52 12.29C23.52 11.43 23.45 10.61 23.31 9.82H12V14.46H18.46C18.18 15.92 17.32 17.16 16.03 18.02V20.99H19.91C22.18 18.9 23.52 15.83 23.52 12.29Z" fill="#4285F4"/><path d="M12 24C15.24 24 17.96 22.93 19.91 20.99L16.03 18.02C14.95 18.74 13.58 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.2H1.26V17.31C3.24 21.25 7.31 24 12 24Z" fill="#34A853"/><path d="M5.27 14.2C5.03 13.33 4.9 12.42 4.9 11.5C4.9 10.58 5.03 9.67 5.27 8.8V5.69H1.26C0.46 7.29 0 9.1 0 11.5C0 13.9 0.46 15.71 1.26 17.31L5.27 14.2Z" fill="#FBBC05"/><path d="M12 3.83C13.76 3.83 15.35 4.44 16.59 5.62L20 2.21C17.96 0.31 15.24 0 12 0C7.31 0 3.24 2.75 1.26 6.69L5.27 9.8C6.22 6.94 8.87 3.83 12 3.83Z" fill="#EA4335"/></svg>
+                             <svg width="24" height="24" viewBox="0 0 24 24"><path d="M23.52 12.29C23.52 11.43 23.45 10.61 23.31 9.82H12V14.46H18.46C18.18 15.92 17.32 17.16 16.03 18.02V20.99H19.91C22.18 18.9 23.52 15.83 23.52 12.29Z" fill="#4285F4"/><path d="M12 24C15.24 24 17.96 22.93 19.91 20.99L16.03 18.02C14.95 18.74 13.58 19.17 12 19.17C8.87 19.17 6.22 17.06 5.27 14.2H1.26V17.31C3.24 21.25 7.31 24 12 24Z" fill="#34A853"/><path d="M5.27 14.2C5.03 13.33 4.9 12.42 4.9 11.5C4.9 10.58 5.03 9.67 5.27 8.8V5.69H1.26C0.46 7.29 0 9.1 0 11.5C0 13.9 0.46 15.71 1.26 17.31L5.27 14.2Z" fill="#FBBC05"/><path d="M12 3.83C13.76 3.83 15.35 4.44 16.59 5.62L20 2.21C17.96 0.31 15.24 0 12 0C7.31 0 3.24 2.75 1.26 6.69L5.27 9.8C6.22 6.94 8.87 3.83 12 3.83Z" fill="#EA4335"/></svg>
                         </button>
 
-                        {/* FACEBOOK - Real SDK */}
                         <button type="button" onClick={handleFacebookLogin} className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-blue-50 bg-white">
                              {loading && authProvider === 'Facebook' ? <RefreshCcw className="w-5 h-5 animate-spin text-blue-600" /> : <Facebook className="w-6 h-6 text-[#1877F2]" />}
                         </button>
 
-                        {/* X - Simulated Popup */}
                         <button type="button" onClick={handleRealXLogin} className="w-full h-14 border border-gray-200 rounded-xl flex items-center justify-center hover:bg-gray-100 bg-white">
                              <svg className="w-5 h-5 text-black" fill="currentColor" viewBox="0 0 24 24"><path d="M13.6823 10.6218L20.2391 3H18.6854L12.9921 9.61788L8.44486 3H3.2002L10.0765 13.0074L3.2002 21H4.75404L10.7663 14.0113L15.5685 21H20.8131L13.6819 10.6218H13.6823ZM11.5541 13.0956L10.8574 12.0991L5.31391 4.16971H7.70053L12.1742 10.5689L12.8709 11.5655L18.6861 19.8835H16.2995L11.5541 13.096V13.0956Z" /></svg>
                         </button>

@@ -16,6 +16,7 @@ export interface User {
   joinedAt: string;
   lastActive?: string;
   birthday?: string;
+  provider: 'email' | 'google' | 'facebook' | 'x';
 }
 
 export interface Companion {
@@ -31,7 +32,7 @@ export interface Companion {
 
 export interface Transaction {
   id: string;
-  userId?: string; // Optional for global revenue tracking
+  userId?: string;
   userName?: string;
   date: string;
   amount: number; // In Minutes
@@ -46,7 +47,8 @@ export interface GlobalSettings {
   allowSignups: boolean;
   siteName: string;
   broadcastMessage?: string;
-  maxConcurrentSessions: number; // New: Traffic Control
+  maxConcurrentSessions: number;
+  multilingualMode: boolean; // New: Toggle for Tavus language
 }
 
 export interface SystemLog {
@@ -84,7 +86,7 @@ export interface JournalEntry {
 export interface PromoCode {
   id: string;
   code: string;
-  discountPercentage: number; // e.g., 10 for 10% off top-ups
+  discountPercentage: number;
   uses: number;
   active: boolean;
 }

@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { User, UserRole, Companion } from './types';
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import AdminDashboard from './components/AdminDashboard';
+import AdminLogin from './components/AdminLogin';
 import Auth from './components/Auth';
 import VideoRoom from './components/VideoRoom';
 import StaticPages from './components/StaticPages';
@@ -19,6 +20,7 @@ const MainApp: React.FC = () => {
   const [maintenanceMode, setMaintenanceMode] = useState(false);
   const lastActivityRef = useRef<number>(Date.now());
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Restore session
   useEffect(() => {
@@ -60,7 +62,7 @@ const MainApp: React.FC = () => {
     return () => clearInterval(interval);
   }, [user, activeSessionCompanion]);
 
-  const handleLogin = (role: UserRole, name: string, avatar?: string, email?: string) => {
+  const handleLogin = (role: UserRole, name: string, avatar?: string, email?: string, birthday?: string, provider: 'email' | 'google' | 'facebook' | 'x' = 'email') => {
     let currentUser = Database.getUser();
     const userEmail = email || `${name.toLowerCase().replace(/ /g, '.')}@example.com`;
     
@@ -72,10 +74,19 @@ const MainApp: React.FC = () => {
             currentUser = existing;
             if (avatar) { currentUser.avatar = avatar; Database.updateUser(currentUser); }
         } else {
+            // STRICT ADMIN CREATION LOGIC
             const adminExists = Database.hasAdmin();
-            const isOAuth = !!avatar && (name.includes('Verified') || role === UserRole.USER);
-            const finalRole = (!adminExists && !isOAuth) ? UserRole.ADMIN : UserRole.USER;
-            currentUser = Database.createUser(name, userEmail, undefined, finalRole);
+            
+            // Only grant ADMIN if:
+            // 1. No admin exists yet
+            // 2. The provider is specifically 'email' (Password based)
+            // OAuth logins (Google/FB/X) are NEVER admins automatically
+            let finalRole = UserRole.USER;
+            if (!adminExists && provider === 'email') {
+                finalRole = UserRole.ADMIN;
+            }
+
+            currentUser = Database.createUser(name, userEmail, provider, birthday, finalRole);
             if (avatar) { currentUser.avatar = avatar; Database.updateUser(currentUser); }
         }
     }
@@ -83,18 +94,25 @@ const MainApp: React.FC = () => {
     Database.saveUserSession(currentUser);
     lastActivityRef.current = Date.now();
     setShowAuth(false);
+    
+    if (currentUser.role === UserRole.ADMIN) {
+        navigate('/admin/dashboard');
+    } else {
+        navigate('/');
+    }
   };
 
   const handleLogout = () => {
     Database.clearSession();
     setUser(null);
     setActiveSessionCompanion(null);
+    navigate('/');
   };
 
   if (isRestoring) return <div className="min-h-screen flex items-center justify-center bg-[#FFFBEB]"><div className="w-8 h-8 border-4 border-yellow-500 border-t-transparent rounded-full animate-spin"></div></div>;
 
-  // Maintenance Mode
-  if (maintenanceMode && (!user || user.role !== UserRole.ADMIN) && !location.pathname.includes('/support')) {
+  // Maintenance Mode Lockout
+  if (maintenanceMode && (!user || user.role !== UserRole.ADMIN) && !location.pathname.includes('/support') && !location.pathname.includes('/admin')) {
       return (
         <div className="min-h-screen bg-gray-900 flex flex-col items-center justify-center text-white p-6 text-center">
             <Wrench className="w-16 h-16 text-yellow-500 mb-6 animate-pulse" />
@@ -105,32 +123,41 @@ const MainApp: React.FC = () => {
       );
   }
 
-  // Video Session
   if (activeSessionCompanion && user) {
     return <VideoRoom companion={activeSessionCompanion} onEndSession={() => setActiveSessionCompanion(null)} userName={user.name} />;
   }
 
-  // Auth View Overlay
-  if (showAuth) {
-    return <Auth onLogin={handleLogin} onCancel={() => setShowAuth(false)} />;
-  }
-
-  // Routing Logic
   return (
-    <Routes>
-      <Route path="/" element={
-        user ? (
-          user.role === UserRole.ADMIN ? <AdminDashboard onLogout={handleLogout} /> : 
-          <Dashboard user={user} onLogout={handleLogout} onStartSession={(c) => setActiveSessionCompanion(c)} />
-        ) : (
-          <LandingPage onLoginClick={() => setShowAuth(true)} />
-        )
-      } />
-      <Route path="/privacy" element={<StaticPages type="privacy" />} />
-      <Route path="/terms" element={<StaticPages type="terms" />} />
-      <Route path="/support" element={<StaticPages type="support" />} />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+    <>
+      {showAuth && <Auth onLogin={handleLogin} onCancel={() => setShowAuth(false)} />}
+      <Routes>
+        {/* Public Routes */}
+        <Route path="/" element={
+            user && user.role === UserRole.USER ? (
+                <Dashboard user={user} onLogout={handleLogout} onStartSession={(c) => setActiveSessionCompanion(c)} />
+            ) : (
+                <LandingPage onLoginClick={() => setShowAuth(true)} />
+            )
+        } />
+        
+        {/* Admin Sub-Site Routes */}
+        <Route path="/admin" element={<Navigate to="/admin/login" />} />
+        <Route path="/admin/login" element={<AdminLogin onLogin={(u) => { setUser(u); Database.saveUserSession(u); navigate('/admin/dashboard'); }} />} />
+        <Route path="/admin/dashboard" element={
+            user && user.role === UserRole.ADMIN ? (
+                <AdminDashboard onLogout={handleLogout} />
+            ) : (
+                <Navigate to="/admin/login" />
+            )
+        } />
+
+        {/* Static Pages */}
+        <Route path="/privacy" element={<StaticPages type="privacy" />} />
+        <Route path="/terms" element={<StaticPages type="terms" />} />
+        <Route path="/support" element={<StaticPages type="support" />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </>
   );
 };
 

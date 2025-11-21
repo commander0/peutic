@@ -1,7 +1,7 @@
 
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode } from '../types';
 
-// Simulation of a MongoDB/Postgres Backend using LocalStorage
+// Simulation of a Backend using LocalStorage
 const DB_KEYS = {
   USER: 'peutic_db_current_user',
   ALL_USERS: 'peutic_db_users', 
@@ -12,8 +12,8 @@ const DB_KEYS = {
   MOODS: 'peutic_db_moods',
   JOURNALS: 'peutic_db_journals',
   PROMOS: 'peutic_db_promos',
-  QUEUE: 'peutic_db_queue', // New Queue Key
-  ACTIVE_SESSIONS: 'peutic_db_active_sessions' // New Session Counter
+  QUEUE: 'peutic_db_queue',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions'
 };
 
 // Initial Seed Data
@@ -54,14 +54,15 @@ export class Database {
     return usersStr ? JSON.parse(usersStr) : [];
   }
 
-  static createUser(name: string, email: string, birthday?: string, role: UserRole = UserRole.USER): User {
+  static createUser(name: string, email: string, provider: 'email' | 'google' | 'facebook' | 'x', birthday?: string, role: UserRole = UserRole.USER): User {
     const users = this.getAllUsers();
     const newUser: User = {
       id: `u_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
       email,
       role,
-      balance: 0, // Start with 0 balance
+      provider,
+      balance: 0,
       avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FACC15&color=000`,
       subscriptionStatus: 'ACTIVE',
       joinedAt: new Date().toISOString(),
@@ -88,14 +89,12 @@ export class Database {
   }
 
   static updateUser(updatedUser: User) {
-    // Update in All Users list
     const users = this.getAllUsers();
     const index = users.findIndex(u => u.id === updatedUser.id);
     if (index !== -1) {
       users[index] = updatedUser;
       localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     }
-    // Update current session if match
     const currentUser = this.getUser();
     if (currentUser && currentUser.id === updatedUser.id) {
       this.saveUserSession(updatedUser);
@@ -136,7 +135,7 @@ export class Database {
       this.logSystemEvent('INFO', 'Mass Status Update', `All specialists set to ${status}`);
   }
 
-  // --- WALLET & TRANSACTIONS ---
+  // --- TRANSACTIONS ---
   static topUpWallet(minutes: number, cost: number) {
     const user = this.getUser();
     if (user) {
@@ -175,7 +174,6 @@ export class Database {
 
   static addTransaction(tx: Transaction) {
     const all = this.getAllTransactions();
-    // If missing userId, try to fill from current session
     if (!tx.userId) {
         const u = this.getUser();
         if (u) { tx.userId = u.id; tx.userName = u.name; }
@@ -184,7 +182,7 @@ export class Database {
     localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(all));
   }
 
-  // --- GLOBAL SETTINGS ---
+  // --- SETTINGS ---
   static getSettings(): GlobalSettings {
     const saved = localStorage.getItem(DB_KEYS.SETTINGS);
     return saved ? JSON.parse(saved) : {
@@ -192,7 +190,8 @@ export class Database {
       maintenanceMode: false,
       allowSignups: true,
       siteName: 'Peutic',
-      maxConcurrentSessions: 15
+      maxConcurrentSessions: 15,
+      multilingualMode: true
     };
   }
 
@@ -201,7 +200,7 @@ export class Database {
     this.logSystemEvent('WARNING', 'Settings Changed', 'Global configuration updated by admin');
   }
 
-  // --- SYSTEM LOGS & METRICS ---
+  // --- LOGS & METRICS ---
   static getSystemLogs(): SystemLog[] {
       const saved = localStorage.getItem(DB_KEYS.LOGS);
       return saved ? JSON.parse(saved) : [];
@@ -216,25 +215,24 @@ export class Database {
           event,
           details
       };
-      logs.unshift(newLog); // Newest first
-      if (logs.length > 200) logs.pop(); // Keep log size manageable
+      logs.unshift(newLog); 
+      if (logs.length > 200) logs.pop(); 
       localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
   }
 
   static getServerMetrics(): ServerMetric[] {
-      // Simulate metrics since we are client-side
       const now = new Date();
       const active = this.getActiveSessionCount();
       return Array.from({length: 10}, (_, i) => ({
           time: new Date(now.getTime() - i * 5000).toLocaleTimeString(),
-          cpu: 20 + Math.random() * 30 + (active * 2), // CPU scales with users
+          cpu: 20 + Math.random() * 30 + (active * 2),
           memory: 30 + Math.random() * 20,
           latency: 15 + Math.random() * 40,
           activeSessions: active
       })).reverse();
   }
 
-  // --- QUEUE & TRAFFIC MANAGEMENT ---
+  // --- QUEUE ---
   static getQueue(): string[] {
       const q = localStorage.getItem(DB_KEYS.QUEUE);
       return q ? JSON.parse(q) : [];
@@ -246,7 +244,7 @@ export class Database {
           q.push(userId);
           localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
       }
-      return q.indexOf(userId) + 1; // Position (1-based)
+      return q.indexOf(userId) + 1;
   }
 
   static leaveQueue(userId: string) {
@@ -257,14 +255,12 @@ export class Database {
 
   static getQueuePosition(userId: string): number {
       const q = this.getQueue();
-      return q.indexOf(userId) + 1; // Returns 0 if not in queue
+      return q.indexOf(userId) + 1; 
   }
 
-  // Helper to simulate queue movement for demo purposes
   static advanceQueue() {
       const q = this.getQueue();
       if (q.length > 0) {
-          // Remove the first person (simulating they entered a session)
           q.shift();
           localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
       }
@@ -285,10 +281,8 @@ export class Database {
       let count = this.getActiveSessionCount();
       count = Math.max(0, count - 1);
       localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, count.toString());
-      // When a session ends, free up a spot in the queue (Simulate Round Robin)
       this.advanceQueue();
   }
-
 
   // --- WELLNESS & PROMOS ---
   static saveMood(entry: MoodEntry) {
@@ -305,11 +299,6 @@ export class Database {
       localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(journals));
   }
 
-  static simulateSendEmail(to: string, subject: string) {
-      this.logSystemEvent('SUCCESS', 'Email Sent', `Subject: "${subject}" to ${to}`);
-  }
-
-  // Promo Codes
   static getPromoCodes(): PromoCode[] {
       const saved = localStorage.getItem(DB_KEYS.PROMOS);
       return saved ? JSON.parse(saved) : [];
@@ -332,7 +321,6 @@ export class Database {
       localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
   }
 
-  // Admin Data Export
   static exportData(type: 'USERS' | 'LOGS') {
       const data = type === 'USERS' ? this.getAllUsers() : this.getSystemLogs();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
