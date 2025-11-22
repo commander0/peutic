@@ -38,8 +38,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     setTimeout(() => {
         const user = Database.getUserByEmail(email);
         // Verify User Exists + Role = Admin
-        // Note: In this frontend-only demo, we verify existence and role. 
-        // In a real backend, you would validate the password hash here.
         if (user && user.role === UserRole.ADMIN) {
             Database.resetAdminFailure();
             Database.logSystemEvent('SECURITY', 'Admin Login', `Admin ${user.email} logged into Command Center`);

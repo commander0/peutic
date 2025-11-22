@@ -15,7 +15,8 @@ const DB_KEYS = {
   PROMOS: 'peutic_db_promos_v6',
   QUEUE: 'peutic_db_queue_v6',
   ACTIVE_SESSIONS: 'peutic_db_active_sessions_v6',
-  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v6'
+  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v6',
+  BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v6'
 };
 
 // Initial Seed Data (Exported for Round Robin usage)
@@ -32,21 +33,21 @@ export const INITIAL_COMPANIONS: Companion[] = [
   { id: 'c10', name: 'Julia', specialty: 'Relationships', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Expert advice on dating, marriage, and connection.', replicaId: 'rb43357fb2ee' },
   { id: 'c11', name: 'Gabby', specialty: 'Self-Esteem', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Building confidence and self-worth together.', replicaId: 'rdf61be0d4e1' },
   { id: 'c12', name: 'Katya', specialty: 'Mindfulness', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Guided meditation and mindful living practices.', replicaId: 'r5791c5ab229' },
-  { id: 'c13', name: 'Ivy', specialty: 'Youth Mentoring', status: 'AVAILABLE', rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Guidance and support for young adults.', replicaId: 'r991fc9af2be' },
-  { id: 'c14', name: 'Zane', specialty: 'Addiction Recovery', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Supportive accountability and understanding.', replicaId: 'r24efb3b9bef' },
-  { id: 'c15', name: 'Rose', specialty: 'Trauma Informed', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Gentle approaches to processing past events.', replicaId: 'r3f8decedbd2' },
-  { id: 'c16', name: 'Owen', specialty: 'Career Transition', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Helping you pivot to your next great chapter.', replicaId: 'r9458111c64a' },
-  { id: 'c17', name: 'Samantha', specialty: 'Divorce Support', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Navigating the emotional complexities of separation.', replicaId: 'rf6b1c8d5e9d' },
-  { id: 'c18', name: 'Kai', specialty: 'LGBTQ+ Issues', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=600&h=600', bio: 'A supportive ally for identity and acceptance.', replicaId: 'r31e11adf1d3' },
-  { id: 'c19', name: 'Jakey', specialty: 'Social Anxiety', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Building social skills in a low-pressure environment.', replicaId: 'r5791c5ab229' },
-  { id: 'c20', name: 'Liam', specialty: 'Anger Management', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Constructive ways to process frustration.', replicaId: 'r90a0339d496' },
-  { id: 'c21', name: 'Beth', specialty: 'Postpartum Support', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Support for new mothers and transitions.', replicaId: 'rec4a4153a78' },
-  { id: 'c22', name: 'Mary', specialty: 'Spiritual Guidance', status: 'AVAILABLE', rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1588516903720-860f194dc830?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Connecting with your deeper spiritual self.', replicaId: 'r6ca16dbe104' },
-  { id: 'c23', name: 'Destiny', specialty: 'Goal Setting', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1589571894960-20bbe2815d22?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Turning your dreams into actionable plans.', replicaId: 'r38a383b0173' },
-  { id: 'c24', name: 'Rose (Jr)', specialty: 'Academic Stress', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Handling the pressures of school and exams.', replicaId: 'r1af76e94d00' },
-  { id: 'c25', name: 'Raj', specialty: 'Cultural Adjustment', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Navigating life in a new culture or environment.', replicaId: 'ra066ab28864' },
-  { id: 'c26', name: 'Ben', specialty: 'Phobia Desensitization', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1480429370139-89acccb096b9?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Overcoming specific fears step by step.', replicaId: 'r1a4e22fa0d9' },
-  { id: 'c27', name: 'Steph', specialty: 'Burnout Recovery', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600&h=600', bio: 'Restoring balance after periods of intense stress.', replicaId: 'r9c55f9312fb' }
+  { id: 'c13', name: 'Ivy', specialty: 'Youth Mentoring', status: 'AVAILABLE', rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Guidance and support for young adults.', replicaId: 'r991fc9af2be' },
+  { id: 'c14', name: 'Zane', specialty: 'Addiction Recovery', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Supportive accountability and understanding.', replicaId: 'r24efb3b9bef' },
+  { id: 'c15', name: 'Rose', specialty: 'Trauma Informed', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Gentle approaches to processing past events.', replicaId: 'r3f8decedbd2' },
+  { id: 'c16', name: 'Owen', specialty: 'Career Transition', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Helping you pivot to your next great chapter.', replicaId: 'r9458111c64a' },
+  { id: 'c17', name: 'Samantha', specialty: 'Divorce Support', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Navigating the emotional complexities of separation.', replicaId: 'rf6b1c8d5e9d' },
+  { id: 'c18', name: 'Kai', specialty: 'LGBTQ+ Issues', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=200&h=200', bio: 'A supportive ally for identity and acceptance.', replicaId: 'r31e11adf1d3' },
+  { id: 'c19', name: 'Jakey', specialty: 'Social Anxiety', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Building social skills in a low-pressure environment.', replicaId: 'r5791c5ab229' },
+  { id: 'c20', name: 'Liam', specialty: 'Anger Management', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1500917293891-ef795e70e1f6?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Constructive ways to process frustration.', replicaId: 'r90a0339d496' },
+  { id: 'c21', name: 'Beth', specialty: 'Postpartum Support', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1548142813-c348350df52b?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Support for new mothers and transitions.', replicaId: 'rec4a4153a78' },
+  { id: 'c22', name: 'Mary', specialty: 'Spiritual Guidance', status: 'AVAILABLE', rating: 4.7, imageUrl: 'https://images.unsplash.com/photo-1588516903720-860f194dc830?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Connecting with your deeper spiritual self.', replicaId: 'r6ca16dbe104' },
+  { id: 'c23', name: 'Destiny', specialty: 'Goal Setting', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1589571894960-20bbe2815d22?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Turning your dreams into actionable plans.', replicaId: 'r38a383b0173' },
+  { id: 'c24', name: 'Rose (Jr)', specialty: 'Academic Stress', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1594744803329-e58b31de8bf5?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Handling the pressures of school and exams.', replicaId: 'r1af76e94d00' },
+  { id: 'c25', name: 'Raj', specialty: 'Cultural Adjustment', status: 'AVAILABLE', rating: 4.9, imageUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Navigating life in a new culture or environment.', replicaId: 'ra066ab28864' },
+  { id: 'c26', name: 'Ben', specialty: 'Phobia Desensitization', status: 'AVAILABLE', rating: 4.8, imageUrl: 'https://images.unsplash.com/photo-1480429370139-89acccb096b9?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Overcoming specific fears step by step.', replicaId: 'r1a4e22fa0d9' },
+  { id: 'c27', name: 'Steph', specialty: 'Burnout Recovery', status: 'AVAILABLE', rating: 5.0, imageUrl: 'https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=200&h=200', bio: 'Restoring balance after periods of intense stress.', replicaId: 'r9c55f9312fb' }
 ];
 
 export class Database {
@@ -348,6 +349,15 @@ export class Database {
       const journals = JSON.parse(saved);
       journals.push(entry);
       localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(journals));
+  }
+
+  static getBreathingCooldown(): number | null {
+      const cd = localStorage.getItem(DB_KEYS.BREATHE_COOLDOWN);
+      return cd ? parseInt(cd, 10) : null;
+  }
+
+  static setBreathingCooldown(timestamp: number) {
+      localStorage.setItem(DB_KEYS.BREATHE_COOLDOWN, timestamp.toString());
   }
 
   static getPromoCodes(): PromoCode[] {
