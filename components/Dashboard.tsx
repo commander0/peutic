@@ -19,7 +19,6 @@ interface DashboardProps {
 
 const STRIPE_PUBLISHABLE_KEY = "pk_live_51MZuG0BUviiBIU4d81PC3BDlYgxuUszLu1InD0FFWOcGwQyNYgn5jjNOYi5a0uic9iuG8FdMjZBqpihTxK7oH0W600KfPZFZwp";
 
-// Define window.Stripe type for TypeScript
 declare global {
   interface Window {
     Stripe?: any;
@@ -105,7 +104,7 @@ const WeatherEffect: React.FC<{ type: 'confetti' | 'rain' }> = ({ type }) => {
     return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-[100]" />;
 };
 
-// --- MINDFUL MATCH GAME COMPONENT ---
+// --- MINDFUL MATCH (FIXED LAYOUT & ICONS) ---
 const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     const [cards, setCards] = useState<any[]>([]);
     const [flipped, setFlipped] = useState<number[]>([]);
@@ -113,36 +112,24 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     const [moves, setMoves] = useState(0);
     const [won, setWon] = useState(false);
 
-    const ICONS = [Sun, Heart, Smile, Music, Cloud, Coffee, Anchor, Feather];
+    // Updated Premium Icons
+    const ICONS = [Sun, Heart, Music, Zap, Star, Anchor, Feather, Cloud];
 
-    useEffect(() => {
-        initGame();
-    }, []);
+    useEffect(() => { initGame(); }, []);
 
     const initGame = () => {
         const duplicated = [...ICONS, ...ICONS];
-        const shuffled = duplicated
-            .sort(() => Math.random() - 0.5)
-            .map((icon, index) => ({ id: index, icon, isFlipped: false }));
-        setCards(shuffled);
-        setFlipped([]);
-        setSolved([]);
-        setMoves(0);
-        setWon(false);
+        const shuffled = duplicated.sort(() => Math.random() - 0.5).map((icon, i) => ({ id: i, icon }));
+        setCards(shuffled); setFlipped([]); setSolved([]); setMoves(0); setWon(false);
     };
 
     const handleCardClick = (index: number) => {
         if (flipped.length === 2 || solved.includes(index) || flipped.includes(index)) return;
-        
         const newFlipped = [...flipped, index];
         setFlipped(newFlipped);
-        
         if (newFlipped.length === 2) {
             setMoves(m => m + 1);
-            const firstCard = cards[newFlipped[0]];
-            const secondCard = cards[newFlipped[1]];
-            
-            if (firstCard.icon === secondCard.icon) {
+            if (cards[newFlipped[0]].icon === cards[newFlipped[1]].icon) {
                 setSolved([...solved, newFlipped[0], newFlipped[1]]);
                 setFlipped([]);
             } else {
@@ -151,58 +138,28 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
         }
     };
 
-    useEffect(() => {
-        if (cards.length > 0 && solved.length === cards.length) {
-            setWon(true);
-            if (onWin) onWin();
-        }
-    }, [solved, cards, onWin]);
+    useEffect(() => { if (cards.length > 0 && solved.length === cards.length) { setWon(true); onWin?.(); } }, [solved]);
 
     return (
-        <div className="bg-gradient-to-br from-yellow-50 to-white rounded-2xl p-6 border border-yellow-100 h-full flex flex-col shadow-inner overflow-hidden">
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <h3 className="font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500"/> Mindful Match</h3>
-                    <p className="text-xs text-gray-500">Find the pairs to focus your mind.</p>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold bg-white border border-yellow-100 px-3 py-1 rounded-full text-yellow-800 shadow-sm">Moves: {moves}</span>
-                    <button onClick={initGame} className="p-2 hover:bg-white hover:shadow-md rounded-full transition-all"><RefreshCw className="w-4 h-4" /></button>
-                </div>
+        <div className="bg-white/50 h-full flex flex-col rounded-2xl p-4 border border-yellow-100 overflow-hidden relative">
+            <div className="flex justify-between items-center mb-2 flex-shrink-0">
+                <h3 className="font-bold text-sm text-gray-700">Mindful Match</h3>
+                <button onClick={initGame}><RefreshCw className="w-4 h-4 text-gray-400 hover:text-black" /></button>
             </div>
-
             {won ? (
-                <div className="flex-1 flex flex-col items-center justify-center text-center animate-in zoom-in duration-500">
-                    <div className="w-24 h-24 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-lg shadow-yellow-200">
-                        <Trophy className="w-12 h-12 text-yellow-600" />
-                    </div>
-                    <h3 className="text-3xl font-black text-gray-900 mb-2">Focus Complete!</h3>
-                    <p className="text-gray-500 mb-8">You cleared your mind in {moves} moves.</p>
-                    <button onClick={initGame} className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 shadow-xl hover:scale-105 transition-transform">Play Again</button>
+                <div className="flex-1 flex flex-col items-center justify-center">
+                    <Trophy className="w-12 h-12 text-yellow-500 mb-2" />
+                    <p className="font-bold text-lg">Cleared!</p>
+                    <button onClick={initGame} className="mt-4 bg-black text-white px-4 py-2 rounded-lg text-sm">Replay</button>
                 </div>
             ) : (
-                <div className="grid grid-cols-4 gap-3 sm:gap-4 flex-1 content-center max-w-md mx-auto w-full overflow-y-auto p-1">
-                    {cards.map((card, index) => {
-                        const isVisible = flipped.includes(index) || solved.includes(index);
+                <div className="grid grid-cols-4 gap-2 flex-1 overflow-y-auto p-1 min-h-0">
+                    {cards.map((card, i) => {
+                        const isVisible = flipped.includes(i) || solved.includes(i);
                         const Icon = card.icon;
                         return (
-                            <button
-                                key={index}
-                                onClick={() => handleCardClick(index)}
-                                className={`aspect-square rounded-xl flex items-center justify-center transition-all duration-500 transform preserve-3d ${
-                                    isVisible 
-                                    ? 'bg-white border-2 border-peutic-yellow shadow-md rotate-y-180' 
-                                    : 'bg-gray-900 hover:bg-gray-800 shadow-lg'
-                                }`}
-                                style={{ perspective: '1000px' }}
-                            >
-                                {isVisible ? (
-                                    <Icon className="w-6 h-6 sm:w-8 sm:h-8 text-peutic-yellow animate-in fade-in zoom-in duration-300" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                        <div className="w-2 h-2 bg-gray-700 rounded-full"></div>
-                                    </div>
-                                )}
+                            <button key={i} onClick={() => handleCardClick(i)} className={`aspect-square rounded-lg flex items-center justify-center transition-all duration-300 ${isVisible ? 'bg-white shadow-md border-2 border-yellow-400' : 'bg-gray-900'}`}>
+                                {isVisible && <Icon className="w-5 h-5 text-yellow-500 animate-in zoom-in" />}
                             </button>
                         );
                     })}
@@ -212,7 +169,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     );
 };
 
-// --- ADVANCED CLOUD HOP GAME COMPONENT ---
+// --- CLOUD HOP (VERTICAL SCROLLER) ---
 const CloudHopGame: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [score, setScore] = useState(0);
@@ -221,237 +178,89 @@ const CloudHopGame: React.FC = () => {
 
     useEffect(() => {
         if (!gameStarted) return;
-        
         const canvas = canvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Constants
-        const GRAVITY = 0.4;
-        const JUMP_FORCE = -11;
-        const MOVE_SPEED = 4;
-        
-        // State
-        let player = { x: canvas.width / 2, y: canvas.height - 100, width: 30, height: 30, vx: 0, vy: 0 };
-        let platforms: any[] = [];
-        let particles: any[] = [];
-        let cameraY = 0;
-        let scoreValue = 0;
-        let myReq: number;
+        const GRAVITY = 0.4; const JUMP_FORCE = -9;
+        let player = { x: 150, y: 300, vx: 0, vy: 0 };
+        let platforms = [{x: 0, y: 380, w: 400, type: 'ground'}];
+        let cameraY = 0; let scoreVal = 0; let req: number;
         let keys: any = {};
 
-        // Generate Initial Platforms
-        const generatePlatforms = () => {
-            platforms = [];
-            // Ground platform
-            platforms.push({ x: 0, y: canvas.height - 40, width: canvas.width, height: 40, type: 'ground' });
-            
-            let y = canvas.height - 100;
-            while (y > -1000) {
-                const x = Math.random() * (canvas.width - 70);
-                platforms.push({ x, y, width: 70, height: 15, type: 'cloud' });
-                y -= 90; // Spacing
-            }
-        };
-        generatePlatforms();
+        // Seed platforms
+        let py = 300;
+        while (py > -2000) {
+            platforms.push({ x: Math.random() * 300, y: py, w: 60, type: 'cloud' });
+            py -= 80;
+        }
 
-        // Input Handling
-        const handleKeyDown = (e: KeyboardEvent) => { keys[e.code] = true; };
-        const handleKeyUp = (e: KeyboardEvent) => { keys[e.code] = false; };
-        const handleTouchStart = (e: TouchEvent) => {
-            e.preventDefault();
-            if (e.touches[0].clientX < canvas.width / 2) keys['ArrowLeft'] = true;
-            else keys['ArrowRight'] = true;
-        };
-        const handleTouchEnd = (e: TouchEvent) => {
-            e.preventDefault();
-            keys['ArrowLeft'] = false;
-            keys['ArrowRight'] = false;
-        };
-
-        window.addEventListener('keydown', handleKeyDown);
-        window.addEventListener('keyup', handleKeyUp);
-        canvas.addEventListener('touchstart', handleTouchStart);
-        canvas.addEventListener('touchend', handleTouchEnd);
-
-        // Asset Drawing Helpers
-        const drawCloud = (x: number, y: number, w: number, h: number) => {
-            ctx.fillStyle = '#FFFFFF';
-            ctx.beginPath();
-            ctx.arc(x + 10, y + h/2, h/2 + 5, 0, Math.PI * 2);
-            ctx.arc(x + w - 10, y + h/2, h/2 + 5, 0, Math.PI * 2);
-            ctx.rect(x + 10, y, w - 20, h);
-            ctx.fill();
-        };
-
-        const drawPlayer = (x: number, y: number) => {
-            // Body
-            ctx.fillStyle = '#FACC15'; // Yellow Character
-            ctx.beginPath();
-            ctx.arc(x + 15, y + 15, 15, 0, Math.PI * 2);
-            ctx.fill();
-            // Eyes
-            ctx.fillStyle = '#000';
-            ctx.beginPath();
-            ctx.arc(x + 10, y + 12, 2, 0, Math.PI * 2);
-            ctx.arc(x + 20, y + 12, 2, 0, Math.PI * 2);
-            ctx.fill();
-            // Smile
-            ctx.beginPath();
-            ctx.arc(x + 15, y + 15, 8, 0.1 * Math.PI, 0.9 * Math.PI);
-            ctx.stroke();
-        };
+        const keyDown = (e: KeyboardEvent) => keys[e.code] = true;
+        const keyUp = (e: KeyboardEvent) => keys[e.code] = false;
+        window.addEventListener('keydown', keyDown);
+        window.addEventListener('keyup', keyUp);
 
         const update = () => {
-            // Horizontal Movement
-            if (keys['ArrowLeft']) player.vx = -MOVE_SPEED;
-            else if (keys['ArrowRight']) player.vx = MOVE_SPEED;
-            else player.vx *= 0.9; // Friction
+            if (keys['ArrowLeft']) player.vx = -3;
+            else if (keys['ArrowRight']) player.vx = 3;
+            else player.vx *= 0.8;
 
             player.x += player.vx;
-            
-            // Screen Wrap
-            if (player.x < -player.width) player.x = canvas.width;
-            if (player.x > canvas.width) player.x = -player.width;
+            if (player.x < -20) player.x = 400;
+            if (player.x > 400) player.x = -20;
 
-            // Gravity
             player.vy += GRAVITY;
             player.y += player.vy;
 
-            // Camera Follow (Scroll Up)
-            if (player.y < canvas.height / 2 && player.vy < 0) {
-                player.y = canvas.height / 2;
-                const diff = Math.abs(player.vy);
-                scoreValue += Math.floor(diff);
-                setScore(scoreValue);
-                
+            // Camera
+            if (player.y < 200) {
+                player.y = 200;
+                scoreVal += Math.floor(Math.abs(player.vy));
+                setScore(scoreVal);
                 platforms.forEach(p => {
-                    p.y += diff;
-                    if (p.y > canvas.height) {
-                        // Recycle platform to top
-                        p.y = -20;
-                        p.x = Math.random() * (canvas.width - 70);
-                    }
+                    p.y += Math.abs(player.vy);
+                    if (p.y > 400) { p.y = -20; p.x = Math.random() * 340; }
                 });
             }
 
-            // Collision Detection (Only when falling)
+            // Collision
             if (player.vy > 0) {
                 platforms.forEach(p => {
-                    if (
-                        player.y + player.height > p.y &&
-                        player.y + player.height < p.y + p.height + 10 &&
-                        player.x + player.width > p.x &&
-                        player.x < p.x + p.width
-                    ) {
+                    if (player.y + 20 > p.y && player.y + 20 < p.y + 20 && player.x + 20 > p.x && player.x < p.x + p.w) {
                         player.vy = JUMP_FORCE;
-                        // Add particles on jump
-                        for(let i=0; i<5; i++) {
-                            particles.push({ x: player.x+15, y: player.y+30, vx: (Math.random()-0.5)*5, vy: Math.random()*2, life: 1.0 });
-                        }
                     }
                 });
             }
 
-            // Game Over Check
-            if (player.y > canvas.height) {
+            if (player.y > 400) {
                 setGameOver(true);
                 setGameStarted(false);
-                cancelAnimationFrame(myReq);
+                cancelAnimationFrame(req);
                 return;
             }
 
-            // Draw Background
-            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            gradient.addColorStop(0, '#60A5FA'); // Blue Sky
-            gradient.addColorStop(1, '#BFDBFE'); // Light Blue
-            ctx.fillStyle = gradient;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // Draw
+            ctx.fillStyle = '#87CEEB'; ctx.fillRect(0,0,400,400);
+            ctx.fillStyle = '#FFF';
+            platforms.forEach(p => ctx.fillRect(p.x, p.y, p.w, 10));
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath(); ctx.arc(player.x+10, player.y+10, 10, 0, Math.PI*2); ctx.fill();
 
-            // Draw Platforms
-            platforms.forEach(p => {
-                if (p.type === 'ground') {
-                    ctx.fillStyle = '#4ADE80';
-                    ctx.fillRect(p.x, p.y, p.width, p.height);
-                } else {
-                    drawCloud(p.x, p.y, p.width, p.height);
-                }
-            });
-
-            // Draw Particles
-            particles.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.05;
-                ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, 3, 0, Math.PI*2);
-                ctx.fill();
-                if (p.life <= 0) particles.splice(i, 1);
-            });
-
-            drawPlayer(player.x, player.y);
-
-            myReq = requestAnimationFrame(update);
+            req = requestAnimationFrame(update);
         };
-
         update();
-
-        return () => {
-            cancelAnimationFrame(myReq);
-            window.removeEventListener('keydown', handleKeyDown);
-            window.removeEventListener('keyup', handleKeyUp);
-            canvas.removeEventListener('touchstart', handleTouchStart);
-            canvas.removeEventListener('touchend', handleTouchEnd);
-        };
+        return () => { cancelAnimationFrame(req); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); };
     }, [gameStarted]);
 
-    const startGame = () => {
-        setGameOver(false);
-        setScore(0);
-        setGameStarted(true);
-    };
-
     return (
-        <div className="bg-sky-300 rounded-2xl p-1 h-full relative overflow-hidden shadow-inner border-4 border-white min-h-[350px]">
-            {/* HUD */}
-            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start">
-                <div className="bg-white/20 backdrop-blur-md p-2 rounded-xl border border-white/30">
-                    <h3 className="font-black text-white text-sm drop-shadow-sm">CLOUD HOP</h3>
-                    <p className="text-[10px] text-white font-medium opacity-90">Tap sides or use Arrows</p>
-                </div>
-                <div className="bg-yellow-400 px-4 py-2 rounded-xl shadow-lg border-2 border-white transform rotate-3">
-                    <p className="text-xs font-bold text-yellow-900 uppercase">Score</p>
-                    <p className="text-2xl font-black text-white leading-none drop-shadow-md">{Math.floor(score)}</p>
-                </div>
-            </div>
-            
-            <canvas 
-                ref={canvasRef} 
-                width={400} 
-                height={500} 
-                className="w-full h-full bg-sky-400 rounded-xl cursor-pointer"
-            />
-
+        <div className="relative h-full w-full bg-sky-300 overflow-hidden rounded-2xl border-4 border-white shadow-inner">
+            <div className="absolute top-2 right-2 bg-white/50 px-2 rounded font-black">{score}</div>
+            <canvas ref={canvasRef} width={400} height={400} className="w-full h-full" />
             {(!gameStarted || gameOver) && (
-                <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center z-20 backdrop-blur-sm p-6 text-center">
-                    {gameOver && (
-                        <div className="mb-6 animate-in zoom-in">
-                            <div className="text-6xl mb-2">🌤️</div>
-                            <h2 className="text-3xl font-black text-white mb-1">Game Over</h2>
-                            <p className="text-gray-300">You reached {Math.floor(score)}m</p>
-                        </div>
-                    )}
-                    {!gameOver && (
-                        <div className="mb-8 animate-in slide-in-from-bottom-5">
-                            <Cloud className="w-20 h-20 text-white mx-auto mb-4 animate-bounce" />
-                            <h2 className="text-3xl font-black text-white mb-2">Ready to Hop?</h2>
-                            <p className="text-sky-100">Jump on clouds to reach the stars!</p>
-                        </div>
-                    )}
-                    <button onClick={startGame} className="bg-yellow-400 text-black px-10 py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform shadow-[0_0_20px_rgba(250,204,21,0.5)] flex items-center gap-2 border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1">
-                        {gameOver ? <RefreshCw className="w-6 h-6"/> : <Play className="w-6 h-6"/>} {gameOver ? 'Try Again' : 'Start Game'}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                    <button onClick={() => { setGameStarted(true); setGameOver(false); setScore(0); }} className="bg-yellow-400 px-6 py-2 rounded-xl font-bold shadow-lg border-b-4 border-yellow-600 active:border-b-0 active:translate-y-1">
+                        {gameOver ? 'Try Again' : 'Start Hop'}
                     </button>
                 </div>
             )}
@@ -459,191 +268,14 @@ const CloudHopGame: React.FC = () => {
     );
 };
 
-// --- SKELETON LOADER ---
-const SpecialistSkeleton = () => (
-  <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden h-[400px]">
-      <div className="h-64 bg-gray-200 animate-pulse"></div>
-      <div className="p-6">
-          <div className="h-4 bg-gray-200 rounded w-1/3 mb-4 animate-pulse"></div>
-          <div className="h-3 bg-gray-200 rounded w-full mb-2 animate-pulse"></div>
-          <div className="h-3 bg-gray-200 rounded w-2/3 mb-6 animate-pulse"></div>
-          <div className="h-12 bg-gray-200 rounded-xl animate-pulse"></div>
-      </div>
-  </div>
-);
-
-// --- WAITING ROOM MODAL ---
-const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady: () => void }> = ({ userId, onLeave, onReady }) => {
-    const [position, setPosition] = useState<number>(0);
-    const [estWait, setEstWait] = useState<number>(5);
-    const [selectedGame, setSelectedGame] = useState<'mindful' | 'cloud'>('cloud');
-
-    useEffect(() => {
-        const pos = Database.joinQueue(userId);
-        setPosition(pos);
-        setEstWait(Math.ceil(pos * 1.5));
-
-        const interval = setInterval(() => {
-            const currentPos = Database.getQueuePosition(userId);
-            if (currentPos === 0 || currentPos === 1) {
-                clearInterval(interval);
-                onReady();
-            } else {
-                if (Math.random() > 0.7) Database.advanceQueue(); 
-                setPosition(currentPos);
-                setEstWait(Math.ceil(currentPos * 1.5));
-            }
-        }, 2000);
-        return () => clearInterval(interval);
-    }, [userId, onReady]);
-
-    const handleLeave = () => {
-        Database.leaveQueue(userId);
-        onLeave();
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-[#FFFBEB] w-full max-w-4xl rounded-3xl p-6 md:p-8 text-center relative shadow-2xl border-4 border-white overflow-hidden">
-                {/* Header Bar */}
-                <div className="absolute top-0 left-0 w-full h-16 bg-white border-b border-yellow-100 flex items-center justify-between px-6">
-                    <div className="flex items-center gap-2">
-                        <Hourglass className="w-5 h-5 text-yellow-500 animate-spin-slow" />
-                        <span className="font-bold text-gray-900">Waiting Room</span>
-                    </div>
-                    <button onClick={handleLeave} className="text-gray-400 hover:text-red-500 font-bold text-xs transition-colors border border-gray-200 px-3 py-1.5 rounded-lg hover:bg-red-50">Leave Queue</button>
-                </div>
-
-                <div className="mt-16 flex flex-col lg:flex-row gap-8 h-[600px]">
-                    {/* Left: Status */}
-                    <div className="w-full lg:w-1/3 flex flex-col justify-center space-y-6">
-                        <div className="bg-white p-6 rounded-3xl shadow-lg border border-yellow-100">
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-2">Your Position</p>
-                            <div className="text-6xl font-black text-black tracking-tighter">#{position}</div>
-                            <div className="w-full h-2 bg-gray-100 rounded-full mt-4 overflow-hidden">
-                                <div className="h-full bg-green-500 animate-pulse" style={{ width: '30%' }}></div>
-                            </div>
-                        </div>
-                        
-                        <div className="bg-yellow-50 p-6 rounded-3xl border border-yellow-200">
-                            <p className="text-xs font-bold text-yellow-700 uppercase tracking-widest mb-1">Estimated Wait</p>
-                            <div className="text-4xl font-black text-yellow-900">{estWait}<span className="text-lg font-bold"> mins</span></div>
-                        </div>
-
-                        <div className="bg-gray-900 text-white p-4 rounded-2xl text-left">
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className="w-8 h-8 bg-gray-800 rounded-full flex items-center justify-center"><Info className="w-4 h-4"/></div>
-                                <p className="font-bold text-sm">Did you know?</p>
-                            </div>
-                            <p className="text-xs text-gray-400 leading-relaxed">Playing simple games while waiting can reduce cortisol levels by up to 15% before a therapy session.</p>
-                        </div>
-                    </div>
-
-                    {/* Right: Games */}
-                    <div className="w-full lg:w-2/3 bg-white rounded-3xl border border-gray-200 shadow-inner p-2 flex flex-col">
-                        <div className="flex justify-center gap-2 mb-2 bg-gray-50 p-1 rounded-xl self-center">
-                            <button onClick={() => setSelectedGame('cloud')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'cloud' ? 'bg-sky-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'}`}><Cloud className="w-4 h-4"/> Cloud Hop</button>
-                            <button onClick={() => setSelectedGame('mindful')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'mindful' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-500 hover:bg-gray-200'}`}><Sparkles className="w-4 h-4"/> Mindful Match</button>
-                        </div>
-                        <div className="flex-1 overflow-hidden rounded-2xl relative border border-gray-100">
-                            {selectedGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, cost: number) => void; initialError?: string }> = ({ onClose, onSuccess, initialError }) => {
-    const [amount, setAmount] = useState(20);
-    const [isCustom, setIsCustom] = useState(false);
-    const [processing, setProcessing] = useState(false);
-    const [error, setError] = useState<string | null>(initialError || null);
-    
-    const stripeRef = useRef<any>(null);
-    const elementsRef = useRef<any>(null);
-    const cardElementRef = useRef<any>(null);
-    const mountNodeRef = useRef<HTMLDivElement>(null);
-    const settings = Database.getSettings();
-    const pricePerMin = settings.pricePerMinute;
-
-    useEffect(() => {
-        if (!window.Stripe) { setError("Stripe failed to load. Please refresh."); return; }
-        if (!stripeRef.current) {
-            stripeRef.current = window.Stripe(STRIPE_PUBLISHABLE_KEY);
-            elementsRef.current = stripeRef.current.elements();
-            const style = {
-                base: { color: "#32325d", fontFamily: '"Manrope", sans-serif', fontSmoothing: "antialiased", fontSize: "16px", "::placeholder": { color: "#aab7c4" } },
-                invalid: { color: "#fa755a", iconColor: "#fa755a" }
-            };
-            if (!cardElementRef.current) {
-                cardElementRef.current = elementsRef.current.create("card", { style: style, hidePostalCode: true });
-                setTimeout(() => { if (mountNodeRef.current) cardElementRef.current.mount(mountNodeRef.current); }, 100);
-            }
-        }
-    }, []);
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setProcessing(true);
-        setError(null);
-        if (!amount || amount <= 0) { setError("Please enter a valid amount."); setProcessing(false); return; }
-        if (!stripeRef.current || !cardElementRef.current) { setError("Payment system not initialized."); setProcessing(false); return; }
-        try {
-            const result = await stripeRef.current.createToken(cardElementRef.current);
-            if (result.error) { setError(result.error.message); setProcessing(false); } else {
-                setTimeout(() => { setProcessing(false); const minutesAdded = Math.floor(amount / pricePerMin); onSuccess(minutesAdded, amount); }, 1500);
-            }
-        } catch (err: any) { setError(err.message || "Payment failed."); setProcessing(false); }
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-                <div className="p-6 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-                    <div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-green-600" /><span className="font-bold text-gray-700">Secure Checkout</span></div>
-                    <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition"><X className="w-5 h-5" /></button>
-                </div>
-                <div className="p-8">
-                    <div className="mb-8 text-center">
-                        <p className="text-gray-500 text-sm mb-4 font-medium">Select Amount to Add</p>
-                        {!isCustom && <h2 className="text-5xl font-extrabold tracking-tight mb-6">${amount.toFixed(2)}</h2>}
-                        <div className="flex justify-center gap-2 mb-6 flex-wrap">
-                            {[20, 50, 100, 250].map((val) => (
-                                <button key={val} type="button" onClick={() => { setAmount(val); setIsCustom(false); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${!isCustom && amount === val ? 'bg-black text-white shadow-lg transform scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>${val}</button>
-                            ))}
-                            <button type="button" onClick={() => { setIsCustom(true); setAmount(0); }} className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${isCustom ? 'bg-black text-white shadow-lg transform scale-105' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Custom</button>
-                        </div>
-                        {isCustom && (
-                            <div className="mb-6 animate-in fade-in zoom-in duration-300">
-                                <div className="relative max-w-[180px] mx-auto">
-                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-lg">$</span>
-                                    <input type="number" min="1" step="1" value={amount === 0 ? '' : amount} onChange={(e) => setAmount(parseFloat(e.target.value) || 0)} className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-300 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none text-2xl font-bold text-center" placeholder="0.00" autoFocus />
-                                </div>
-                            </div>
-                        )}
-                        <p className="text-xs text-gray-400 mt-2">Adds approx. <span className="font-bold text-black">{Math.floor((amount || 0) / pricePerMin)} mins</span> of talk time.</p>
-                    </div>
-                    {error && <div className="mb-4 p-3 bg-red-50 border border-red-100 text-red-600 text-sm rounded-lg flex items-center gap-2"><AlertTriangle className="w-4 h-4 flex-shrink-0" /><span>{error}</span></div>}
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="bg-gray-50 p-4 rounded-xl border border-gray-200"><div ref={mountNodeRef} className="p-2" /></div>
-                        <button type="submit" disabled={processing || !window.Stripe || (amount <= 0)} className={`w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-2 ${processing || (amount <= 0) ? 'bg-gray-800 text-gray-400 cursor-not-allowed' : 'bg-peutic-yellow text-black hover:bg-yellow-400 hover:scale-[1.02]'}`}>
-                            {processing ? <span className="animate-pulse">Processing Securely...</span> : <><Lock className="w-5 h-5" /> Pay ${(amount || 0).toFixed(2)}</>}
-                        </button>
-                    </form>
-                </div>
-            </div>
-        </div>
-    );
-};
-
+// --- BREATHING MODAL (UPDATED: 120s + 5min Cooldown + Audio) ---
 const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [text, setText] = useState("Inhale");
+    const [timeLeft, setTimeLeft] = useState(120); // 120 Seconds Duration
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
     useEffect(() => {
-        // Play calming loop from CDN
+        // Play calming loop
         audioRef.current = new Audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-impulse-30032.mp3");
         audioRef.current.loop = true;
         audioRef.current.volume = 0.5;
@@ -651,27 +283,66 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
         const steps = [{ text: "Inhale", delay: 4000 }, { text: "Hold", delay: 4000 }, { text: "Exhale", delay: 4000 }, { text: "Hold", delay: 4000 }];
         let currentStep = 0;
+        
+        // Breathe Loop
         const runLoop = () => { setText(steps[currentStep].text); currentStep = (currentStep + 1) % steps.length; };
         runLoop();
-        const interval = setInterval(runLoop, 4000);
+        const breatheInterval = setInterval(runLoop, 4000);
+        
+        // Countdown Timer
+        const timerInterval = setInterval(() => {
+            setTimeLeft(prev => {
+                if (prev <= 1) {
+                    Database.setBreathingCooldown(Date.now() + 5 * 60 * 1000); // 5 Min Cooldown
+                    onClose();
+                    return 0;
+                }
+                return prev - 1;
+            });
+        }, 1000);
         
         return () => { 
-            clearInterval(interval); 
+            clearInterval(breatheInterval); 
+            clearInterval(timerInterval);
             if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
         };
     }, []);
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-             <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
+             <div className="relative w-full max-w-md aspect-square flex items-center justify-center flex-col">
                 <button onClick={onClose} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
                 <div className="absolute inset-0 bg-peutic-yellow/20 rounded-full animate-breathe"></div>
                 <div className="absolute inset-12 bg-peutic-yellow/40 rounded-full animate-breathe" style={{ animationDelay: '1s' }}></div>
                 <div className="relative z-10 text-center text-white">
                     <h2 className="text-4xl font-bold mb-2">{text}</h2>
-                    <p className="text-white/60">Listen to the sound...</p>
+                    <p className="text-white/60 mb-4">Listen to the sound...</p>
+                    <div className="inline-block px-4 py-1 rounded-full bg-white/10 border border-white/20 text-sm font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
                 </div>
              </div>
+        </div>
+    );
+};
+
+// --- PLAY MODAL (GAME SELECTOR - FIXED BLANK PAGE) ---
+const PlayModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+    const [activeGame, setActiveGame] = useState<'mindful' | 'cloud'>('cloud'); // Default to cloud to prevent blank
+
+    return (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div className="bg-[#FFFBEB] w-full max-w-3xl h-[600px] rounded-3xl p-6 shadow-2xl relative flex flex-col border-4 border-white">
+                <div className="flex justify-between items-center mb-6">
+                    <div className="flex gap-2">
+                        <button onClick={() => setActiveGame('mindful')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${activeGame === 'mindful' ? 'bg-yellow-400 text-black shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>Mindful Match</button>
+                        <button onClick={() => setActiveGame('cloud')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${activeGame === 'cloud' ? 'bg-sky-400 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>Cloud Hop</button>
+                    </div>
+                    <button onClick={onClose} className="p-2 hover:bg-yellow-100 rounded-full"><X className="w-5 h-5" /></button>
+                </div>
+                
+                <div className="flex-1 overflow-hidden rounded-2xl bg-white shadow-inner border border-yellow-100 relative">
+                    {activeGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
+                </div>
+            </div>
         </div>
     );
 };
@@ -706,7 +377,6 @@ const ProfileModal: React.FC<{ user: User; onClose: () => void; onUpdate: () => 
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession }) => {
   const [weather, setWeather] = useState<'confetti' | 'rain' | null>(null);
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
-  const [showPayment, setShowPayment] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
   const [showPlay, setShowPlay] = useState(false); 
   const [showQueue, setShowQueue] = useState(false);
@@ -795,6 +465,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       const entry: JournalEntry = { id: `jour_${Date.now()}`, userId: user.id, date: new Date().toISOString(), content: journalContent };
       Database.saveJournal(entry);
       setJournalContent(''); setShowJournal(false);
+  };
+
+  const startBreathing = () => {
+      const cooldown = Database.getBreathingCooldown();
+      if (cooldown && cooldown > Date.now()) {
+          alert(`Please wait ${Math.ceil((cooldown - Date.now()) / 60000)} minutes before next session.`);
+          return;
+      }
+      setShowBreathing(true);
   };
 
   const filteredCompanions = companions.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.specialty.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -887,8 +566,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                     </div>
                                 </div>
                                 <div className="grid grid-cols-3 gap-4">
-                                    <button onClick={() => setShowBreathing(true)} className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group">
-                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform"><Wind className="w-5 h-5" /></div>
+                                    <button onClick={startBreathing} className="flex items-center gap-3 p-4 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors border border-blue-100 group">
+                                        <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center group-hover:scale-110 transition-transform"><Wind className="w-5 h-5 text-blue-500" /></div>
                                         <div className="text-left hidden sm:block"><span className="block font-bold text-sm">Breathe</span><span className="text-xs opacity-70">Panic Relief</span></div>
                                     </button>
                                     <button onClick={() => setShowJournal(!showJournal)} className="flex items-center gap-3 p-4 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 transition-colors border border-purple-100 group">
