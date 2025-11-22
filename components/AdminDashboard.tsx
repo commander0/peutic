@@ -206,6 +206,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       e.preventDefault();
       if (!broadcastSubject || !broadcastBody) return;
       
+      // Simulate sending to all users
       const recipientCount = users.length;
       Database.logSystemEvent('INFO', 'Email Marketing', `Email blast sent to ${recipientCount} users. Subject: ${broadcastSubject}`);
       
@@ -346,8 +347,8 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                       <div className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${log.type === 'ERROR' || log.type === 'SECURITY' ? 'bg-red-500' : log.type === 'WARNING' ? 'bg-yellow-500' : 'bg-blue-500'}`}></div>
                                       <div className="overflow-hidden">
                                           <p className="text-xs font-bold text-gray-300 truncate">{log.event}</p>
-                                          <p className="text-[10px] text-gray-600 truncate">{log.details}</p>
-                                          <p className="text-[10px] text-gray-700 font-mono mt-1">{new Date(log.timestamp).toLocaleTimeString()}</p>
+                                          <p className="text-xs text-gray-500 truncate">{log.details}</p>
+                                          <p className="text-[10px] text-gray-600 font-mono mt-1">{new Date(log.timestamp).toLocaleTimeString()}</p>
                                       </div>
                                   </div>
                               ))}
@@ -708,19 +709,17 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   </div>
 
                   <div className="mb-6">
-                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2 text-left">Image URL</label>
+                      <label className="block text-xs font-bold text-gray-500 uppercase mb-2">Image URL</label>
                       <input 
-                          type="text" 
-                          className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-yellow-500 outline-none"
-                          placeholder="https://..."
+                          className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white focus:border-yellow-500 outline-none text-xs"
                           value={newImageUrl}
                           onChange={e => setNewImageUrl(e.target.value)}
+                          placeholder="https://..."
                       />
                   </div>
-
                   <div className="flex gap-3">
                       <button onClick={() => setShowImageModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700 hover:text-white transition-colors">Cancel</button>
-                      <button onClick={handleUpdateImage} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-900/20">Save Changes</button>
+                      <button onClick={handleUpdateImage} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400 transition-colors shadow-lg shadow-yellow-900/20">Update Image</button>
                   </div>
               </div>
           </div>

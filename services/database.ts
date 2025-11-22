@@ -21,7 +21,6 @@ const DB_KEYS = {
 };
 
 // --- THE "INFINITY" STABLE IMAGE POOL ---
-// Expanded for maximum variety and stability
 export const STABLE_AVATAR_POOL = [
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800", // Ruby
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800", 
@@ -47,7 +46,6 @@ export const STABLE_AVATAR_POOL = [
     "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=800"
 ];
 
-// Initial Seed Data with Empty Image URLs (Will be resolved by AvatarImage component dynamically)
 export const INITIAL_COMPANIONS: Companion[] = [
   { id: 'c1', name: 'Ruby', gender: 'Female', specialty: 'Anxiety & Panic', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Specializing in grounding techniques and immediate stress relief.', replicaId: 're3a705cf66a' },
   { id: 'c2', name: 'Carter', gender: 'Male', specialty: 'Life Coaching', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Helping you build a roadmap for personal success.', replicaId: 'rca8a38779a8' },
@@ -79,7 +77,6 @@ export const INITIAL_COMPANIONS: Companion[] = [
 ];
 
 export class Database {
-  // --- USER MANAGEMENT ---
   static getAllUsers(): User[] {
     const usersStr = localStorage.getItem(DB_KEYS.ALL_USERS);
     return usersStr ? JSON.parse(usersStr) : [];
@@ -96,7 +93,7 @@ export class Database {
       role,
       provider,
       balance: 0,
-      avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=FACC15&color=000`,
+      avatar: '', 
       subscriptionStatus: 'ACTIVE',
       joinedAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
@@ -143,7 +140,6 @@ export class Database {
       return this.getAllUsers().some(u => u.role === UserRole.ADMIN);
   }
 
-  // --- ADMIN SECURITY ---
   static checkAdminLockout(): number | null {
       const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
       if (!attemptsStr) return null;
@@ -151,10 +147,10 @@ export class Database {
       if (data.count >= 5) {
           const now = Date.now();
           const diff = now - data.lastAttempt;
-          if (diff < 24 * 60 * 60 * 1000) { // 24 Hours
-              return Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 1000)); // Mins remaining
+          if (diff < 24 * 60 * 60 * 1000) { 
+              return Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 1000)); 
           } else {
-              localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS); // Reset after 24h
+              localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS);
               return null;
           }
       }
@@ -173,13 +169,10 @@ export class Database {
       localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS);
   }
 
-  // --- EMAIL SIMULATION ---
   static sendEmail(to: string, subject: string, body: string) {
       this.logSystemEvent('INFO', 'Email Sent', `Sent "${subject}" to ${to}`);
-      console.log(`%c[EMAIL SIMULATION] To: ${to}\nSubject: ${subject}\nBody: ${body}`, "color: #FACC15; font-weight: bold; background: #000; padding: 4px;");
   }
 
-  // --- COMPANION MANAGEMENT ---
   static getCompanions(): Companion[] {
     const saved = localStorage.getItem(DB_KEYS.COMPANIONS);
     if (!saved) {
@@ -205,10 +198,8 @@ export class Database {
       this.logSystemEvent('INFO', 'Mass Status Update', `All specialists set to ${status}`);
   }
 
-  // --- TRANSACTIONS ---
   static topUpWallet(minutes: number, cost: number, targetUserId?: string) {
     let user = null;
-    
     if (targetUserId) {
         const allUsers = this.getAllUsers();
         user = allUsers.find(u => u.id === targetUserId) || null;
@@ -260,7 +251,6 @@ export class Database {
     localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(all));
   }
 
-  // --- SETTINGS ---
   static getSettings(): GlobalSettings {
     const saved = localStorage.getItem(DB_KEYS.SETTINGS);
     return saved ? JSON.parse(saved) : {
@@ -278,7 +268,6 @@ export class Database {
     this.logSystemEvent('WARNING', 'Settings Changed', 'Global configuration updated by admin');
   }
 
-  // --- LOGS & METRICS ---
   static getSystemLogs(): SystemLog[] {
       const saved = localStorage.getItem(DB_KEYS.LOGS);
       return saved ? JSON.parse(saved) : [];
@@ -310,7 +299,6 @@ export class Database {
       })).reverse();
   }
 
-  // --- QUEUE ---
   static joinQueue(userId: string): number {
       const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
       if (!q.includes(userId)) {
@@ -354,7 +342,6 @@ export class Database {
       this.advanceQueue();
   }
 
-  // --- WELLNESS & PROMOS ---
   static saveMood(entry: MoodEntry) {
       const moods = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]');
       moods.push(entry);
@@ -382,13 +369,7 @@ export class Database {
   
   static createPromoCode(code: string, discount: number) {
       const list = this.getPromoCodes();
-      list.push({ 
-          id: Date.now().toString(), 
-          code: code.toUpperCase(), 
-          discountPercentage: discount, 
-          uses: 0, 
-          active: true 
-      });
+      list.push({ id: Date.now().toString(), code: code.toUpperCase(), discountPercentage: discount, uses: 0, active: true });
       localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
   }
 
@@ -397,19 +378,6 @@ export class Database {
       localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
   }
 
-  static exportData(type: 'USERS' | 'LOGS') {
-      const data = type === 'USERS' ? this.getAllUsers() : this.getSystemLogs();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `peutic_${type.toLowerCase()}_export_${new Date().toISOString().split('T')[0]}.json`;
-      a.click();
-      URL.revokeObjectURL(url);
-      this.logSystemEvent('INFO', 'Data Export', `Admin exported ${type} database`);
-  }
-
-  // --- NEW FEATURES (MEMORY & GIFTS) ---
   static saveSessionMemory(memory: SessionMemory) {
       const memories = JSON.parse(localStorage.getItem(DB_KEYS.MEMORIES) || '[]');
       memories.push(memory);
@@ -425,13 +393,7 @@ export class Database {
   static createGiftCard(amount: number, createdBy: string): string {
       const gifts = JSON.parse(localStorage.getItem(DB_KEYS.GIFTS) || '[]');
       const code = `PEUTIC-${Math.random().toString(36).substr(2, 6).toUpperCase()}`;
-      const newGift: GiftCard = {
-          id: Date.now().toString(),
-          code,
-          amount,
-          createdBy,
-          isRedeemed: false
-      };
+      const newGift: GiftCard = { id: Date.now().toString(), code, amount, createdBy, isRedeemed: false };
       gifts.push(newGift);
       localStorage.setItem(DB_KEYS.GIFTS, JSON.stringify(gifts));
       return code;
@@ -440,14 +402,26 @@ export class Database {
   static redeemGiftCard(code: string, userId: string): number | null {
       const gifts = JSON.parse(localStorage.getItem(DB_KEYS.GIFTS) || '[]');
       const giftIndex = gifts.findIndex((g: GiftCard) => g.code === code && !g.isRedeemed);
-      
       if (giftIndex !== -1) {
           const gift = gifts[giftIndex];
           gifts[giftIndex].isRedeemed = true;
           localStorage.setItem(DB_KEYS.GIFTS, JSON.stringify(gifts));
-          this.topUpWallet(gift.amount, 0, userId); // Grant funds
+          this.topUpWallet(gift.amount, 0, userId);
           return gift.amount;
       }
       return null;
+  }
+
+  static exportData(type: 'USERS' | 'LOGS') {
+      const data = type === 'USERS' ? this.getAllUsers() : this.getSystemLogs();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `peutic_${type.toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
   }
 }

@@ -56,7 +56,6 @@ const MainApp: React.FC = () => {
       const timeoutLimit = user.role === UserRole.ADMIN ? 24 * 60 * 60 * 1000 : 15 * 60 * 1000;
       if (elapsed > timeoutLimit) {
         handleLogout();
-        alert("Session expired due to inactivity.");
       }
     };
     const interval = setInterval(checkTimeout, 60 * 1000);

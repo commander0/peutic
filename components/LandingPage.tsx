@@ -34,7 +34,7 @@ const LogoBloomberg = () => (
   </svg>
 );
 
-// --- AVATAR COMPONENT (Fixed Fallback) ---
+// --- AVATAR COMPONENT (Fixed Fallback - NO INITIALS) ---
 const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
     const [imgSrc, setImgSrc] = useState(src);
     const [usePool, setUsePool] = useState(false);
@@ -48,6 +48,7 @@ const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = 
         }
     }, [src]);
 
+    // Deterministic but randomized fallback to ensure we always show a FACE, not initials
     const getStableImage = (name: string) => {
         let hash = 0;
         for (let i = 0; i < name.length; i++) {
@@ -61,7 +62,7 @@ const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = 
         <img 
             src={usePool ? getStableImage(alt) : imgSrc} 
             alt={alt} 
-            className={`${className} object-cover object-center`}
+            className={className}
             onError={() => setUsePool(true)}
             loading="lazy"
         />
@@ -330,8 +331,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                               />
                               <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md ${spec.status === 'AVAILABLE' ? 'bg-green-500/80' : 'bg-yellow-500/80'}`}>{spec.status}</div>
                           </div>
-                          <h3 className="text-xl font-bold">{spec.name}</h3>
-                          <p className="text-gray-500 text-sm">{spec.specialty}</p>
+                          {/* REMOVED NAMES AND SPECIALTIES HERE */}
+                          {/* Only the avatar and status badge remain visible in the card body */}
                       </div>
                   ))}
               </div>
