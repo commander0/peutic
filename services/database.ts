@@ -1,28 +1,27 @@
+
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard } from '../types';
 
-// Simulation of a Backend using LocalStorage
-// VERSIONED KEYS TO FORCE RESET (Updated to v10)
 const DB_KEYS = {
-  USER: 'peutic_db_current_user_v10',
-  ALL_USERS: 'peutic_db_users_v10', 
-  COMPANIONS: 'peutic_db_companions_v10',
-  TRANSACTIONS: 'peutic_db_transactions_v10',
-  SETTINGS: 'peutic_db_settings_v10',
-  LOGS: 'peutic_db_logs_v10',
-  MOODS: 'peutic_db_moods_v10',
-  JOURNALS: 'peutic_db_journals_v10',
-  PROMOS: 'peutic_db_promos_v10',
-  QUEUE: 'peutic_db_queue_v10',
-  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v10',
-  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v10',
-  BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v10',
-  MEMORIES: 'peutic_db_memories_v10',
-  GIFTS: 'peutic_db_gifts_v10'
+  USER: 'peutic_db_current_user_v11',
+  ALL_USERS: 'peutic_db_users_v11', 
+  COMPANIONS: 'peutic_db_companions_v11',
+  TRANSACTIONS: 'peutic_db_transactions_v11',
+  SETTINGS: 'peutic_db_settings_v11',
+  LOGS: 'peutic_db_logs_v11',
+  MOODS: 'peutic_db_moods_v11',
+  JOURNALS: 'peutic_db_journals_v11',
+  PROMOS: 'peutic_db_promos_v11',
+  QUEUE: 'peutic_db_queue_v11',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v11',
+  ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v11',
+  BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v11',
+  MEMORIES: 'peutic_db_memories_v11',
+  GIFTS: 'peutic_db_gifts_v11'
 };
 
-// --- THE "INFINITY" STABLE IMAGE POOL ---
+// Expanded Stable Pool
 export const STABLE_AVATAR_POOL = [
-    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800", // Ruby
+    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=800", 
@@ -47,33 +46,33 @@ export const STABLE_AVATAR_POOL = [
 ];
 
 export const INITIAL_COMPANIONS: Companion[] = [
-  { id: 'c1', name: 'Ruby', gender: 'Female', specialty: 'Anxiety & Panic', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Specializing in grounding techniques and immediate stress relief.', replicaId: 're3a705cf66a' },
-  { id: 'c2', name: 'Carter', gender: 'Male', specialty: 'Life Coaching', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Helping you build a roadmap for personal success.', replicaId: 'rca8a38779a8' },
-  { id: 'c3', name: 'James', gender: 'Male', specialty: 'Men\'s Health', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'A safe space to discuss pressure, expectations, and balance.', replicaId: 'r92debe21318' },
-  { id: 'c4', name: 'Danny', gender: 'Male', specialty: 'Grief Support', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Walking beside you through times of loss.', replicaId: 'r62baeccd777' },
-  { id: 'c5', name: 'Anna', gender: 'Female', specialty: 'Family Dynamics', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Navigating complex family relationships with care.', replicaId: 'r6ae5b6efc9d' },
-  { id: 'c6', name: 'Elena', gender: 'Female', specialty: 'Women\'s Health', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Holistic support for hormonal health.', replicaId: 'r86e2c395e725' }, 
-  { id: 'c7', name: 'Olivia', gender: 'Female', specialty: 'Workplace Stress', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Strategies to handle burnout and professional anxiety.', replicaId: 'rc2146c13e81' },
-  { id: 'c8', name: 'Charlie', gender: 'Male', specialty: 'Listening Ear', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Here to listen to whatever is on your mind.', replicaId: 'rf4703150052' },
-  { id: 'c9', name: 'Luna', gender: 'Female', specialty: 'Creative Blocks', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Unlocking your potential through open dialogue.', replicaId: 're5c4a8dd5ea' },
-  { id: 'c10', name: 'Julia', gender: 'Female', specialty: 'Relationships', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Expert advice on dating, marriage, and connection.', replicaId: 'rb43357fb2ee' },
-  { id: 'c11', name: 'Gabby', gender: 'Female', specialty: 'Self-Esteem', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Building confidence and self-worth together.', replicaId: 'rdf61be0d4e1' },
-  { id: 'c12', name: 'Katya', gender: 'Female', specialty: 'Mindfulness', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Guided meditation and mindful living practices.', replicaId: 'r5791c5ab229' },
-  { id: 'c13', name: 'Ivy', gender: 'Female', specialty: 'Youth Mentoring', status: 'AVAILABLE', rating: 4.7, imageUrl: '', bio: 'Guidance and support for young adults.', replicaId: 'r991fc9af2be' },
-  { id: 'c14', name: 'Zane', gender: 'Male', specialty: 'Addiction', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Supportive accountability and understanding.', replicaId: 'r24efb3b9bef' },
-  { id: 'c15', name: 'Rose', gender: 'Female', specialty: 'Trauma', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Gentle approaches to processing past events.', replicaId: 'r3f8decedbd2' },
-  { id: 'c16', name: 'Owen', gender: 'Male', specialty: 'Career', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Helping you pivot to your next great chapter.', replicaId: 'r9458111c64a' },
-  { id: 'c17', name: 'Sarah', gender: 'Female', specialty: 'Divorce', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Navigating separation.', replicaId: 'rf6b1c8d5e9d' },
-  { id: 'c18', name: 'Kai', gender: 'Male', specialty: 'LGBTQ+', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Supportive ally for identity.', replicaId: 'r31e11adf1d3' },
-  { id: 'c19', name: 'Jake', gender: 'Male', specialty: 'Social Anxiety', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Building social skills.', replicaId: 'r5791c5ab229' },
+  { id: 'c1', name: 'Ruby', gender: 'Female', specialty: 'Anxiety & Panic', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Specializing in grounding.', replicaId: 're3a705cf66a' },
+  { id: 'c2', name: 'Carter', gender: 'Male', specialty: 'Life Coaching', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Success roadmap.', replicaId: 'rca8a38779a8' },
+  { id: 'c3', name: 'James', gender: 'Male', specialty: 'Men\'s Health', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Safe space for men.', replicaId: 'r92debe21318' },
+  { id: 'c4', name: 'Danny', gender: 'Male', specialty: 'Grief Support', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Walking beside you.', replicaId: 'r62baeccd777' },
+  { id: 'c5', name: 'Anna', gender: 'Female', specialty: 'Family Dynamics', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Complex relationships.', replicaId: 'r6ae5b6efc9d' },
+  { id: 'c6', name: 'Elena', gender: 'Female', specialty: 'Women\'s Health', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Hormonal health.', replicaId: 'r86e2c395e725' }, 
+  { id: 'c7', name: 'Olivia', gender: 'Female', specialty: 'Workplace Stress', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Burnout strategy.', replicaId: 'rc2146c13e81' },
+  { id: 'c8', name: 'Charlie', gender: 'Male', specialty: 'Listening Ear', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Just listening.', replicaId: 'rf4703150052' },
+  { id: 'c9', name: 'Luna', gender: 'Female', specialty: 'Creative Blocks', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Unlock potential.', replicaId: 're5c4a8dd5ea' },
+  { id: 'c10', name: 'Julia', gender: 'Female', specialty: 'Relationships', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Dating advice.', replicaId: 'rb43357fb2ee' },
+  { id: 'c11', name: 'Gabby', gender: 'Female', specialty: 'Self-Esteem', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Building confidence.', replicaId: 'rdf61be0d4e1' },
+  { id: 'c12', name: 'Katya', gender: 'Female', specialty: 'Mindfulness', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Guided meditation.', replicaId: 'r5791c5ab229' },
+  { id: 'c13', name: 'Ivy', gender: 'Female', specialty: 'Youth Mentoring', status: 'AVAILABLE', rating: 4.7, imageUrl: '', bio: 'Young adult support.', replicaId: 'r991fc9af2be' },
+  { id: 'c14', name: 'Zane', gender: 'Male', specialty: 'Addiction', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Supportive accountability.', replicaId: 'r24efb3b9bef' },
+  { id: 'c15', name: 'Rose', gender: 'Female', specialty: 'Trauma', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Gentle processing.', replicaId: 'r3f8decedbd2' },
+  { id: 'c16', name: 'Owen', gender: 'Male', specialty: 'Career', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Career pivots.', replicaId: 'r9458111c64a' },
+  { id: 'c17', name: 'Sarah', gender: 'Female', specialty: 'Divorce', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Separation help.', replicaId: 'rf6b1c8d5e9d' },
+  { id: 'c18', name: 'Kai', gender: 'Male', specialty: 'LGBTQ+', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Identity support.', replicaId: 'r31e11adf1d3' },
+  { id: 'c19', name: 'Jake', gender: 'Male', specialty: 'Social Anxiety', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Social skills.', replicaId: 'r5791c5ab229' },
   { id: 'c20', name: 'Liam', gender: 'Male', specialty: 'Anger', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Constructive frustration.', replicaId: 'r90a0339d496' },
-  { id: 'c21', name: 'Beth', gender: 'Female', specialty: 'Postpartum', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Support for new mothers.', replicaId: 'rec4a4153a78' },
-  { id: 'c22', name: 'Mary', gender: 'Female', specialty: 'Spiritual', status: 'AVAILABLE', rating: 4.7, imageUrl: '', bio: 'Deep spiritual connection.', replicaId: 'r6ca16dbe104' },
-  { id: 'c23', name: 'Destiny', gender: 'Female', specialty: 'Goals', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Actionable planning.', replicaId: 'r38a383b0173' },
-  { id: 'c24', name: 'Rose Jr', gender: 'Female', specialty: 'Academic', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'School and exam pressure.', replicaId: 'r1af76e94d00' },
-  { id: 'c25', name: 'Raj', gender: 'Male', specialty: 'Cultural', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Navigating new cultures.', replicaId: 'ra066ab28864' },
+  { id: 'c21', name: 'Beth', gender: 'Female', specialty: 'Postpartum', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'New mother support.', replicaId: 'rec4a4153a78' },
+  { id: 'c22', name: 'Mary', gender: 'Female', specialty: 'Spiritual', status: 'AVAILABLE', rating: 4.7, imageUrl: '', bio: 'Deep connection.', replicaId: 'r6ca16dbe104' },
+  { id: 'c23', name: 'Destiny', gender: 'Female', specialty: 'Goals', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'Action plans.', replicaId: 'r38a383b0173' },
+  { id: 'c24', name: 'Rose Jr', gender: 'Female', specialty: 'Academic', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Exam pressure.', replicaId: 'r1af76e94d00' },
+  { id: 'c25', name: 'Raj', gender: 'Male', specialty: 'Cultural', status: 'AVAILABLE', rating: 4.9, imageUrl: '', bio: 'New cultures.', replicaId: 'ra066ab28864' },
   { id: 'c26', name: 'Ben', gender: 'Male', specialty: 'Phobias', status: 'AVAILABLE', rating: 4.8, imageUrl: '', bio: 'Overcoming fears.', replicaId: 'r1a4e22fa0d9' },
-  { id: 'c27', name: 'Steph', gender: 'Female', specialty: 'Burnout', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Restoring balance.', replicaId: 'r9c55f9312fb' }
+  { id: 'c27', name: 'Steph', gender: 'Female', specialty: 'Burnout', status: 'AVAILABLE', rating: 5.0, imageUrl: '', bio: 'Life balance.', replicaId: 'r9c55f9312fb' }
 ];
 
 export class Database {

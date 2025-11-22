@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, MoodEntry, JournalEntry } from '../types';
 import { 
@@ -24,35 +25,30 @@ declare global {
   }
 }
 
-// --- THE "INFINITY" AVATAR COMPONENT ---
+// --- THE "INFINITY" AVATAR COMPONENT (DiceBear Fallback) ---
 const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
     const [imgSrc, setImgSrc] = useState(src);
-    const [usePool, setUsePool] = useState(false);
 
     useEffect(() => {
+        // If empty or too short, default to fallback immediately
         if (src && src.length > 10) { 
             setImgSrc(src);
-            setUsePool(false);
         } else {
-            setUsePool(true);
+            useFallback();
         }
     }, [src]);
 
-    const getStableImage = (name: string) => {
-        let hash = 0;
-        for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const index = Math.abs(hash) % STABLE_AVATAR_POOL.length;
-        return STABLE_AVATAR_POOL[index];
+    const useFallback = () => {
+        // DiceBear Lorelei style is friendly and high quality SVG
+        setImgSrc(`https://api.dicebear.com/7.x/lorelei/svg?seed=${encodeURIComponent(alt)}&backgroundColor=FACC15`);
     };
 
     return (
         <img 
-            src={usePool ? getStableImage(alt) : imgSrc} 
+            src={imgSrc} 
             alt={alt} 
             className={`${className} object-cover object-center`}
-            onError={() => setUsePool(true)}
+            onError={useFallback}
             loading="lazy"
         />
     );
@@ -170,7 +166,6 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     const [cards, setCards] = useState<any[]>([]);
     const [flipped, setFlipped] = useState<number[]>([]);
     const [solved, setSolved] = useState<number[]>([]);
-    const [moves, setMoves] = useState(0);
     const [won, setWon] = useState(false);
     const ICONS = [Sun, Heart, Music, Zap, Star, Anchor, Feather, Cloud];
 
@@ -179,7 +174,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     const initGame = () => {
         const duplicated = [...ICONS, ...ICONS];
         const shuffled = duplicated.sort(() => Math.random() - 0.5).map((icon, i) => ({ id: i, icon }));
-        setCards(shuffled); setFlipped([]); setSolved([]); setMoves(0); setWon(false);
+        setCards(shuffled); setFlipped([]); setSolved([]); setWon(false);
     };
 
     const handleCardClick = (index: number) => {
@@ -187,7 +182,6 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
         const newFlipped = [...flipped, index];
         setFlipped(newFlipped);
         if (newFlipped.length === 2) {
-            setMoves(m => m + 1);
             if (cards[newFlipped[0]].icon === cards[newFlipped[1]].icon) {
                 setSolved([...solved, newFlipped[0], newFlipped[1]]);
                 setFlipped([]);
@@ -217,14 +211,9 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
                         const isVisible = flipped.includes(i) || solved.includes(i);
                         const Icon = card.icon;
                         return (
-                            <div key={i} className="aspect-square perspective-1000">
-                                <button onClick={() => handleCardClick(i)} className={`w-full h-full relative transition-all duration-500 transform-style-3d ${isVisible ? 'rotate-y-180' : ''}`}>
-                                    <div className="absolute inset-0 bg-gray-900 rounded-lg backface-hidden flex items-center justify-center border border-gray-700 shadow-md">
-                                        <div className="w-2 h-2 bg-gray-700 rounded-full"></div>
-                                    </div>
-                                    <div className="absolute inset-0 bg-white rounded-lg backface-hidden rotate-y-180 flex items-center justify-center border-2 border-yellow-400 shadow-lg">
-                                        <Icon className="w-6 h-6 text-yellow-500" />
-                                    </div>
+                            <div key={i} className="aspect-square">
+                                <button onClick={() => handleCardClick(i)} className={`w-full h-full rounded-lg flex items-center justify-center transition-all duration-300 ${isVisible ? 'bg-white border-2 border-yellow-400 shadow-lg' : 'bg-gray-900 shadow-md'}`}>
+                                    {isVisible && <Icon className="w-6 h-6 text-yellow-500 animate-in zoom-in" />}
                                 </button>
                             </div>
                         );
@@ -235,11 +224,13 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     );
 };
 
+// --- CLOUD HOP (Vertical Scroller with Tap Controls) ---
 const CloudHopGame: React.FC = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [score, setScore] = useState(0);
     const [gameOver, setGameOver] = useState(false);
     const [gameStarted, setGameStarted] = useState(false);
+    const playerRef = useRef({ x: 150, y: 300, vx: 0, vy: 0 });
 
     useEffect(() => {
         if (!gameStarted) return;
@@ -248,99 +239,112 @@ const CloudHopGame: React.FC = () => {
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const GRAVITY = 0.4; const JUMP_FORCE = -10;
-        let player = { x: 150, y: 300, vx: 0, vy: 0 };
+        const GRAVITY = 0.4;
         let platforms = [{x: 0, y: 380, w: 400, h: 40, type: 'ground'}];
-        let particles: any[] = [];
         let req: number;
-        let keys: any = {};
-        let scoreVal = 0;
-
+        
+        // Seed platforms
         let py = 300;
         while (py > -2000) {
             platforms.push({ x: Math.random() * 300, y: py, w: 70, h: 15, type: 'cloud' });
             py -= 90;
         }
 
-        const keyDown = (e: KeyboardEvent) => keys[e.code] = true;
-        const keyUp = (e: KeyboardEvent) => keys[e.code] = false;
-        window.addEventListener('keydown', keyDown);
-        window.addEventListener('keyup', keyUp);
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'ArrowLeft') playerRef.current.vx = -4;
+            if (e.key === 'ArrowRight') playerRef.current.vx = 4;
+        };
+        const handleKeyUp = () => { playerRef.current.vx = 0; };
+
+        window.addEventListener('keydown', handleKeyDown);
+        window.addEventListener('keyup', handleKeyUp);
 
         const drawCloud = (x: number, y: number, w: number, h: number) => {
              ctx.fillStyle = 'white';
-             ctx.beginPath();
-             ctx.roundRect(x, y, w, h, 10);
-             ctx.fill();
+             ctx.beginPath(); ctx.roundRect(x, y, w, h, 10); ctx.fill();
              ctx.beginPath(); ctx.arc(x+10, y, 15, 0, Math.PI*2); ctx.fill();
              ctx.beginPath(); ctx.arc(x+w-10, y, 15, 0, Math.PI*2); ctx.fill();
              ctx.beginPath(); ctx.arc(x+w/2, y-5, 20, 0, Math.PI*2); ctx.fill();
         };
 
         const update = () => {
-            if (keys['ArrowLeft']) player.vx = -4; else if (keys['ArrowRight']) player.vx = 4; else player.vx *= 0.8;
-            player.x += player.vx;
-            if (player.x < -20) player.x = 400; if (player.x > 400) player.x = -20;
-            player.vy += GRAVITY; player.y += player.vy;
+            const p = playerRef.current;
+            p.x += p.vx;
+            if (p.x < -20) p.x = 400; if (p.x > 400) p.x = -20;
+            p.vy += GRAVITY; p.y += p.vy;
 
-            if (player.y < 200) {
-                player.y = 200;
-                scoreVal += Math.floor(Math.abs(player.vy));
-                setScore(scoreVal);
-                platforms.forEach(p => {
-                    p.y += Math.abs(player.vy);
-                    if (p.y > 450) { p.y = -20; p.x = Math.random() * 340; }
+            if (p.y < 200) {
+                p.y = 200;
+                setScore(s => s + Math.floor(Math.abs(p.vy)));
+                platforms.forEach(pl => {
+                    pl.y += Math.abs(p.vy);
+                    if (pl.y > 450) { pl.y = -20; pl.x = Math.random() * 340; }
                 });
             }
 
-            if (player.vy > 0) {
-                platforms.forEach(p => {
-                    if (player.y + 20 > p.y && player.y + 20 < p.y + 40 && player.x + 20 > p.x && player.x < p.x + p.w) {
-                        player.vy = JUMP_FORCE;
-                        for(let i=0;i<5;i++) particles.push({x: player.x, y: player.y+20, vx: (Math.random()-0.5)*5, vy: Math.random(), life: 1});
+            if (p.vy > 0) {
+                platforms.forEach(pl => {
+                    if (p.y + 20 > pl.y && p.y + 20 < pl.y + 40 && p.x + 20 > pl.x && p.x < pl.x + pl.w) {
+                        p.vy = -10;
                     }
                 });
             }
 
-            if (player.y > 450) { setGameOver(true); setGameStarted(false); cancelAnimationFrame(req); return; }
+            if (p.y > 450) { setGameOver(true); setGameStarted(false); cancelAnimationFrame(req); return; }
 
             const grad = ctx.createLinearGradient(0,0,0,400); grad.addColorStop(0,'#38bdf8'); grad.addColorStop(1,'#bae6fd');
             ctx.fillStyle = grad; ctx.fillRect(0,0,400,400);
+            
+            // Stars
             ctx.fillStyle = 'white';
             for(let i=0; i<20; i++) ctx.fillRect(Math.random()*400, Math.random()*400, 2, 2);
 
-            platforms.forEach(p => {
-                if(p.type === 'ground') { ctx.fillStyle = '#4ade80'; ctx.fillRect(p.x, p.y, p.w, p.h); }
-                else drawCloud(p.x, p.y, p.w, p.h);
+            platforms.forEach(pl => {
+                if(pl.type==='ground') { ctx.fillStyle='#4ade80'; ctx.fillRect(pl.x, pl.y, pl.w, pl.h); }
+                else drawCloud(pl.x, pl.y, pl.w, pl.h);
             });
 
-            particles.forEach((p,i) => {
-                p.x += p.vx; p.y += p.vy; p.life -= 0.05;
-                ctx.fillStyle = `rgba(255,255,255,${p.life})`;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI*2); ctx.fill();
-                if(p.life<=0) particles.splice(i,1);
-            });
-
+            // Player
             ctx.shadowBlur = 15; ctx.shadowColor = 'white';
-            ctx.fillStyle = '#FACC15'; ctx.beginPath(); ctx.arc(player.x+15, player.y+15, 15, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = '#FACC15'; ctx.beginPath(); ctx.arc(p.x+15, p.y+15, 15, 0, Math.PI*2); ctx.fill();
             ctx.shadowBlur = 0;
             ctx.fillStyle = 'black'; 
-            ctx.beginPath(); ctx.arc(player.x+10, player.y+12, 2, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.arc(player.x+20, player.y+12, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x+10, p.y+12, 2, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(p.x+20, p.y+12, 2, 0, Math.PI*2); ctx.fill();
 
             req = requestAnimationFrame(update);
         };
         update();
-        return () => { cancelAnimationFrame(req); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); };
+
+        return () => { 
+            cancelAnimationFrame(req); 
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('keyup', handleKeyUp);
+        };
     }, [gameStarted]);
 
+    const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
+        if (!canvasRef.current) return;
+        // Simple tap logic: Left side go left, right side go right
+        const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
+        const rect = canvasRef.current.getBoundingClientRect();
+        if (clientX - rect.left < rect.width / 2) playerRef.current.vx = -5;
+        else playerRef.current.vx = 5;
+    };
+    
+    const handleRelease = () => { playerRef.current.vx = 0; };
+
     return (
-        <div className="relative h-full w-full bg-sky-300 overflow-hidden rounded-2xl border-4 border-white shadow-inner">
+        <div 
+            className="relative h-full w-full bg-sky-300 overflow-hidden rounded-2xl border-4 border-white shadow-inner cursor-pointer"
+            onMouseDown={handleTap} onMouseUp={handleRelease}
+            onTouchStart={handleTap} onTouchEnd={handleRelease}
+        >
             <div className="absolute top-2 right-2 bg-white/20 backdrop-blur-sm px-3 py-1 rounded-full font-black text-white text-lg z-10">{score}m</div>
             <canvas ref={canvasRef} width={400} height={400} className="w-full h-full" />
             {(!gameStarted || gameOver) && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-20">
-                    <button onClick={() => { setGameStarted(true); setGameOver(false); setScore(0); }} className="bg-yellow-400 text-yellow-900 px-8 py-3 rounded-full font-black text-lg shadow-xl hover:scale-110 transition-transform flex items-center gap-2">
+                    <button onClick={() => { setGameStarted(true); setGameOver(false); setScore(0); playerRef.current = {x:150,y:300,vx:0,vy:0}; }} className="bg-yellow-400 text-yellow-900 px-8 py-3 rounded-full font-black text-lg shadow-xl hover:scale-110 transition-transform flex items-center gap-2">
                         <Play className="w-5 h-5 fill-current" /> {gameOver ? 'Try Again' : 'Play'}
                     </button>
                 </div>
@@ -349,6 +353,7 @@ const CloudHopGame: React.FC = () => {
     );
 };
 
+// ... (Breathing, PlayModal, ProfileModal, PaymentModal, GiftModal remain same) ...
 const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [text, setText] = useState("Inhale");
     const [timeLeft, setTimeLeft] = useState(120); 
