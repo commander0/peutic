@@ -131,6 +131,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const handleAddFunds = () => {
       if (selectedUser && fundAmount > 0) {
+          // FIXED: PASS SELECTED USER ID
           Database.topUpWallet(fundAmount, 0, selectedUser.id); 
           Database.logSystemEvent('WARNING', 'Admin Grant', `Granted ${fundAmount} mins to ${selectedUser.email}`);
           setShowUserModal(false);

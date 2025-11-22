@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Heart, Star, Clock, CheckCircle, ArrowRight, Lock, Globe, ChevronDown, Play, MessageCircle, Signal, Cookie, Award } from 'lucide-react';
 import { LanguageCode, getTranslation } from '../services/i18n';
 import { Link } from 'react-router-dom';
+import { Database, INITIAL_COMPANIONS } from '../services/database';
 
 // --- STATIC SVG COMPONENTS ---
 const LogoTechCrunch = () => (
@@ -33,6 +34,21 @@ const LogoBloomberg = () => (
   </svg>
 );
 
+// --- AVATAR COMPONENT ---
+const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
+    const [imgSrc, setImgSrc] = useState(src);
+    useEffect(() => { setImgSrc(src); }, [src]);
+    return (
+        <img 
+            src={imgSrc} 
+            alt={alt} 
+            className={className} 
+            onError={() => setImgSrc(`https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=FACC15&color=000&size=512&bold=true`)}
+            loading="lazy"
+        />
+    );
+};
+
 interface LandingPageProps {
   onLoginClick: (signupMode?: boolean) => void;
 }
@@ -43,6 +59,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [onlineCount, setOnlineCount] = useState(124);
   const [showCookies, setShowCookies] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const [featuredSpecialists, setFeaturedSpecialists] = useState<any[]>([]);
 
   useEffect(() => {
     setOnlineCount(Math.floor(Math.random() * (300 - 80 + 1)) + 80);
@@ -57,6 +74,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
     };
     window.addEventListener('scroll', handleScroll);
 
+    // ROUND ROBIN SHUFFLE
+    const allCompanions = [...INITIAL_COMPANIONS];
+    const shuffled = allCompanions.sort(() => 0.5 - Math.random());
+    setFeaturedSpecialists(shuffled.slice(0, 5));
+
     return () => {
         clearTimeout(timer);
         window.removeEventListener('scroll', handleScroll);
@@ -67,15 +89,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       localStorage.setItem('peutic_cookies_accepted', 'true');
       setShowCookies(false);
   };
-
-  const featuredSpecialists = [
-    // RESTORED ORIGINAL RUBY (Warm & Inviting Caucasian)
-    { name: "Ruby", role: "Anxiety & Panic", img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
-    { name: "Elena", role: "Women's Health", img: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
-    { name: "James", role: "Men's Health", img: "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=600&h=600", status: "In Session" },
-    { name: "Danny", role: "Grief Support", img: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" },
-    { name: "Julia", role: "Relationships", img: "https://images.unsplash.com/photo-1531123897727-8f129e1688ce?auto=format&fit=crop&q=80&w=600&h=600", status: "Available" }
-  ];
 
   const pressLogos = [LogoTechCrunch, LogoNYT, LogoWired, LogoBloomberg, LogoForbes];
 
@@ -271,7 +284,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
           </div>
       </section>
 
-      {/* SPECIALIST LAYOUT (Flexible 3-over-2) */}
+      {/* SPECIALIST LAYOUT (Flexible 3-over-2 + Round Robin) */}
       <section className="py-24 bg-[#FFFBEB] z-10 relative">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
@@ -286,11 +299,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
                   {featuredSpecialists.map((spec, i) => (
                       <div key={i} className="w-full sm:w-[calc(50%-12px)] md:w-[calc(33.333%-16px)] bg-white p-4 rounded-3xl shadow-sm border border-yellow-100 hover:shadow-xl transition-all group cursor-pointer transform hover:scale-[1.02]" onClick={() => onLoginClick(true)}>
                           <div className="aspect-square rounded-2xl overflow-hidden mb-4 relative">
-                              <img src={spec.img} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={spec.name} />
-                              <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md ${spec.status === 'Available' ? 'bg-green-500/80' : 'bg-yellow-500/80'}`}>{spec.status}</div>
+                              <AvatarImage src={spec.imageUrl} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" alt={spec.name} />
+                              <div className={`absolute top-3 right-3 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md ${spec.status === 'AVAILABLE' ? 'bg-green-500/80' : 'bg-yellow-500/80'}`}>{spec.status}</div>
                           </div>
                           <h3 className="text-xl font-bold">{spec.name}</h3>
-                          <p className="text-gray-500 text-sm">{spec.role}</p>
+                          <p className="text-gray-500 text-sm">{spec.specialty}</p>
                       </div>
                   ))}
               </div>

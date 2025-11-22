@@ -5,7 +5,7 @@ import {
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
   Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
-  Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play, Zap, Star, Ghost
+  Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play, Zap, Star, Ghost, Edit2, Camera, Droplets
 } from 'lucide-react';
 import { generateDailyInsight } from '../services/geminiService';
 import { Database } from '../services/database';
@@ -26,29 +26,23 @@ declare global {
   }
 }
 
-// --- AVATAR COMPONENT WITH FALLBACK ---
+// --- ROBUST AVATAR COMPONENT ---
 const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
     const [imgSrc, setImgSrc] = useState(src);
-
     useEffect(() => { setImgSrc(src); }, [src]);
-
-    const handleError = () => {
-        // Fallback to a reliable generator if the main image fails
-        setImgSrc(`https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=FACC15&color=000&size=512`);
-    };
-
     return (
         <img 
             src={imgSrc} 
             alt={alt} 
             className={className} 
-            onError={handleError} 
+            onError={() => setImgSrc(`https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=FACC15&color=000&size=512&bold=true`)}
+            loading="lazy"
         />
     );
 };
 
-// --- CONFETTI COMPONENT ---
-const Confetti: React.FC = () => {
+// --- WEATHER EFFECTS ENGINE (Confetti + Rain) ---
+const WeatherEffect: React.FC<{ type: 'confetti' | 'rain' }> = ({ type }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -60,34 +54,54 @@ const Confetti: React.FC = () => {
         canvas.height = window.innerHeight;
         
         const particles: any[] = [];
-        const colors = ['#FACC15', '#FFD700', '#FFFFFF', '#000000', '#F472B6'];
+        const particleCount = type === 'confetti' ? 150 : 300; // Dazzling density
         
-        for (let i = 0; i < 100; i++) {
+        for (let i = 0; i < particleCount; i++) {
             particles.push({
-                x: canvas.width / 2,
-                y: canvas.height / 2,
-                vx: (Math.random() - 0.5) * 20,
-                vy: (Math.random() - 0.5) * 20,
-                color: colors[Math.floor(Math.random() * colors.length)],
-                size: Math.random() * 8 + 2
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height - canvas.height,
+                vx: type === 'confetti' ? (Math.random() - 0.5) * 10 : 0,
+                vy: type === 'confetti' ? Math.random() * 5 + 2 : Math.random() * 10 + 10, // Rain falls fast
+                color: type === 'confetti' 
+                    ? ['#FACC15', '#FFD700', '#FF0000', '#00FF00', '#0000FF'][Math.floor(Math.random() * 5)]
+                    : '#60A5FA', // Rain color
+                size: type === 'confetti' ? Math.random() * 8 + 4 : Math.random() * 2 + 1,
+                length: type === 'rain' ? Math.random() * 20 + 10 : 0
             });
         }
         
         const animate = () => {
             if (!ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            particles.forEach((p, i) => {
+            
+            particles.forEach((p) => {
                 p.x += p.vx;
                 p.y += p.vy;
-                p.vy += 0.5; // Gravity
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, p.size, p.size);
-                if (p.y > canvas.height) particles.splice(i, 1);
+                
+                if (type === 'confetti') {
+                    p.vy += 0.1; // Gravity
+                    ctx.fillStyle = p.color;
+                    ctx.fillRect(p.x, p.y, p.size, p.size);
+                } else {
+                    ctx.strokeStyle = p.color;
+                    ctx.lineWidth = p.size;
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(p.x, p.y + p.length);
+                    ctx.stroke();
+                }
+
+                // Reset if off screen
+                if (p.y > canvas.height) {
+                    p.y = -20;
+                    p.x = Math.random() * canvas.width;
+                    if (type === 'confetti') p.vy = Math.random() * 5 + 2;
+                }
             });
-            if (particles.length > 0) requestAnimationFrame(animate);
+            requestAnimationFrame(animate);
         };
         animate();
-    }, []);
+    }, [type]);
     return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-[100]" />;
 };
 
@@ -145,7 +159,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     }, [solved, cards, onWin]);
 
     return (
-        <div className="bg-gradient-to-br from-yellow-50 to-white rounded-2xl p-6 border border-yellow-100 h-full flex flex-col shadow-inner">
+        <div className="bg-gradient-to-br from-yellow-50 to-white rounded-2xl p-6 border border-yellow-100 h-full flex flex-col shadow-inner overflow-hidden">
             <div className="flex justify-between items-center mb-6">
                 <div>
                     <h3 className="font-bold text-gray-900 flex items-center gap-2"><Sparkles className="w-4 h-4 text-yellow-500"/> Mindful Match</h3>
@@ -167,7 +181,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
                     <button onClick={initGame} className="bg-black text-white px-8 py-3 rounded-xl font-bold hover:bg-gray-800 shadow-xl hover:scale-105 transition-transform">Play Again</button>
                 </div>
             ) : (
-                <div className="grid grid-cols-4 gap-3 sm:gap-4 flex-1 content-center max-w-md mx-auto w-full">
+                <div className="grid grid-cols-4 gap-3 sm:gap-4 flex-1 content-center max-w-md mx-auto w-full overflow-y-auto p-1">
                     {cards.map((card, index) => {
                         const isVisible = flipped.includes(index) || solved.includes(index);
                         const Icon = card.icon;
@@ -528,8 +542,8 @@ const WaitingRoomModal: React.FC<{ userId: string; onLeave: () => void; onReady:
                     {/* Right: Games */}
                     <div className="w-full lg:w-2/3 bg-white rounded-3xl border border-gray-200 shadow-inner p-2 flex flex-col">
                         <div className="flex justify-center gap-2 mb-2 bg-gray-50 p-1 rounded-xl self-center">
-                            <button onClick={() => setSelectedGame('cloud')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'cloud' ? 'bg-sky-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}><Cloud className="w-4 h-4"/> Cloud Hop</button>
-                            <button onClick={() => setSelectedGame('mindful')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'mindful' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-500 hover:bg-gray-100'}`}><Sparkles className="w-4 h-4"/> Mindful Match</button>
+                            <button onClick={() => setSelectedGame('cloud')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'cloud' ? 'bg-sky-500 text-white shadow-md' : 'text-gray-500 hover:bg-gray-200'}`}><Cloud className="w-4 h-4"/> Cloud Hop</button>
+                            <button onClick={() => setSelectedGame('mindful')} className={`px-6 py-2 rounded-lg font-bold text-sm transition-all flex items-center gap-2 ${selectedGame === 'mindful' ? 'bg-yellow-500 text-black shadow-md' : 'text-gray-500 hover:bg-gray-200'}`}><Sparkles className="w-4 h-4"/> Mindful Match</button>
                         </div>
                         <div className="flex-1 overflow-hidden rounded-2xl relative border border-gray-100">
                             {selectedGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
@@ -626,14 +640,27 @@ const PaymentModal: React.FC<{ onClose: () => void; onSuccess: (amount: number, 
 
 const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [text, setText] = useState("Inhale");
+    const audioRef = useRef<HTMLAudioElement | null>(null);
+
     useEffect(() => {
+        // Play calming loop from CDN
+        audioRef.current = new Audio("https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=meditation-impulse-30032.mp3");
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.5;
+        audioRef.current.play().catch(e => console.log("Audio autoplay blocked", e));
+
         const steps = [{ text: "Inhale", delay: 4000 }, { text: "Hold", delay: 4000 }, { text: "Exhale", delay: 4000 }, { text: "Hold", delay: 4000 }];
         let currentStep = 0;
         const runLoop = () => { setText(steps[currentStep].text); currentStep = (currentStep + 1) % steps.length; };
         runLoop();
         const interval = setInterval(runLoop, 4000);
-        return () => clearInterval(interval);
+        
+        return () => { 
+            clearInterval(interval); 
+            if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
+        };
     }, []);
+
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
              <div className="relative w-full max-w-md aspect-square flex items-center justify-center">
@@ -642,42 +669,48 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <div className="absolute inset-12 bg-peutic-yellow/40 rounded-full animate-breathe" style={{ animationDelay: '1s' }}></div>
                 <div className="relative z-10 text-center text-white">
                     <h2 className="text-4xl font-bold mb-2">{text}</h2>
-                    <p className="text-white/60">Follow the rhythm</p>
+                    <p className="text-white/60">Listen to the sound...</p>
                 </div>
              </div>
         </div>
     );
 };
 
-// --- PLAY MODAL (GAME SELECTOR) ---
-const PlayModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
-    const [activeGame, setActiveGame] = useState<'mindful' | 'cloud'>('mindful');
-
+// --- PROFILE EDIT MODAL ---
+const ProfileModal: React.FC<{ user: User; onClose: () => void; onUpdate: () => void }> = ({ user, onClose, onUpdate }) => {
+    const [url, setUrl] = useState(user.avatar || '');
+    const save = () => {
+        if (url) {
+            const u = Database.getUser();
+            if (u) { u.avatar = url; Database.updateUser(u); onUpdate(); onClose(); }
+        }
+    };
     return (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div className="bg-[#FFFBEB] w-full max-w-3xl h-[600px] rounded-3xl p-6 shadow-2xl relative flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                    <div className="flex gap-2">
-                        <button onClick={() => setActiveGame('mindful')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${activeGame === 'mindful' ? 'bg-yellow-400 text-black shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>Mindful Match</button>
-                        <button onClick={() => setActiveGame('cloud')} className={`px-4 py-2 rounded-xl font-bold text-sm transition-all ${activeGame === 'cloud' ? 'bg-sky-400 text-white shadow-lg' : 'bg-white text-gray-500 hover:bg-gray-100'}`}>Cloud Hop</button>
-                    </div>
-                    <button onClick={onClose} className="p-2 hover:bg-yellow-100 rounded-full"><X className="w-5 h-5" /></button>
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center">
+                <h3 className="font-bold text-lg mb-4">Update Profile Picture</h3>
+                <div className="w-24 h-24 mx-auto mb-4 rounded-full overflow-hidden border-4 border-yellow-400">
+                    <img src={url} className="w-full h-full object-cover" onError={(e) => e.currentTarget.src = `https://ui-avatars.com/api/?name=${user.name}`} />
                 </div>
-                
-                <div className="flex-1 overflow-hidden rounded-2xl bg-white shadow-inner border border-yellow-100">
-                    {activeGame === 'mindful' ? <MindfulMatchGame /> : <CloudHopGame />}
+                <input className="w-full p-2 border rounded mb-4" placeholder="Image URL..." value={url} onChange={e => setUrl(e.target.value)} />
+                <div className="flex gap-2">
+                    <button onClick={onClose} className="flex-1 py-2 border rounded font-bold">Cancel</button>
+                    <button onClick={save} className="flex-1 py-2 bg-black text-white rounded font-bold">Save</button>
                 </div>
             </div>
         </div>
     );
 };
 
+// --- MAIN DASHBOARD ---
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession }) => {
+  const [weather, setWeather] = useState<'confetti' | 'rain' | null>(null);
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
   const [showPayment, setShowPayment] = useState(false);
   const [showBreathing, setShowBreathing] = useState(false);
-  const [showPlay, setShowPlay] = useState(false); // Renamed from showGame for clarity
+  const [showPlay, setShowPlay] = useState(false); 
   const [showQueue, setShowQueue] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const [pendingCompanion, setPendingCompanion] = useState<Companion | null>(null);
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
@@ -691,9 +724,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [mood, setMood] = useState<'Happy'|'Calm'|'Neutral'|'Sad'|'Anxious' | null>(null);
   const [journalContent, setJournalContent] = useState('');
   const [showJournal, setShowJournal] = useState(false);
-  const [showConfetti, setShowConfetti] = useState(false);
   const [streak, setStreak] = useState(3);
-  const [weeklyGoal, setWeeklyGoal] = useState(1);
+  const [weeklyGoal, setWeeklyGoal] = useState(0);
   
   useEffect(() => {
       // Greeting Logic
@@ -707,27 +739,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
         if (dbUser) setBalance(dbUser.balance);
         const txs = Database.getUserTransactions(user.id);
         setTransactions(txs);
-        // We don't setCompanions here instantly to allow skeleton demo on mount
+        
+        // Calculate Weekly Goal Progress (simulated 3 sessions/week)
+        const thisWeekSessions = txs.filter(t => {
+            const d = new Date(t.date);
+            const now = new Date();
+            return (now.getTime() - d.getTime()) < 7 * 24 * 60 * 60 * 1000 && t.amount < 0;
+        });
+        setWeeklyGoal(thisWeekSessions.length);
+
         if (!loadingCompanions) setCompanions(Database.getCompanions());
       };
 
       refreshData();
       const interval = setInterval(refreshData, 5000);
 
-      // Simulate loading delay for visual polish
       setTimeout(() => {
          setCompanions(Database.getCompanions());
          setLoadingCompanions(false);
-         
-         // Fetch real images in background
-         listReplicas().then(replicas => {
-            if (replicas && replicas.length > 0) {
-                setCompanions(prev => prev.map(c => {
-                    const match = replicas.find((r: any) => r.replica_id === c.replicaId);
-                    return match ? { ...c, imageUrl: match.thumbnail_video_url || match.thumbnail_url || c.imageUrl } : c;
-                }));
-            }
-         });
       }, 1500);
 
       return () => clearInterval(interval);
@@ -740,8 +769,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       setBalance(prev => prev + minutesAdded);
       setShowPayment(false);
       setPaymentError(undefined);
-      setShowConfetti(true);
-      setTimeout(() => setShowConfetti(false), 5000);
+      setWeather('confetti');
+      setTimeout(() => setWeather(null), 5000);
   };
 
   const handleConnectRequest = (companion: Companion) => {
@@ -757,7 +786,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       const entry: MoodEntry = { id: `mood_${Date.now()}`, userId: user.id, date: new Date().toISOString(), mood: m };
       Database.saveMood(entry);
       setMood(null); setStreak(s => s + 1);
-      if (m === 'Happy' || m === 'Calm') { setShowConfetti(true); setTimeout(() => setShowConfetti(false), 5000); }
+      if (m === 'Happy' || m === 'Calm') { setWeather('confetti'); setTimeout(() => setWeather(null), 5000); }
+      else if (m === 'Sad' || m === 'Anxious') { setWeather('rain'); setTimeout(() => setWeather(null), 5000); }
   };
 
   const handleSaveJournal = () => {
@@ -770,8 +800,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const filteredCompanions = companions.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.specialty.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#FFFBEB] to-[#FFF1F2] font-sans text-gray-900 selection:bg-yellow-200">
-      {showConfetti && <Confetti />}
+    <div className="min-h-screen bg-gradient-to-br from-[#FFFBEB] to-[#FFF1F2] font-sans text-gray-900 selection:bg-yellow-200 overflow-hidden">
+      {weather && <WeatherEffect type={weather} />}
+      
       <nav className="bg-white/80 backdrop-blur-md border-b border-yellow-100 sticky top-0 z-30 shadow-sm transition-all duration-300">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-20 items-center">
@@ -802,9 +833,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         <div className="flex flex-col md:flex-row gap-8">
            <div className="w-full md:w-64 flex-shrink-0 space-y-4">
-                <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-yellow-100 text-center flex md:block items-center gap-4 md:gap-0">
+                <div className="bg-white p-4 md:p-6 rounded-2xl shadow-sm border border-yellow-100 text-center flex md:block items-center gap-4 md:gap-0 relative group">
+                    <button onClick={() => setShowProfile(true)} className="absolute top-2 right-2 p-1.5 bg-gray-100 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-yellow-100"><Edit2 className="w-3 h-3" /></button>
                     <div className="w-16 h-16 md:w-24 md:h-24 rounded-full bg-gray-200 mx-auto md:mb-4 overflow-hidden border-4 border-white shadow-lg flex-shrink-0">
-                        <img src={user.avatar} alt="User" className="w-full h-full" />
+                        <AvatarImage src={user.avatar || ''} alt={user.name} className="w-full h-full object-cover" />
                     </div>
                     <div className="text-left md:text-center flex-1">
                         <h3 className="font-bold text-lg">{user.name}</h3>
@@ -816,7 +848,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                 <div className="bg-white p-4 rounded-2xl shadow-sm border border-yellow-100 hidden md:block">
                     <div className="flex justify-between items-center mb-2"><span className="text-xs font-bold text-gray-500 uppercase">Weekly Goal</span><Target className="w-4 h-4 text-gray-400" /></div>
                     <p className="text-sm font-bold text-gray-900 mb-3">{weeklyGoal} / 3 Sessions</p>
-                    <div className="w-full bg-gray-100 rounded-full h-2 mb-2"><div className="bg-green-500 h-2 rounded-full" style={{ width: `${(weeklyGoal / 3) * 100}%` }}></div></div>
+                    <div className="w-full bg-gray-100 rounded-full h-2 mb-2"><div className="bg-green-500 h-2 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyGoal / 3) * 100)}%` }}></div></div>
                     <p className="text-[10px] text-gray-400 text-center">Complete 2 more to unlock badge</p>
                 </div>
                 <div className="bg-white rounded-2xl shadow-sm border border-yellow-100 overflow-hidden flex md:block justify-between md:justify-start">
@@ -891,6 +923,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                 <div className="relative w-full md:w-auto"><Search className="absolute left-4 top-3.5 w-5 h-5 text-gray-400" /><input type="text" placeholder="Search specialists..." className="w-full md:w-64 pl-12 pr-4 py-3 rounded-xl border border-gray-200 focus:border-peutic-yellow focus:ring-1 focus:ring-peutic-yellow outline-none" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} /></div>
                             </div>
 
+                            {/* SPECIALIST GRID */}
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {loadingCompanions ? (
                                     <>
@@ -966,6 +999,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       {showQueue && <WaitingRoomModal userId={user.id} onLeave={() => setShowQueue(false)} onReady={handleQueueReady} />}
       {showPayment && <PaymentModal onClose={() => setShowPayment(false)} onSuccess={handlePaymentSuccess} initialError={paymentError} />}
       {showBreathing && <BreathingExercise onClose={() => setShowBreathing(false)} />}
+      {showProfile && <ProfileModal user={user} onClose={() => setShowProfile(false)} onUpdate={refresh} />}
       {showPlay && <PlayModal onClose={() => setShowPlay(false)} />}
     </div>
   );

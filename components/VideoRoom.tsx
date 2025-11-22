@@ -4,7 +4,7 @@ import { Companion } from '../types';
 import { 
     Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, MessageSquare, 
     Loader2, AlertCircle, RefreshCcw, Shield, Signal, GripHorizontal, 
-    Maximize2, Minimize2, Aperture, Star, CheckCircle, ThumbsUp
+    Maximize2, Minimize2, Aperture, Star, CheckCircle, ThumbsUp, AlertTriangle
 } from 'lucide-react';
 import { createTavusConversation } from '../services/tavusService';
 import { Database } from '../services/database';
@@ -44,6 +44,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   // Audio simulation for Demo Mode
   const [audioLevel, setAudioLevel] = useState<number[]>(new Array(20).fill(5));
 
+  // --- CREDIT TRACKING ---
+  const [remainingMinutes, setRemainingMinutes] = useState(0);
+  const [lowBalanceWarning, setLowBalanceWarning] = useState(false);
+
   // --- Session Initialization ---
   const initSession = async () => {
     setConnectionState('CONNECTING');
@@ -56,6 +60,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         if (!user || user.balance <= 0) {
             throw new Error("Insufficient Credits: Session Access Denied.");
         }
+        
+        setRemainingMinutes(user.balance); // Init tracker
 
         if (!companion.replicaId) throw new Error("Invalid Specialist Configuration");
 
@@ -116,15 +122,37 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     };
   }, [camOn, showSummary]);
 
-  // --- Timers & Simulation ---
+  // --- Timers & Credit Enforcement ---
   useEffect(() => {
     if (showSummary) return;
     const interval = setInterval(() => {
-        setDuration(d => d + 1);
+        setDuration(d => {
+            const newDuration = d + 1;
+            
+            // Deduct locally every minute
+            if (newDuration % 60 === 0) {
+                setRemainingMinutes(prev => {
+                    const nextVal = prev - 1;
+                    if (nextVal <= 0) {
+                        handleEndSession();
+                        return 0;
+                    }
+                    return nextVal;
+                });
+            }
+            
+            // Trigger warning at 30s mark of last minute
+            if (remainingMinutes < 1 && newDuration % 60 === 30) {
+                setLowBalanceWarning(true);
+            }
+
+            return newDuration;
+        });
+        
         if (Math.random() > 0.8) setNetworkQuality(Math.floor(Math.random() * 2) + 3); 
     }, 1000);
     return () => clearInterval(interval);
-  }, [showSummary]);
+  }, [showSummary, remainingMinutes]);
 
   useEffect(() => {
     if (connectionState !== 'DEMO_MODE' || showSummary) return;
@@ -266,7 +294,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20 bg-gradient-to-b from-black/80 to-transparent pointer-events-none transition-opacity duration-500">
         <div className="flex items-center gap-4 pointer-events-auto">
           <div className="w-12 h-12 rounded-full bg-gray-800 border-2 border-white/10 overflow-hidden shadow-2xl">
-             <img src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" />
+             <img src={companion.imageUrl} alt={companion.name} className="w-full h-full object-cover" onError={(e) => e.currentTarget.src=`https://ui-avatars.com/api/?name=${companion.name}`} />
           </div>
           <div className="text-shadow-sm">
             <p className="text-white font-bold text-lg leading-none mb-1">{companion.name}</p>
@@ -283,7 +311,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         </div>
         
         <div className="flex flex-col items-end gap-2 pointer-events-auto">
-            <div className="bg-black/40 backdrop-blur-xl px-4 py-2 rounded-2xl border border-white/10 text-white font-mono shadow-xl flex items-center gap-4">
+            <div className={`bg-black/40 backdrop-blur-xl px-4 py-2 rounded-2xl border text-white font-mono shadow-xl flex items-center gap-4 ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'}`}>
                 <div className="flex items-center gap-1.5">
                         <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
                         <span className="text-xs font-bold tracking-wider">REC</span>
@@ -297,16 +325,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 <span className="font-variant-numeric tabular-nums tracking-wide">{formatTime(duration)}</span>
             </div>
             
-            {/* Signal Strength */}
-            <div className="flex gap-1 items-end h-4 px-2">
-                {[1, 2, 3, 4].map(bar => (
-                    <div 
-                        key={bar} 
-                        className={`w-1 rounded-sm ${bar <= networkQuality ? 'bg-green-500' : 'bg-white/20'}`}
-                        style={{ height: `${bar * 25}%` }}
-                    ></div>
-                ))}
-            </div>
+            {lowBalanceWarning && (
+                <div className="bg-red-600/90 backdrop-blur-md px-3 py-1 rounded-lg flex items-center gap-2 animate-bounce shadow-lg">
+                    <AlertTriangle className="w-4 h-4 text-white" />
+                    <span className="text-xs font-bold text-white">Low Balance: &lt; 30s</span>
+                </div>
+            )}
         </div>
       </div>
 
