@@ -1,9 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Shield, Heart, Star, Clock, CheckCircle, ArrowRight, Lock, Globe, ChevronDown, Play, MessageCircle, Signal, Cookie, Award, CreditCard } from 'lucide-react';
 import { LanguageCode, getTranslation } from '../services/i18n';
 import { Link } from 'react-router-dom';
-import { Database, INITIAL_COMPANIONS } from '../services/database';
+import { Database, INITIAL_COMPANIONS, STABLE_AVATAR_POOL } from '../services/database';
+import { Companion } from '../types';
 
 // --- STATIC SVG COMPONENTS ---
 const LogoTechCrunch = () => (
@@ -37,22 +37,32 @@ const LogoBloomberg = () => (
 // --- AVATAR COMPONENT (Fixed Fallback) ---
 const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
     const [imgSrc, setImgSrc] = useState(src);
-    
-    useEffect(() => { 
-        setImgSrc(src); 
+    const [usePool, setUsePool] = useState(false);
+
+    useEffect(() => {
+        if (src && src.length > 10) { 
+            setImgSrc(src);
+            setUsePool(false);
+        } else {
+            setUsePool(true);
+        }
     }, [src]);
 
-    const handleError = () => {
-        // Fallback to a high-quality generated avatar that matches the brand colors
-        setImgSrc(`https://ui-avatars.com/api/?name=${encodeURIComponent(alt)}&background=FACC15&color=000&size=512&bold=true&font-size=0.35`);
+    const getStableImage = (name: string) => {
+        let hash = 0;
+        for (let i = 0; i < name.length; i++) {
+            hash = name.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        const index = Math.abs(hash) % STABLE_AVATAR_POOL.length;
+        return STABLE_AVATAR_POOL[index];
     };
 
     return (
         <img 
-            src={imgSrc} 
+            src={usePool ? getStableImage(alt) : imgSrc} 
             alt={alt} 
-            className={className}
-            onError={handleError}
+            className={`${className} object-cover object-center`}
+            onError={() => setUsePool(true)}
             loading="lazy"
         />
     );
@@ -68,7 +78,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [onlineCount, setOnlineCount] = useState(124);
   const [showCookies, setShowCookies] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [featuredSpecialists, setFeaturedSpecialists] = useState<any[]>([]);
+  const [featuredSpecialists, setFeaturedSpecialists] = useState<Companion[]>([]);
 
   useEffect(() => {
     setOnlineCount(Math.floor(Math.random() * (300 - 80 + 1)) + 80);
@@ -84,11 +94,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
     window.addEventListener('scroll', handleScroll);
 
     // ROUND ROBIN SHUFFLE LOGIC
-    // Randomly select 5 specialists from the full database list on every load
     if (INITIAL_COMPANIONS && INITIAL_COMPANIONS.length > 0) {
         const allCompanions = [...INITIAL_COMPANIONS];
-        const shuffled = allCompanions.sort(() => 0.5 - Math.random());
-        setFeaturedSpecialists(shuffled.slice(0, 5));
+        for (let i = allCompanions.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allCompanions[i], allCompanions[j]] = [allCompanions[j], allCompanions[i]];
+        }
+        setFeaturedSpecialists(allCompanions.slice(0, 5));
     }
 
     return () => {
@@ -162,7 +174,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
       <section className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden z-10">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
               <div className="grid lg:grid-cols-2 gap-12 items-center">
-                  <div className="space-y-8 z-10 text-center lg:text-center animate-in slide-in-from-left-10 duration-700 fade-in relative">
+                  <div className="space-y-8 z-10 text-center animate-in slide-in-from-left-10 duration-700 fade-in relative lg:text-center">
                       
                       <div className="flex flex-wrap justify-center gap-3 mb-4">
                           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-yellow-200 shadow-sm">

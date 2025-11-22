@@ -28,6 +28,7 @@ export interface Companion {
   rating: number;
   bio: string;
   replicaId: string;
+  gender: 'Male' | 'Female'; // Added Gender Field
 }
 
 export interface Transaction {
@@ -48,7 +49,7 @@ export interface GlobalSettings {
   siteName: string;
   broadcastMessage?: string;
   maxConcurrentSessions: number;
-  multilingualMode: boolean; // New: Toggle for Tavus language
+  multilingualMode: boolean;
 }
 
 export interface SystemLog {
@@ -89,4 +90,21 @@ export interface PromoCode {
   discountPercentage: number;
   uses: number;
   active: boolean;
+}
+
+export interface SessionMemory {
+  id: string;
+  userId: string;
+  companionName: string;
+  date: string;
+  summary: string;
+  keyTopics: string[];
+}
+
+export interface GiftCard {
+  id: string;
+  code: string;
+  amount: number;
+  createdBy: string;
+  isRedeemed: boolean;
 }

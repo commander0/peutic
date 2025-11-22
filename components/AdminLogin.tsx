@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Database } from '../services/database';
 import { UserRole } from '../types';
 import { Lock, AlertCircle, Shield, ArrowRight, Key, PlusCircle, Check } from 'lucide-react';
