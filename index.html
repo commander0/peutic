@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="referrer" content="origin-when-cross-origin" />
+    
+    <!-- SEO & Social Media Metadata -->
+    <title>Peutic | Premium Human Connection</title>
+    <meta name="description" content="Experience the gold standard in emotional support. Connect instantly via video with a dedicated specialist tailored just for you. 24/7 Availability." />
+    
+    <!-- Favicon (Branded Yellow Square with Heart) -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23FACC15'/%3E%3Cpath d='M50 85 C50 85 20 58 20 38 C20 22 38 18 50 30 C62 18 80 22 80 38 C80 58 50 85 50 85 Z' fill='%23000000'/%3E%3C/svg%3E" />
+
+    <!-- Open Graph / Facebook / iMessage -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://peutic.vercel.app/" />
+    <meta property="og:title" content="Peutic | Your Private Confidant & Friend" />
+    <meta property="og:description" content="Instant access to premium mental wellness specialists. No waitlists. End-to-end encrypted video sessions for anxiety, stress, and personal growth." />
+    <meta property="og:image" content="https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=1200&auto=format&fit=crop" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Peutic | Premium Human Connection" />
+    <meta name="twitter:description" content="Experience the gold standard in emotional support. Connect instantly via video with a dedicated specialist tailored just for you." />
+    <meta name="twitter:image" content="https://images.unsplash.com/photo-1516321497487-e288fb19713f?q=80&w=1200&auto=format&fit=crop" />
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Manrope', 'sans-serif'],
+            },
+            colors: {
+              peutic: {
+                gold: '#FFD700',
+                yellow: '#FACC15',
+                black: '#0A0A0A',
+                charcoal: '#171717',
+                gray: '#262626',
+              }
+            },
+            animation: {
+              'float': 'float 6s ease-in-out infinite',
+              'pulse-glow': 'pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+              'marquee': 'marquee 25s linear infinite',
+              'slow-spin': 'spin 20s linear infinite',
+              'breathe': 'breathe 8s ease-in-out infinite',
+              'in': 'in 0.5s ease-out',
+              'fade-in': 'fade-in 0.5s ease-out',
+              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            },
+            keyframes: {
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-10px)' },
+              },
+              'pulse-glow': {
+                '0%, 100%': { opacity: '1', boxShadow: '0 0 0 0px rgba(250, 204, 21, 0.7)' },
+                '50%': { opacity: '.8', boxShadow: '0 0 0 10px rgba(250, 204, 21, 0)' },
+              },
+              marquee: {
+                '0%': { transform: 'translateX(0%)' },
+                '100%': { transform: 'translateX(-100%)' },
+              },
+              breathe: {
+                '0%, 100%': { transform: 'scale(1)', opacity: '0.6' },
+                '50%': { transform: 'scale(1.5)', opacity: '0.3' },
+              },
+              in: {
+                  '0%': { opacity: '0', transform: 'translateY(20px)' },
+                  '100%': { opacity: '1', transform: 'translateY(0)' }
+              },
+              'fade-in': {
+                  '0%': { opacity: '0' },
+                  '100%': { opacity: '1' }
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        background-color: #FFFBEB;
+        color: #0A0A0A;
+        -webkit-font-smoothing: antialiased;
+        overflow-x: hidden; /* Prevent horizontal scroll during drags */
+        -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+      }
+      /* Custom scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #FACC15;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #EAB308;
+      }
+      /* Stripe Element Styling */
+      .StripeElement {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        background-color: white;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.1s;
+      }
+      .StripeElement--focus {
+        border-color: #FACC15;
+        box-shadow: 0 0 0 1px #FACC15;
+      }
+      /* Hide scrollbar for chrome/safari/opera */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      /* Hide scrollbar for IE, Edge and Firefox */
+      .no-scrollbar {
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+      }
+      
+      .glass-card {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+      }
+
+      .grab-cursor {
+        cursor: grab;
+      }
+      .grabbing-cursor {
+        cursor: grabbing;
+        user-select: none;
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>
