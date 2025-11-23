@@ -283,6 +283,11 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   <h2 className="text-3xl font-black text-white tracking-tight capitalize">{activeTab.replace('-', ' ')}</h2>
                   <p className="text-gray-500 text-sm mt-1">System Status: <span className="text-green-500 font-bold">Operational</span></p>
               </div>
+              {activeTab === 'users' && (
+                  <button onClick={() => Database.exportData('USERS')} className="flex items-center gap-2 px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-xs font-bold transition-colors">
+                      <Download className="w-3 h-3" /> Export CSV
+                  </button>
+              )}
           </div>
 
           {activeTab === 'overview' && (
@@ -298,12 +303,173 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
           {activeTab === 'users' && (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
-                  {/* User Table Logic Same as before, just rendering wrapper for brevity */}
-                  <div className="p-6 text-gray-400">User Management Interface Active.</div>
+                  <div className="p-4 border-b border-gray-800 flex gap-4">
+                      <div className="relative flex-1">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                          <input type="text" placeholder="Search users by name or email..." className="w-full bg-black border border-gray-800 rounded-xl pl-10 pr-4 py-2 text-sm text-gray-300 focus:border-yellow-500 outline-none" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
+                      </div>
+                      <select className="bg-black border border-gray-800 rounded-xl px-4 py-2 text-sm text-gray-300 outline-none" value={userFilter} onChange={e => setUserFilter(e.target.value)}>
+                          <option value="ALL">All Users</option>
+                          <option value="ADMIN">Admins</option>
+                          <option value="BANNED">Banned</option>
+                      </select>
+                  </div>
+                  <table className="w-full text-left border-collapse">
+                      <thead className="bg-black/50 text-gray-500 text-xs uppercase font-bold">
+                          <tr>
+                              <th className="p-4">User</th>
+                              <th className="p-4">Role</th>
+                              <th className="p-4">Balance</th>
+                              <th className="p-4">Status</th>
+                              <th className="p-4 text-right">Actions</th>
+                          </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-800">
+                          {filteredUsers.map(user => (
+                              <tr key={user.id} className="hover:bg-gray-800/50 transition-colors group">
+                                  <td className="p-4 flex items-center gap-3">
+                                      <div className="w-8 h-8 rounded-full bg-gray-800 overflow-hidden">
+                                          <AvatarImage src={user.avatar || ''} alt={user.name} className="w-full h-full object-cover" />
+                                      </div>
+                                      <div>
+                                          <div className="font-bold text-gray-200 text-sm">{user.name}</div>
+                                          <div className="text-xs text-gray-500">{user.email}</div>
+                                      </div>
+                                  </td>
+                                  <td className="p-4"><span className={`text-xs font-bold px-2 py-1 rounded-md ${user.role === UserRole.ADMIN ? 'bg-yellow-500/20 text-yellow-500' : 'bg-gray-800 text-gray-400'}`}>{user.role}</span></td>
+                                  <td className="p-4 font-mono text-sm">{user.balance}m</td>
+                                  <td className="p-4">
+                                      {user.subscriptionStatus === 'BANNED' ? (
+                                          <span className="flex items-center gap-1 text-red-500 text-xs font-bold"><Ban className="w-3 h-3" /> BANNED</span>
+                                      ) : (
+                                          <span className="flex items-center gap-1 text-green-500 text-xs font-bold"><CheckCircle className="w-3 h-3" /> ACTIVE</span>
+                                      )}
+                                  </td>
+                                  <td className="p-4 text-right flex justify-end gap-2">
+                                      <button onClick={() => openFundModal(user)} className="p-2 hover:bg-green-900/30 rounded-lg text-green-600 transition-colors" title="Add Funds"><Plus className="w-4 h-4" /></button>
+                                      <button onClick={() => toggleUserBan(user)} className={`p-2 rounded-lg transition-colors ${user.subscriptionStatus === 'BANNED' ? 'hover:bg-green-900/30 text-green-600' : 'hover:bg-red-900/30 text-red-600'}`} title={user.subscriptionStatus === 'BANNED' ? 'Unban' : 'Ban User'}>
+                                          {user.subscriptionStatus === 'BANNED' ? <Shield className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                                      </button>
+                                  </td>
+                              </tr>
+                          ))}
+                      </tbody>
+                  </table>
+                  {filteredUsers.length === 0 && <div className="p-8 text-center text-gray-500 text-sm">No users found matching criteria.</div>}
               </div>
           )}
 
-          {/* TAB: SETTINGS WITH PRICE TOGGLE */}
+          {activeTab === 'specialists' && (
+              <div className="space-y-6">
+                  <div className="flex gap-4">
+                       <button onClick={handleMassReset} className="px-6 py-3 bg-yellow-500 text-black font-bold rounded-xl hover:bg-yellow-400 transition-all shadow-lg shadow-yellow-500/10 flex items-center gap-2">
+                           <RefreshCw className="w-4 h-4" /> Reset All to Available
+                       </button>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                      {companions.map(comp => (
+                          <div key={comp.id} className="bg-gray-900 border border-gray-800 p-4 rounded-2xl relative group hover:border-gray-700 transition-all">
+                               <button onClick={() => openImageModal(comp)} className="absolute top-2 right-2 p-2 bg-black/50 hover:bg-yellow-500 hover:text-black rounded-lg text-white transition-all z-10"><ImageIcon className="w-4 h-4" /></button>
+                               <div className="flex items-center gap-4 mb-4">
+                                   <div className="w-16 h-16 rounded-xl bg-black overflow-hidden border border-gray-800">
+                                       <AvatarImage src={comp.imageUrl} alt={comp.name} className="w-full h-full object-cover" />
+                                   </div>
+                                   <div>
+                                       <h3 className="font-bold text-white">{comp.name}</h3>
+                                       <p className="text-xs text-gray-500">{comp.specialty}</p>
+                                   </div>
+                               </div>
+                               <div className="grid grid-cols-3 gap-2">
+                                   <button onClick={() => updateCompanionStatus(comp.id, 'AVAILABLE')} className={`py-2 rounded-lg text-[10px] font-bold transition-all ${comp.status === 'AVAILABLE' ? 'bg-green-500 text-black' : 'bg-black text-gray-500 hover:bg-gray-800'}`}>ONLINE</button>
+                                   <button onClick={() => updateCompanionStatus(comp.id, 'BUSY')} className={`py-2 rounded-lg text-[10px] font-bold transition-all ${comp.status === 'BUSY' ? 'bg-yellow-500 text-black' : 'bg-black text-gray-500 hover:bg-gray-800'}`}>BUSY</button>
+                                   <button onClick={() => updateCompanionStatus(comp.id, 'OFFLINE')} className={`py-2 rounded-lg text-[10px] font-bold transition-all ${comp.status === 'OFFLINE' ? 'bg-red-500 text-white' : 'bg-black text-gray-500 hover:bg-gray-800'}`}>OFF</button>
+                               </div>
+                          </div>
+                      ))}
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'financials' && (
+              <div className="space-y-6">
+                  <div className="grid md:grid-cols-2 gap-6">
+                      <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+                          <h3 className="text-lg font-bold text-white mb-6">Revenue Trend (7 Days)</h3>
+                          <div className="h-64 w-full">
+                              <ResponsiveContainer width="100%" height="100%">
+                                  <AreaChart data={revenueChartData}>
+                                      <defs>
+                                          <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                                              <stop offset="5%" stopColor="#FACC15" stopOpacity={0.3}/>
+                                              <stop offset="95%" stopColor="#FACC15" stopOpacity={0}/>
+                                          </linearGradient>
+                                      </defs>
+                                      <CartesianGrid strokeDasharray="3 3" stroke="#333" />
+                                      <XAxis dataKey="name" stroke="#666" fontSize={10} />
+                                      <YAxis stroke="#666" fontSize={10} />
+                                      <Tooltip contentStyle={{ backgroundColor: '#111', border: '1px solid #333' }} />
+                                      <Area type="monotone" dataKey="value" stroke="#FACC15" fillOpacity={1} fill="url(#colorRev)" />
+                                  </AreaChart>
+                              </ResponsiveContainer>
+                          </div>
+                      </div>
+                      <div className="bg-gray-900 border border-gray-800 p-6 rounded-2xl">
+                           <h3 className="text-lg font-bold text-white mb-6">Recent Transactions</h3>
+                           <div className="space-y-3 overflow-y-auto max-h-64 pr-2">
+                               {transactions.slice().reverse().slice(0, 8).map(tx => (
+                                   <div key={tx.id} className="flex justify-between items-center p-3 bg-black rounded-xl border border-gray-800">
+                                       <div>
+                                           <div className="text-sm font-bold text-gray-200">{tx.description}</div>
+                                           <div className="text-xs text-gray-600">{new Date(tx.date).toLocaleDateString()} • {tx.userName}</div>
+                                       </div>
+                                       <div className={`text-sm font-bold font-mono ${tx.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                           {tx.amount > 0 ? '+' : ''}{tx.amount}m
+                                       </div>
+                                   </div>
+                               ))}
+                           </div>
+                      </div>
+                  </div>
+              </div>
+          )}
+
+          {activeTab === 'marketing' && (
+              <div className="grid md:grid-cols-2 gap-8">
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
+                      <h3 className="font-bold text-white text-xl mb-6 flex items-center gap-2"><Tag className="w-5 h-5 text-green-500" /> Active Promo Codes</h3>
+                      <div className="space-y-4 mb-8">
+                          {promos.length === 0 && <div className="text-gray-500 text-sm">No active codes.</div>}
+                          {promos.map(p => (
+                              <div key={p.id} className="flex justify-between items-center bg-black p-4 rounded-xl border border-gray-800">
+                                  <div>
+                                      <div className="font-black text-white text-lg tracking-widest">{p.code}</div>
+                                      <div className="text-green-500 text-xs font-bold">{p.discountPercentage}% OFF</div>
+                                  </div>
+                                  <button onClick={() => handleDeletePromo(p.id)} className="p-2 hover:bg-red-900/30 text-red-500 rounded-lg"><Trash2 className="w-4 h-4" /></button>
+                              </div>
+                          ))}
+                      </div>
+                      <form onSubmit={handleCreatePromo} className="flex gap-4 border-t border-gray-800 pt-6">
+                          <input required placeholder="CODE2025" className="flex-1 bg-black border border-gray-800 rounded-xl px-4 text-white text-sm outline-none focus:border-green-500 uppercase" value={newPromo.code} onChange={e => setNewPromo({...newPromo, code: e.target.value.toUpperCase()})} />
+                          <input required type="number" min="1" max="100" className="w-20 bg-black border border-gray-800 rounded-xl px-4 text-white text-sm outline-none focus:border-green-500" value={newPromo.discount} onChange={e => setNewPromo({...newPromo, discount: parseInt(e.target.value)})} />
+                          <button className="bg-green-500 text-black px-4 py-2 rounded-xl font-bold text-sm hover:bg-green-400">Add</button>
+                      </form>
+                  </div>
+
+                  <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
+                      <h3 className="font-bold text-white text-xl mb-6 flex items-center gap-2"><Megaphone className="w-5 h-5 text-blue-500" /> Email Blast</h3>
+                      <form onSubmit={handleSendEmailBlast} className="space-y-4">
+                           <input required placeholder="Subject Line" className="w-full bg-black border border-gray-800 rounded-xl p-4 text-white outline-none focus:border-blue-500" value={broadcastSubject} onChange={e => setBroadcastSubject(e.target.value)} />
+                           <textarea required placeholder="Write your message here..." className="w-full h-32 bg-black border border-gray-800 rounded-xl p-4 text-white outline-none focus:border-blue-500 resize-none" value={broadcastBody} onChange={e => setBroadcastBody(e.target.value)}></textarea>
+                           <button disabled={broadcastSent} className="w-full bg-blue-600 text-white font-bold py-4 rounded-xl hover:bg-blue-500 transition-colors flex items-center justify-center gap-2">
+                               {broadcastSent ? <CheckCircle className="w-5 h-5" /> : <Send className="w-5 h-5" />}
+                               {broadcastSent ? "Emails Queued" : "Send to All Users"}
+                           </button>
+                      </form>
+                  </div>
+              </div>
+          )}
+
           {activeTab === 'settings' && (
               <div className="grid md:grid-cols-2 gap-8">
                   <div className="bg-gray-900 border border-gray-800 rounded-2xl p-8">
@@ -345,12 +511,80 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   </div>
               </div>
           )}
+          
+          {activeTab === 'security' && (
+              <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+                  <div className="p-6 border-b border-gray-800 font-bold text-white">System Logs</div>
+                  <div className="max-h-[600px] overflow-y-auto">
+                      <table className="w-full text-left">
+                          <thead className="bg-black text-gray-500 text-xs uppercase font-bold sticky top-0">
+                              <tr>
+                                  <th className="p-4">Time</th>
+                                  <th className="p-4">Type</th>
+                                  <th className="p-4">Event</th>
+                                  <th className="p-4">Details</th>
+                              </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-800 font-mono text-xs">
+                              {logs.map(log => (
+                                  <tr key={log.id} className="hover:bg-gray-800/50">
+                                      <td className="p-4 text-gray-500">{new Date(log.timestamp).toLocaleTimeString()}</td>
+                                      <td className="p-4">
+                                          <span className={`px-2 py-1 rounded ${
+                                              log.type === 'ERROR' ? 'bg-red-900 text-red-400' :
+                                              log.type === 'WARNING' ? 'bg-yellow-900 text-yellow-400' :
+                                              log.type === 'SUCCESS' ? 'bg-green-900 text-green-400' :
+                                              log.type === 'SECURITY' ? 'bg-purple-900 text-purple-400' :
+                                              'bg-gray-800 text-gray-400'
+                                          }`}>{log.type}</span>
+                                      </td>
+                                      <td className="p-4 font-bold text-gray-300">{log.event}</td>
+                                      <td className="p-4 text-gray-400">{log.details}</td>
+                                  </tr>
+                              ))}
+                          </tbody>
+                      </table>
+                  </div>
+              </div>
+          )}
       </div>
 
       {/* User Modal */}
       {showUserModal && selectedUser && (
           <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              {/* Modal Content */}
+              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+                   <h3 className="text-xl font-bold text-white mb-2">Admin Top-Up</h3>
+                   <p className="text-gray-400 text-sm mb-6">Granting credits to <span className="text-yellow-500 font-bold">{selectedUser.name}</span></p>
+                   
+                   <div className="mb-6">
+                       <label className="text-xs font-bold text-gray-500 uppercase mb-2 block">Minutes to Add</label>
+                       <div className="flex gap-2">
+                           <input type="number" className="flex-1 bg-black border border-gray-700 rounded-xl p-3 text-white outline-none focus:border-green-500 font-mono text-lg" value={fundAmount} onChange={e => setFundAmount(parseInt(e.target.value) || 0)} />
+                       </div>
+                   </div>
+
+                   <div className="flex gap-3">
+                       <button onClick={() => setShowUserModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700">Cancel</button>
+                       <button onClick={handleAddFunds} className="flex-1 py-3 rounded-xl font-bold bg-green-600 text-white hover:bg-green-500">Confirm Grant</button>
+                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* Image Modal */}
+      {showImageModal && selectedCompanion && (
+          <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+              <div className="bg-gray-900 border border-gray-700 rounded-2xl p-8 max-w-sm w-full shadow-2xl">
+                   <h3 className="text-xl font-bold text-white mb-6">Update Avatar</h3>
+                   <div className="w-full aspect-square rounded-xl bg-black border border-gray-800 mb-4 overflow-hidden">
+                       <AvatarImage src={newImageUrl} alt="Preview" className="w-full h-full object-cover" />
+                   </div>
+                   <input className="w-full bg-black border border-gray-700 rounded-xl p-3 text-white text-xs mb-6 outline-none focus:border-yellow-500" value={newImageUrl} onChange={e => setNewImageUrl(e.target.value)} placeholder="https://..." />
+                   <div className="flex gap-3">
+                       <button onClick={() => setShowImageModal(false)} className="flex-1 py-3 rounded-xl font-bold bg-gray-800 text-gray-400 hover:bg-gray-700">Cancel</button>
+                       <button onClick={handleUpdateImage} className="flex-1 py-3 rounded-xl font-bold bg-yellow-500 text-black hover:bg-yellow-400">Save</button>
+                   </div>
+              </div>
           </div>
       )}
     </div>
