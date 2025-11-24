@@ -413,11 +413,45 @@ export class Database {
       return logs.filter((l: BreathLog) => l.userId === userId);
   }
 
-  // --- ART GALLERY ---
+  // --- ART GALLERY (QUOTA SAFE) ---
   static saveArt(entry: ArtEntry) {
-      const art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      
+      // 1. Add new entry to the end
       art.push(entry);
-      localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+      
+      // 2. Preventive Pruning: Keep only the last 10 images to avoid hitting quota too often
+      // (Assuming images are ~200KB-500KB base64, 10 is safe for 5MB limit)
+      if (art.length > 10) {
+          art = art.slice(-10);
+      }
+
+      try {
+          localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+      } catch (e: any) {
+          // 3. Quota Exceeded Handling
+          if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+              console.warn("LocalStorage quota exceeded. Pruning old art to save new entry.");
+              
+              // Aggressive pruning: keep only the last 3 items including the new one
+              const prunedArt = art.slice(-3);
+              
+              try {
+                  localStorage.setItem(DB_KEYS.ART, JSON.stringify(prunedArt));
+              } catch (retryError) {
+                  console.error("Failed to save art even after pruning.", retryError);
+                  // Last resort: save just the new one if possible, or fail gracefully
+                  try {
+                      localStorage.setItem(DB_KEYS.ART, JSON.stringify([entry]));
+                  } catch (finalErr) {
+                      // If even one image is too big, we can't save it.
+                      throw new Error("Storage full. Unable to save artwork.");
+                  }
+              }
+          } else {
+              throw e;
+          }
+      }
   }
 
   static getUserArt(userId: string): ArtEntry[] {

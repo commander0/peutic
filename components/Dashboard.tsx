@@ -159,7 +159,7 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
                      </button>
                      
                      {isGalleryOpen && (
-                         <div className="p-4 pt-0 space-y-4 max-h-[500px] overflow-y-auto">
+                         <div className="p-4 pt-0 space-y-4">
                             {gallery.map((art) => (
                                 <div key={art.id} className="bg-gray-50 p-2 rounded-2xl border border-gray-100 shadow-sm relative group">
                                     <div className="aspect-square rounded-xl overflow-hidden mb-2 relative">
@@ -981,7 +981,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                       {/* Games & Tools - COLLAPSIBLE - DEFAULT CLOSED */}
                       <CollapsibleSection title="Games & Tools" icon={Gamepad2} defaultOpen={false}>
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                               <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-80 shadow-sm overflow-hidden">
+                               <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-[32rem] shadow-sm overflow-hidden">
                                     <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
                                         <MindfulMatchGame />
                                     </div>
