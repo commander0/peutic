@@ -126,6 +126,14 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
       }
   };
 
+  const handleDeleteUser = (user: User) => {
+      if (confirm(`PERMANENT DELETE WARNING:\n\nAre you sure you want to delete ${user.name} (${user.email})?\n\nThis will remove all their data and history forever. This cannot be undone.`)) {
+          Database.deleteUser(user.id);
+          // Force refresh immediately
+          setUsers(Database.getAllUsers());
+      }
+  };
+
   const handleAddFunds = () => {
       if (selectedUser && fundAmount > 0) {
           Database.topUpWallet(fundAmount, 0, selectedUser.id); 
@@ -347,8 +355,11 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                                   </td>
                                   <td className="p-4 text-right flex justify-end gap-2">
                                       <button onClick={() => openFundModal(user)} className="p-2 hover:bg-green-900/30 rounded-lg text-green-600 transition-colors" title="Add Funds"><Plus className="w-4 h-4" /></button>
-                                      <button onClick={() => toggleUserBan(user)} className={`p-2 rounded-lg transition-colors ${user.subscriptionStatus === 'BANNED' ? 'hover:bg-green-900/30 text-green-600' : 'hover:bg-red-900/30 text-red-600'}`} title={user.subscriptionStatus === 'BANNED' ? 'Unban' : 'Ban User'}>
+                                      <button onClick={() => toggleUserBan(user)} className={`p-2 rounded-lg transition-colors ${user.subscriptionStatus === 'BANNED' ? 'hover:bg-green-900/30 text-green-600' : 'hover:bg-yellow-900/30 text-yellow-500'}`} title={user.subscriptionStatus === 'BANNED' ? 'Unban' : 'Ban User'}>
                                           {user.subscriptionStatus === 'BANNED' ? <Shield className="w-4 h-4" /> : <Ban className="w-4 h-4" />}
+                                      </button>
+                                      <button onClick={() => handleDeleteUser(user)} className="p-2 hover:bg-red-900/30 rounded-lg text-red-600 transition-colors" title="Permanently Delete">
+                                          <Trash2 className="w-4 h-4" />
                                       </button>
                                   </td>
                               </tr>

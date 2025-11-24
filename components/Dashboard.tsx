@@ -5,9 +5,10 @@ import {
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
   Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
   Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play, Zap, Star, Ghost, Edit2, Camera, Droplets, Users, Trash2, Bell,
-  CloudRain
+  CloudRain, Image as ImageIcon, Wand2, Download
 } from 'lucide-react';
 import { Database, STABLE_AVATAR_POOL } from '../services/database';
+import { generateWellnessImage } from '../services/geminiService';
 
 interface DashboardProps {
   user: User;
@@ -46,6 +47,73 @@ const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = 
     }
 
     return <img src={imgSrc} alt={alt} className={className} onError={() => setHasError(true)} loading="lazy" />;
+};
+
+// --- ART THERAPY GENERATOR ---
+const ArtTherapyGenerator: React.FC = () => {
+    const [prompt, setPrompt] = useState('');
+    const [image, setImage] = useState<string | null>(null);
+    const [loading, setLoading] = useState(false);
+
+    const handleGenerate = async () => {
+        if (!prompt.trim()) return;
+        setLoading(true);
+        try {
+            const result = await generateWellnessImage(prompt);
+            setImage(result);
+        } catch (e) {
+            console.error(e);
+            alert("Could not generate image right now. Please try again.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-3xl overflow-hidden p-6 space-y-4 shadow-sm border border-yellow-100 relative group">
+            <div className="flex items-center gap-2 mb-2">
+                <div className="p-2 bg-purple-100 rounded-lg"><Wand2 className="w-4 h-4 text-purple-600" /></div>
+                <h3 className="font-bold text-gray-900">AI Art Therapy</h3>
+            </div>
+            
+            {image ? (
+                <div className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group-image">
+                    <img src={image} alt="Generated Art" className="w-full h-full object-cover animate-in fade-in zoom-in duration-500" />
+                    <button 
+                        onClick={() => setImage(null)} 
+                        className="absolute top-2 right-2 bg-black/50 hover:bg-black text-white p-1.5 rounded-full backdrop-blur-md transition-colors"
+                    >
+                        <X className="w-4 h-4" />
+                    </button>
+                    <a 
+                        href={image} 
+                        download="peutic-art.png" 
+                        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-black p-1.5 rounded-full backdrop-blur-md transition-colors shadow-sm"
+                    >
+                        <Download className="w-4 h-4" />
+                    </a>
+                </div>
+            ) : (
+                <div className="relative">
+                    <textarea 
+                        className="w-full h-24 bg-gray-50 rounded-xl border border-gray-200 p-3 text-sm focus:border-purple-400 focus:ring-1 focus:ring-purple-400 outline-none resize-none transition-all"
+                        placeholder="Visualize your calm place... (e.g., 'A peaceful cabin in a snowy forest')"
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value)}
+                    />
+                    <button 
+                        onClick={handleGenerate}
+                        disabled={loading || !prompt}
+                        className={`mt-2 w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${loading || !prompt ? 'bg-gray-100 text-gray-400' : 'bg-purple-600 text-white hover:bg-purple-500 hover:shadow-md'}`}
+                    >
+                        {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        {loading ? 'Creating...' : 'Visualize'}
+                    </button>
+                </div>
+            )}
+            <p className="text-[10px] text-gray-400 text-center">Powered by Gemini AI</p>
+        </div>
+    );
 };
 
 // --- SOUNDSCAPE PLAYER (UPDATED TO STABLE MIXKIT CDN) ---
@@ -398,7 +466,7 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
     useEffect(() => {
         if (audioRef.current) {
-            audioRef.current.volume = 0.6;
+            audioRef.current.volume = 0.6; // Set initial volume via property
         }
 
         const steps = [{ text: "Inhale", delay: 4000 }, { text: "Hold", delay: 4000 }, { text: "Exhale", delay: 4000 }, { text: "Hold", delay: 4000 }];
@@ -423,6 +491,13 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
             clearInterval(loop); 
             clearInterval(timer); 
         };
+    }, []);
+
+    // Effect to handle volume updates if needed dynamically
+    useEffect(() => {
+        if (audioRef.current) {
+            audioRef.current.volume = 0.6;
+        }
     }, []);
 
     return (
@@ -775,6 +850,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                       </button>
                   ))}
               </div>
+
+              {/* NEW AI IMAGE GENERATOR WIDGET */}
+              <ArtTherapyGenerator />
           </div>
 
           {/* Main Content */}
