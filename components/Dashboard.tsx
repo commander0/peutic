@@ -387,61 +387,49 @@ const CloudHopGame: React.FC = () => {
     );
 };
 
-// --- BREATHING EXERCISE WITH RELIABLE WEB AUDIO OSCILLATOR ---
+// --- BREATHING EXERCISE WITH AMBIENT SONG (UPDATED) ---
 const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [text, setText] = useState("Inhale");
     const [timeLeft, setTimeLeft] = useState(120); 
-    const audioContextRef = useRef<AudioContext | null>(null);
-    const oscillatorRef = useRef<OscillatorNode | null>(null);
-    const gainNodeRef = useRef<GainNode | null>(null);
+    const audioRef = useRef<HTMLAudioElement>(null);
+    
+    // Stable, high-quality ambient track from Pixabay (free to use)
+    const AMBIENT_SONG_URL = "https://cdn.pixabay.com/audio/2022/02/07/audio_18d8d3dd81.mp3"; 
 
     useEffect(() => {
-        // Init Web Audio
-        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-        const audioCtx = new AudioContextClass();
-        audioContextRef.current = audioCtx;
-
-        const oscillator = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(220, audioCtx.currentTime); // A3 Low Drone
-        gainNode.gain.setValueAtTime(0.05, audioCtx.currentTime); // Soft volume
-
-        oscillator.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-        oscillator.start();
-
-        oscillatorRef.current = oscillator;
-        gainNodeRef.current = gainNode;
+        if (audioRef.current) {
+            audioRef.current.volume = 0.6;
+        }
 
         const steps = [{ text: "Inhale", delay: 4000 }, { text: "Hold", delay: 4000 }, { text: "Exhale", delay: 4000 }, { text: "Hold", delay: 4000 }];
         let stepIdx = 0;
         const loop = setInterval(() => { 
             setText(steps[stepIdx].text); 
-            // Modulate volume slightly based on breath
-            if (gainNodeRef.current) {
-                const now = audioCtx.currentTime;
-                if (stepIdx === 0) gainNodeRef.current.gain.linearRampToValueAtTime(0.1, now + 4); // Inhale louder
-                else if (stepIdx === 2) gainNodeRef.current.gain.linearRampToValueAtTime(0.05, now + 4); // Exhale softer
-            }
             stepIdx = (stepIdx + 1) % steps.length; 
         }, 4000);
 
         const timer = setInterval(() => {
-            setTimeLeft(p => { if (p <= 1) { Database.setBreathingCooldown(Date.now() + 5 * 60 * 1000); onClose(); return 0; } return p - 1; });
+            setTimeLeft(p => { 
+                if (p <= 1) { 
+                    Database.setBreathingCooldown(Date.now() + 5 * 60 * 1000); 
+                    onClose(); 
+                    return 0; 
+                } 
+                return p - 1; 
+            });
         }, 1000);
 
         return () => { 
             clearInterval(loop); 
             clearInterval(timer); 
-            if (oscillatorRef.current) oscillatorRef.current.stop();
-            if (audioContextRef.current) audioContextRef.current.close();
         };
     }, []);
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+             {/* Native Audio Element for Maximum Stability */}
+             <audio ref={audioRef} src={AMBIENT_SONG_URL} autoPlay loop />
+
              <div className="relative w-full max-w-md aspect-square flex items-center justify-center flex-col">
                 <button onClick={onClose} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
                 <div className="absolute inset-0 bg-peutic-yellow/20 rounded-full animate-breathe"></div>
@@ -449,6 +437,7 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <div className="relative z-10 text-center text-white">
                     <h2 className="text-4xl font-bold mb-2">{text}</h2>
                     <div className="inline-block px-4 py-1 rounded-full bg-white/10 border border-white/20 text-sm font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
+                    <p className="mt-4 text-xs text-white/50 flex items-center justify-center gap-2"><Music className="w-3 h-3"/> Playing: Ambient Piano</p>
                 </div>
              </div>
         </div>

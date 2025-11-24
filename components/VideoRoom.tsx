@@ -39,11 +39,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [rating, setRating] = useState(0);
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
 
-  // PIP State
-  const [pipPosition, setPipPosition] = useState({ x: 85, y: 80 }); // Initial bottom-right
-  const [isDragging, setIsDragging] = useState(false);
-  const [isPipExpanded, setIsPipExpanded] = useState(false);
-
   // Credit Tracking
   const [remainingMinutes, setRemainingMinutes] = useState(0);
   const [lowBalanceWarning, setLowBalanceWarning] = useState(false);
@@ -148,10 +143,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
             video: { 
-                width: { ideal: 1280 }, 
-                height: { ideal: 720 }, 
-                facingMode: "user",
-                aspectRatio: { ideal: 1.777 } // 16:9 Aspect Ratio Preference
+                width: { ideal: 640 }, 
+                height: { ideal: 360 }, 
+                facingMode: "user"
             }, 
             audio: true 
         });
@@ -232,26 +226,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       else setFeedbackTags([...feedbackTags, tag]);
   };
 
-  // --- Draggable Logic ---
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => { setIsDragging(true); };
-
-  const handleDrag = (e: React.MouseEvent | React.TouchEvent) => {
-      if (!isDragging || !containerRef.current) return;
-      
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-
-      const rect = containerRef.current.getBoundingClientRect();
-      
-      let x = ((clientX - rect.left) / rect.width) * 100;
-      let y = ((clientY - rect.top) / rect.height) * 100;
-
-      x = Math.max(5, Math.min(95, x));
-      y = Math.max(5, Math.min(95, y));
-
-      setPipPosition({ x, y });
-  };
-
   const formatTime = (seconds: number) => {
       const mins = Math.floor(seconds / 60);
       const secs = seconds % 60;
@@ -291,7 +265,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   }
 
   return (
-    <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none" onMouseMove={handleDrag} onMouseUp={() => setIsDragging(false)} onTouchMove={handleDrag} onTouchEnd={() => setIsDragging(false)}>
+    <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
         
         {/* --- HEADER OVERLAY --- */}
         <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none bg-gradient-to-b from-black/80 via-black/20 to-transparent pb-20 transition-opacity duration-500">
@@ -381,32 +355,16 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP --- */}
-        <div 
-            className={`absolute z-30 rounded-2xl overflow-hidden border border-white/10 shadow-2xl cursor-grab active:cursor-grabbing transition-all duration-300 ease-out hover:border-white/30 hover:shadow-yellow-500/10 ${isDragging ? 'scale-105 ring-2 ring-yellow-500/50' : ''}`} 
-            style={{ 
-                left: `${pipPosition.x}%`, 
-                top: `${pipPosition.y}%`, 
-                width: isPipExpanded ? '280px' : '140px', 
-                height: isPipExpanded ? '380px' : '190px', 
-                transform: 'translate(-50%, -50%)' 
-            }} 
-            onMouseDown={() => setIsDragging(true)} 
-            onTouchStart={() => setIsDragging(true)}
-        >
+        {/* --- USER PIP (STATIONARY, TOP-MIDDLE, SMALLER) --- */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
                     <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[10px] font-bold uppercase tracking-widest opacity-50">Camera Off</span></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-3">
-                    <div className="flex justify-end">
-                        <button onClick={(e) => {e.stopPropagation(); setIsPipExpanded(!isPipExpanded)}} className="p-1.5 bg-black/50 backdrop-blur-md rounded-lg text-white hover:text-yellow-400 transition-colors">
-                            {isPipExpanded ? <Minimize2 className="w-3 h-3" /> : <Maximize2 className="w-3 h-3" />}
-                        </button>
-                    </div>
-                    <div className="flex justify-between items-end"><span className="text-[10px] font-bold text-white/80 uppercase tracking-wider">You</span><div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div></div>
+                <div className="absolute bottom-2 right-2">
+                     <div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
                 </div>
             </div>
         </div>
