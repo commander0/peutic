@@ -27,7 +27,7 @@ declare global {
 }
 
 // --- HELPER: COLLAPSIBLE SECTION ---
-const CollapsibleSection: React.FC<{ title: string; icon?: React.ElementType; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, icon: Icon, children, defaultOpen = true }) => {
+const CollapsibleSection: React.FC<{ title: string; icon?: React.ElementType; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, icon: Icon, children, defaultOpen = false }) => {
     const [isOpen, setIsOpen] = useState(defaultOpen);
     return (
         <div className="bg-[#FFFBEB] border border-yellow-200 rounded-3xl overflow-hidden shadow-sm transition-all mb-6">
@@ -72,8 +72,8 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
     const [prompt, setPrompt] = useState('');
     const [loading, setLoading] = useState(false);
     const [gallery, setGallery] = useState<ArtEntry[]>([]);
-    const [isGeneratorOpen, setIsGeneratorOpen] = useState(true);
-    const [isGalleryOpen, setIsGalleryOpen] = useState(true);
+    const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
+    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
 
     useEffect(() => {
         setGallery(Database.getUserArt(userId));
@@ -93,8 +93,10 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
                     createdAt: new Date().toISOString()
                 };
                 Database.saveArt(newEntry);
-                setGallery([newEntry, ...gallery]);
+                setGallery(prev => [newEntry, ...prev]);
                 setPrompt('');
+                // Auto-open gallery when new art is generated
+                setIsGalleryOpen(true);
             }
         } catch (e) {
             console.error(e);
@@ -108,7 +110,7 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
         e.stopPropagation();
         if(confirm("Delete this artwork permanently?")) {
             Database.deleteArt(id);
-            setGallery(gallery.filter(g => g.id !== id));
+            setGallery(prev => prev.filter(g => g.id !== id));
         }
     };
 
@@ -199,14 +201,12 @@ const SoundscapePlayer: React.FC = () => {
     };
 
     useEffect(() => {
-        // Cleanup previous audio instance
         if (audioRef.current) {
             audioRef.current.pause();
             audioRef.current.src = "";
         }
         
         const audio = new Audio();
-        audio.crossOrigin = "anonymous"; 
         audio.src = TRACKS[track as keyof typeof TRACKS];
         audio.loop = true;
         audio.volume = volume;
@@ -332,7 +332,7 @@ const WeatherEffect: React.FC<{ type: 'confetti' | 'rain' }> = ({ type }) => {
     return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-[50]" />;
 };
 
-// --- MINDFUL MATCH 3D (RESTORED HEIGHT) ---
+// --- MINDFUL MATCH 3D ---
 const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     const [cards, setCards] = useState<any[]>([]);
     const [flipped, setFlipped] = useState<number[]>([]);
@@ -521,14 +521,15 @@ const CloudHopGame: React.FC = () => {
 };
 
 // --- BREATHING EXERCISE WITH AMBIENT SONG (UPDATED) ---
-const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const BreathingExercise: React.FC<{ onClose: () => void; userId: string }> = ({ onClose, userId }) => {
     const [text, setText] = useState("Inhale");
     const [timeLeft, setTimeLeft] = useState(120); 
     const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
+    const [duration, setDuration] = useState(0); // Track session length
     
-    // Stable, high-quality ambient track from Pixabay CDN
-    const AMBIENT_SONG_URL = "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946802e862.mp3?filename=meditation-124970.mp3"; 
+    // Stable, high-quality ambient track from Mixkit CDN
+    const AMBIENT_SONG_URL = "https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3"; 
 
     useEffect(() => {
         if (audioRef.current) {
@@ -552,10 +553,10 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         }, 4000);
 
         const timer = setInterval(() => {
+            setDuration(d => d + 1);
             setTimeLeft(p => { 
                 if (p <= 1) { 
-                    Database.setBreathingCooldown(Date.now() + 5 * 60 * 1000); 
-                    onClose(); 
+                    handleFinish();
                     return 0; 
                 } 
                 return p - 1; 
@@ -572,6 +573,13 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         };
     }, []);
 
+    const handleFinish = () => {
+        // Record completed session
+        Database.recordBreathSession(userId, 120 - timeLeft + duration);
+        Database.setBreathingCooldown(Date.now() + 5 * 60 * 1000); 
+        onClose();
+    };
+
     const manualPlay = () => {
         if (audioRef.current) {
             audioRef.current.play().then(() => setIsPlaying(true));
@@ -583,7 +591,7 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
              <audio ref={audioRef} src={AMBIENT_SONG_URL} loop />
 
              <div className="relative w-full max-w-md aspect-square flex items-center justify-center flex-col">
-                <button onClick={onClose} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
+                <button onClick={handleFinish} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
                 <div className="absolute inset-0 bg-peutic-yellow/20 rounded-full animate-breathe"></div>
                 <div className="absolute inset-12 bg-peutic-yellow/40 rounded-full animate-breathe" style={{ animationDelay: '1s' }}></div>
                 <div className="relative z-10 text-center text-white">
@@ -815,19 +823,25 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [companions, setCompanions] = useState<Companion[]>([]);
   const [loadingCompanions, setLoadingCompanions] = useState(true); 
   const [streak, setStreak] = useState(3);
+  
   const [weeklyGoal, setWeeklyGoal] = useState(0);
+  const [weeklyTarget, setWeeklyTarget] = useState(10);
+  const [weeklyMessage, setWeeklyMessage] = useState("Start your journey.");
 
   const refreshData = () => {
     const dbUser = Database.getUser();
     if (dbUser) { setBalance(dbUser.balance); setDashboardUser(dbUser); }
+    
+    // Refresh Transactions
     const txs = Database.getUserTransactions(user.id);
     setTransactions(txs);
-    const thisWeekSessions = txs.filter(t => {
-        const d = new Date(t.date);
-        const now = new Date();
-        return (now.getTime() - d.getTime()) < 7 * 24 * 60 * 60 * 1000 && t.amount < 0;
-    });
-    setWeeklyGoal(thisWeekSessions.length);
+
+    // Refresh Weekly Progress
+    const progress = Database.getWeeklyProgress(user.id);
+    setWeeklyGoal(progress.current);
+    setWeeklyTarget(progress.target);
+    setWeeklyMessage(progress.message);
+
     setCompanions(Database.getCompanions());
   };
   
@@ -874,6 +888,12 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
           return; 
       } 
       onStartSession(companion);
+  };
+
+  const handleMoodSelect = (mood: 'confetti' | 'rain' | null) => {
+      setWeather(mood);
+      // Persist mood to database so it counts towards goals
+      Database.saveMood(user.id, mood);
   };
 
   const handleDeleteAccount = () => {
@@ -924,8 +944,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                   <p className="text-xs font-bold text-yellow-600 uppercase tracking-widest mb-6">Premium Member</p>
                   
                   <div className="bg-white p-4 rounded-2xl text-left border border-yellow-100 shadow-inner">
-                      <div className="flex justify-between text-xs font-bold text-gray-500 mb-2"><span>Weekly Goal</span><span>{weeklyGoal}/3</span></div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden"><div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyGoal / 3) * 100)}%` }}></div></div>
+                      <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
+                          <span>Weekly Goal</span>
+                          <span className="text-black font-black">{weeklyGoal}/{weeklyTarget}</span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
+                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyGoal / weeklyTarget) * 100)}%` }}></div>
+                      </div>
+                      <p className="text-[10px] text-gray-400 font-bold text-center italic">{weeklyMessage}</p>
                   </div>
               </div>
 
@@ -952,8 +978,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                           <p className="text-gray-600 text-lg relative z-10 max-w-xl">"{dailyInsight}"</p>
                       </div>
 
-                      {/* Games & Tools - COLLAPSIBLE */}
-                      <CollapsibleSection title="Games & Tools" icon={Gamepad2}>
+                      {/* Games & Tools - COLLAPSIBLE - DEFAULT CLOSED */}
+                      <CollapsibleSection title="Games & Tools" icon={Gamepad2} defaultOpen={false}>
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                                <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-80 shadow-sm overflow-hidden">
                                     <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
@@ -964,7 +990,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                     </div>
                                </div>
                                <div className="space-y-4">
-                                   <MoodTracker onMoodSelect={setWeather} />
+                                   <MoodTracker onMoodSelect={handleMoodSelect} />
                                    <button onClick={() => setShowBreathing(true)} className="w-full h-[100px] bg-[#FFFBEB] border border-yellow-200 p-6 rounded-3xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-pointer group hover:shadow-md">
                                        <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm"><Wind className="w-5 h-5 text-blue-600" /></div>
                                        <div className="text-left">
@@ -1000,7 +1026,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                           </div>
                                           <div className="flex justify-between items-center px-2">
                                               <div>
-                                                  <h4 className="font-bold text-lg text-gray-900">{c.name}</h4>
                                                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{c.specialty}</p>
                                               </div>
                                               <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center group-hover:bg-yellow-400 group-hover:text-black transition-colors shadow-lg">
@@ -1079,7 +1104,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       
       {/* Modals - HIGHEST Z-INDEX */}
       {showPayment && <PaymentModal onClose={() => setShowPayment(false)} onSuccess={handlePaymentSuccess} initialError={paymentError} />}
-      {showBreathing && <BreathingExercise onClose={() => setShowBreathing(false)} />}
+      {showBreathing && <BreathingExercise userId={dashboardUser.id} onClose={() => setShowBreathing(false)} />}
       {showProfile && <ProfileModal user={dashboardUser} onClose={() => setShowProfile(false)} onUpdate={refreshData} />}
       {showJournal && <JournalModal onClose={() => setShowJournal(false)} />}
     </div>

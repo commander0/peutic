@@ -78,7 +78,7 @@ export interface MoodEntry {
   id: string;
   userId: string;
   date: string;
-  mood: 'Happy' | 'Calm' | 'Neutral' | 'Sad' | 'Anxious';
+  mood: 'confetti' | 'rain' | null;
   note?: string;
 }
 
@@ -95,6 +95,14 @@ export interface ArtEntry {
   imageUrl: string;
   prompt: string;
   createdAt: string;
+  title?: string; // Optional title
+}
+
+export interface BreathLog {
+  id: string;
+  userId: string;
+  date: string;
+  durationSeconds: number;
 }
 
 export interface PromoCode {

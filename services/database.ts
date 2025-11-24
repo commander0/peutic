@@ -1,5 +1,5 @@
 
-import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry } from '../types';
+import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry, BreathLog } from '../types';
 
 const DB_KEYS = {
   USER: 'peutic_db_current_user_v14',
@@ -16,6 +16,7 @@ const DB_KEYS = {
   ACTIVE_SESSIONS: 'peutic_db_active_sessions_v14',
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
+  BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
   MEMORIES: 'peutic_db_memories_v14',
   GIFTS: 'peutic_db_gifts_v14',
   EMAILS: 'peutic_db_emails_v14'
@@ -365,6 +366,7 @@ export class Database {
       localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, Math.max(0, count - 1).toString());
   }
 
+  // --- JOURNAL ---
   static saveJournal(entry: JournalEntry) {
       const journals = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]');
       journals.push(entry);
@@ -374,6 +376,41 @@ export class Database {
   static getJournals(userId: string): JournalEntry[] {
       const journals = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]');
       return journals.filter((j: JournalEntry) => j.userId === userId).reverse();
+  }
+
+  // --- MOOD TRACKER ---
+  static saveMood(userId: string, mood: 'confetti' | 'rain' | null) {
+      if (!mood) return;
+      const moods = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]');
+      moods.push({
+          id: `mood_${Date.now()}`,
+          userId,
+          date: new Date().toISOString(),
+          mood
+      });
+      localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(moods));
+  }
+
+  static getMoods(userId: string): MoodEntry[] {
+      const moods = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]');
+      return moods.filter((m: MoodEntry) => m.userId === userId).reverse();
+  }
+
+  // --- BREATHING LOGS ---
+  static recordBreathSession(userId: string, durationSeconds: number) {
+      const logs = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]');
+      logs.push({
+          id: `breath_${Date.now()}`,
+          userId,
+          date: new Date().toISOString(),
+          durationSeconds
+      });
+      localStorage.setItem(DB_KEYS.BREATHE_LOGS, JSON.stringify(logs));
+  }
+
+  static getBreathLogs(userId: string): BreathLog[] {
+      const logs = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]');
+      return logs.filter((l: BreathLog) => l.userId === userId);
   }
 
   // --- ART GALLERY ---
@@ -401,6 +438,37 @@ export class Database {
 
   static setBreathingCooldown(timestamp: number) {
       localStorage.setItem(DB_KEYS.BREATHE_COOLDOWN, timestamp.toString());
+  }
+
+  // --- WEEKLY PROGRESS CALCULATION ---
+  static getWeeklyProgress(userId: string): { current: number; target: number; message: string } {
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      const transactions = this.getUserTransactions(userId).filter(t => new Date(t.date) > oneWeekAgo && t.amount < 0);
+      const journals = this.getJournals(userId).filter(j => new Date(j.date) > oneWeekAgo);
+      const art = this.getUserArt(userId).filter(a => new Date(a.createdAt) > oneWeekAgo);
+      const moods = this.getMoods(userId).filter(m => new Date(m.date) > oneWeekAgo);
+      const breath = this.getBreathLogs(userId).filter(b => new Date(b.date) > oneWeekAgo);
+
+      // SCORING: Session=3, Journal=1, Art=1, Breath=1, Mood=0.5
+      const score = 
+          (transactions.length * 3) + 
+          (journals.length * 1) + 
+          (art.length * 1) + 
+          (breath.length * 1) +
+          (moods.length * 0.5);
+
+      const target = 10; // Weekly Point Target
+      let message = "Start your journey.";
+      const pct = score / target;
+
+      if (pct > 0 && pct < 0.3) message = "Great start!";
+      else if (pct >= 0.3 && pct < 0.6) message = "Building momentum!";
+      else if (pct >= 0.6 && pct < 1) message = "Almost there!";
+      else if (pct >= 1) message = "Goal Crushed! 🌟";
+
+      return { current: score, target, message };
   }
 
   static getPromoCodes(): PromoCode[] {
