@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, JournalEntry, ArtEntry } from '../types';
 import { 
@@ -147,7 +146,7 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
                 )}
             </div>
 
-            {/* GALLERY SECTION */}
+            {/* GALLERY SECTION - NO MAX HEIGHT */}
             {gallery.length > 0 && (
                 <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-yellow-100">
                      <button onClick={() => setIsGalleryOpen(!isGalleryOpen)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
@@ -365,8 +364,9 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     useEffect(() => { if (cards.length > 0 && solved.length === cards.length) { setWon(true); onWin?.(); } }, [solved]);
 
     return (
-        <div className="bg-gradient-to-br from-yellow-50/50 to-white h-full flex flex-col rounded-2xl p-4 border border-yellow-100 overflow-hidden relative shadow-inner">
-            <div className="flex justify-between items-center mb-2 z-10">
+        // RESIZED to h-80 and p-1 for flush fit
+        <div className="bg-gradient-to-br from-yellow-50/50 to-white h-full flex flex-col rounded-2xl p-1 border border-yellow-100 overflow-hidden relative shadow-inner">
+            <div className="flex justify-between items-center mb-1 z-10 px-1 pt-1">
                 <h3 className="font-black text-sm text-yellow-900 uppercase tracking-widest">Mindful Match</h3>
                 <button onClick={initGame} className="p-1 hover:bg-yellow-100 rounded-full transition-colors"><RefreshCw className="w-4 h-4 text-yellow-600" /></button>
             </div>
@@ -377,12 +377,13 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
                     <button onClick={initGame} className="mt-4 bg-black text-white px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform">Replay</button>
                 </div>
             ) : (
-                <div className="grid grid-cols-4 gap-2 h-full p-1 content-center flex-1">
+                // Use grid-rows-4 with gap-1 to perfectly distribute space flush
+                <div className="grid grid-cols-4 grid-rows-4 gap-1 h-full p-0 flex-1">
                     {cards.map((card, i) => {
                         const isVisible = flipped.includes(i) || solved.includes(i);
                         const Icon = card.icon;
                         return (
-                            <div key={i} className="aspect-square">
+                            <div key={i} className="w-full h-full">
                                 <button onClick={() => handleCardClick(i)} className={`w-full h-full rounded-lg flex items-center justify-center transition-all duration-300 ${isVisible ? 'bg-white border-2 border-yellow-400 shadow-lg' : 'bg-gray-900 shadow-md'}`}>
                                     {isVisible && <Icon className="w-6 h-6 text-yellow-500 animate-in zoom-in" />}
                                 </button>
@@ -981,7 +982,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                       {/* Games & Tools - COLLAPSIBLE - DEFAULT CLOSED */}
                       <CollapsibleSection title="Games & Tools" icon={Gamepad2} defaultOpen={false}>
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                               <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-[32rem] shadow-sm overflow-hidden">
+                               <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-80 shadow-sm overflow-hidden">
                                     <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
                                         <MindfulMatchGame />
                                     </div>
