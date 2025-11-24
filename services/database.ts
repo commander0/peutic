@@ -1,4 +1,5 @@
-import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard } from '../types';
+
+import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry } from '../types';
 
 const DB_KEYS = {
   USER: 'peutic_db_current_user_v14',
@@ -9,6 +10,7 @@ const DB_KEYS = {
   LOGS: 'peutic_db_logs_v14',
   MOODS: 'peutic_db_moods_v14',
   JOURNALS: 'peutic_db_journals_v14',
+  ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
   QUEUE: 'peutic_db_queue_v14',
   ACTIVE_SESSIONS: 'peutic_db_active_sessions_v14',
@@ -372,6 +374,24 @@ export class Database {
   static getJournals(userId: string): JournalEntry[] {
       const journals = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]');
       return journals.filter((j: JournalEntry) => j.userId === userId).reverse();
+  }
+
+  // --- ART GALLERY ---
+  static saveArt(entry: ArtEntry) {
+      const art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      art.push(entry);
+      localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+  }
+
+  static getUserArt(userId: string): ArtEntry[] {
+      const art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      return art.filter((a: ArtEntry) => a.userId === userId).reverse();
+  }
+
+  static deleteArt(artId: string) {
+      let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      art = art.filter((a: ArtEntry) => a.id !== artId);
+      localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
   }
 
   static getBreathingCooldown(): number | null {

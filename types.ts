@@ -1,3 +1,4 @@
+
 export enum UserRole {
   GUEST = 'GUEST',
   USER = 'USER',
@@ -86,6 +87,14 @@ export interface JournalEntry {
   userId: string;
   date: string;
   content: string;
+}
+
+export interface ArtEntry {
+  id: string;
+  userId: string;
+  imageUrl: string;
+  prompt: string;
+  createdAt: string;
 }
 
 export interface PromoCode {

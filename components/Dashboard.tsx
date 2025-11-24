@@ -1,11 +1,12 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { User, Companion, Transaction, JournalEntry } from '../types';
+import { User, Companion, Transaction, JournalEntry, ArtEntry } from '../types';
 import { 
   Video, CreditCard, Clock, Settings, LogOut, 
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
   Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
   Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play, Zap, Star, Ghost, Edit2, Camera, Droplets, Users, Trash2, Bell,
-  CloudRain, Image as ImageIcon, Wand2, Download
+  CloudRain, Image as ImageIcon, Wand2, Download, ChevronDown, ChevronUp, ChevronRight
 } from 'lucide-react';
 import { Database, STABLE_AVATAR_POOL } from '../services/database';
 import { generateWellnessImage } from '../services/geminiService';
@@ -24,6 +25,23 @@ declare global {
     webkitAudioContext?: typeof AudioContext;
   }
 }
+
+// --- HELPER: COLLAPSIBLE SECTION ---
+const CollapsibleSection: React.FC<{ title: string; icon?: React.ElementType; children: React.ReactNode; defaultOpen?: boolean }> = ({ title, icon: Icon, children, defaultOpen = true }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="bg-[#FFFBEB] border border-yellow-200 rounded-3xl overflow-hidden shadow-sm transition-all mb-6">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-6 hover:bg-yellow-50 transition-colors">
+                <div className="flex items-center gap-3">
+                    {Icon && <div className="p-2 bg-yellow-100 rounded-lg"><Icon className="w-5 h-5 text-yellow-700" /></div>}
+                    <h3 className="font-bold text-lg text-gray-900">{title}</h3>
+                </div>
+                {isOpen ? <ChevronUp className="w-5 h-5 text-gray-400" /> : <ChevronDown className="w-5 h-5 text-gray-400" />}
+            </button>
+            {isOpen && <div className="p-6 pt-0 animate-in slide-in-from-top-2 duration-300">{children}</div>}
+        </div>
+    );
+};
 
 // --- ROUND ROBIN AVATAR COMPONENT ---
 const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = ({ src, alt, className }) => {
@@ -49,18 +67,35 @@ const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = 
     return <img src={imgSrc} alt={alt} className={className} onError={() => setHasError(true)} loading="lazy" />;
 };
 
-// --- ART THERAPY GENERATOR ---
-const ArtTherapyGenerator: React.FC = () => {
+// --- ART THERAPY GENERATOR (PERSISTENT GALLERY) ---
+const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
     const [prompt, setPrompt] = useState('');
-    const [image, setImage] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [gallery, setGallery] = useState<ArtEntry[]>([]);
+    const [isGeneratorOpen, setIsGeneratorOpen] = useState(true);
+    const [isGalleryOpen, setIsGalleryOpen] = useState(true);
+
+    useEffect(() => {
+        setGallery(Database.getUserArt(userId));
+    }, [userId]);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         setLoading(true);
         try {
             const result = await generateWellnessImage(prompt);
-            setImage(result);
+            if (result) {
+                const newEntry: ArtEntry = {
+                    id: `art_${Date.now()}`,
+                    userId: userId,
+                    imageUrl: result,
+                    prompt: prompt,
+                    createdAt: new Date().toISOString()
+                };
+                Database.saveArt(newEntry);
+                setGallery([newEntry, ...gallery]);
+                setPrompt('');
+            }
         } catch (e) {
             console.error(e);
             alert("Could not generate image right now. Please try again.");
@@ -69,54 +104,86 @@ const ArtTherapyGenerator: React.FC = () => {
         }
     };
 
+    const handleDelete = (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if(confirm("Delete this artwork permanently?")) {
+            Database.deleteArt(id);
+            setGallery(gallery.filter(g => g.id !== id));
+        }
+    };
+
     return (
-        <div className="bg-white rounded-3xl overflow-hidden p-6 space-y-4 shadow-sm border border-yellow-100 relative group">
-            <div className="flex items-center gap-2 mb-2">
-                <div className="p-2 bg-purple-100 rounded-lg"><Wand2 className="w-4 h-4 text-purple-600" /></div>
-                <h3 className="font-bold text-gray-900">AI Art Therapy</h3>
+        <div className="space-y-4">
+            {/* GENERATOR SECTION */}
+            <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-yellow-100">
+                <button onClick={() => setIsGeneratorOpen(!isGeneratorOpen)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                     <div className="flex items-center gap-2">
+                        <div className="p-2 bg-purple-100 rounded-lg"><Wand2 className="w-4 h-4 text-purple-600" /></div>
+                        <h3 className="font-bold text-gray-900 text-sm">AI Art Therapy</h3>
+                     </div>
+                     {isGeneratorOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                </button>
+                
+                {isGeneratorOpen && (
+                    <div className="p-4 pt-0">
+                        <textarea 
+                            className="w-full h-24 bg-gray-50 rounded-xl border border-gray-200 p-3 text-sm focus:border-purple-400 focus:ring-1 focus:ring-purple-400 outline-none resize-none transition-all"
+                            placeholder="Visualize your calm place... (e.g., 'A peaceful cabin in a snowy forest')"
+                            value={prompt}
+                            onChange={(e) => setPrompt(e.target.value)}
+                        />
+                        <button 
+                            onClick={handleGenerate}
+                            disabled={loading || !prompt}
+                            className={`mt-2 w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${loading || !prompt ? 'bg-gray-100 text-gray-400' : 'bg-purple-600 text-white hover:bg-purple-500 hover:shadow-md'}`}
+                        >
+                            {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                            {loading ? 'Creating...' : 'Visualize'}
+                        </button>
+                        <p className="text-[10px] text-gray-400 text-center mt-2">Powered by Gemini AI</p>
+                    </div>
+                )}
             </div>
-            
-            {image ? (
-                <div className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 group-image">
-                    <img src={image} alt="Generated Art" className="w-full h-full object-cover animate-in fade-in zoom-in duration-500" />
-                    <button 
-                        onClick={() => setImage(null)} 
-                        className="absolute top-2 right-2 bg-black/50 hover:bg-black text-white p-1.5 rounded-full backdrop-blur-md transition-colors"
-                    >
-                        <X className="w-4 h-4" />
-                    </button>
-                    <a 
-                        href={image} 
-                        download="peutic-art.png" 
-                        className="absolute bottom-2 right-2 bg-white/90 hover:bg-white text-black p-1.5 rounded-full backdrop-blur-md transition-colors shadow-sm"
-                    >
-                        <Download className="w-4 h-4" />
-                    </a>
-                </div>
-            ) : (
-                <div className="relative">
-                    <textarea 
-                        className="w-full h-24 bg-gray-50 rounded-xl border border-gray-200 p-3 text-sm focus:border-purple-400 focus:ring-1 focus:ring-purple-400 outline-none resize-none transition-all"
-                        placeholder="Visualize your calm place... (e.g., 'A peaceful cabin in a snowy forest')"
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                    />
-                    <button 
-                        onClick={handleGenerate}
-                        disabled={loading || !prompt}
-                        className={`mt-2 w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${loading || !prompt ? 'bg-gray-100 text-gray-400' : 'bg-purple-600 text-white hover:bg-purple-500 hover:shadow-md'}`}
-                    >
-                        {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                        {loading ? 'Creating...' : 'Visualize'}
-                    </button>
+
+            {/* GALLERY SECTION */}
+            {gallery.length > 0 && (
+                <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-yellow-100">
+                     <button onClick={() => setIsGalleryOpen(!isGalleryOpen)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                         <div className="flex items-center gap-2">
+                            <ImageIcon className="w-4 h-4 text-gray-400" />
+                            <h3 className="font-bold text-gray-900 text-sm">Your Gallery</h3>
+                         </div>
+                         {isGalleryOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                     </button>
+                     
+                     {isGalleryOpen && (
+                         <div className="p-4 pt-0 space-y-4 max-h-[500px] overflow-y-auto">
+                            {gallery.map((art) => (
+                                <div key={art.id} className="bg-gray-50 p-2 rounded-2xl border border-gray-100 shadow-sm relative group">
+                                    <div className="aspect-square rounded-xl overflow-hidden mb-2 relative">
+                                        <img src={art.imageUrl} alt={art.prompt} className="w-full h-full object-cover" />
+                                        <div className="absolute top-2 right-2 flex gap-2">
+                                             <button onClick={(e) => handleDelete(e, art.id)} className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-colors z-20" title="Delete Artwork">
+                                                 <Trash2 className="w-3 h-3"/>
+                                             </button>
+                                        </div>
+                                    </div>
+                                    <p className="text-xs text-gray-600 line-clamp-2 px-1 italic">"{art.prompt}"</p>
+                                    <p className="text-[10px] text-gray-400 px-1 mt-1">{new Date(art.createdAt).toLocaleDateString()}</p>
+                                    <a href={art.imageUrl} download={`peutic_art_${art.id}.png`} className="absolute bottom-12 right-2 bg-white/90 p-2 rounded-full shadow-sm hover:bg-white text-black z-10">
+                                        <Download className="w-3 h-3" />
+                                    </a>
+                                </div>
+                            ))}
+                         </div>
+                     )}
                 </div>
             )}
-            <p className="text-[10px] text-gray-400 text-center">Powered by Gemini AI</p>
         </div>
     );
 };
 
-// --- SOUNDSCAPE PLAYER (UPDATED TO STABLE MIXKIT CDN) ---
+// --- SOUNDSCAPE PLAYER ---
 const SoundscapePlayer: React.FC = () => {
     const [playing, setPlaying] = useState(false);
     const [volume, setVolume] = useState(0.4);
@@ -144,7 +211,6 @@ const SoundscapePlayer: React.FC = () => {
         audio.loop = true;
         audio.volume = volume;
         
-        // Handle loading errors
         audio.onerror = (e) => {
             console.error("Audio Load Error:", e);
             setPlaying(false);
@@ -186,7 +252,6 @@ const SoundscapePlayer: React.FC = () => {
                     .then(() => setPlaying(true))
                     .catch(e => {
                         console.error("Play failed:", e);
-                        // Reset if failed
                         setPlaying(false);
                     });
             }
@@ -459,14 +524,24 @@ const CloudHopGame: React.FC = () => {
 const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const [text, setText] = useState("Inhale");
     const [timeLeft, setTimeLeft] = useState(120); 
+    const [isPlaying, setIsPlaying] = useState(false);
     const audioRef = useRef<HTMLAudioElement>(null);
     
-    // Stable, high-quality ambient track from Pixabay (free to use)
-    const AMBIENT_SONG_URL = "https://cdn.pixabay.com/audio/2022/02/07/audio_18d8d3dd81.mp3"; 
+    // Stable, high-quality ambient track from Pixabay CDN
+    const AMBIENT_SONG_URL = "https://cdn.pixabay.com/download/audio/2022/10/25/audio_946802e862.mp3?filename=meditation-124970.mp3"; 
 
     useEffect(() => {
         if (audioRef.current) {
-            audioRef.current.volume = 0.6; // Set initial volume via property
+            audioRef.current.volume = 0.5;
+            const playPromise = audioRef.current.play();
+            if (playPromise !== undefined) {
+                playPromise
+                    .then(() => setIsPlaying(true))
+                    .catch(error => {
+                        console.log("Autoplay blocked, waiting for interaction", error);
+                        setIsPlaying(false);
+                    });
+            }
         }
 
         const steps = [{ text: "Inhale", delay: 4000 }, { text: "Hold", delay: 4000 }, { text: "Exhale", delay: 4000 }, { text: "Hold", delay: 4000 }];
@@ -490,20 +565,22 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
         return () => { 
             clearInterval(loop); 
             clearInterval(timer); 
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current.currentTime = 0;
+            }
         };
     }, []);
 
-    // Effect to handle volume updates if needed dynamically
-    useEffect(() => {
+    const manualPlay = () => {
         if (audioRef.current) {
-            audioRef.current.volume = 0.6;
+            audioRef.current.play().then(() => setIsPlaying(true));
         }
-    }, []);
+    };
 
     return (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
-             {/* Native Audio Element for Maximum Stability */}
-             <audio ref={audioRef} src={AMBIENT_SONG_URL} autoPlay loop />
+             <audio ref={audioRef} src={AMBIENT_SONG_URL} loop />
 
              <div className="relative w-full max-w-md aspect-square flex items-center justify-center flex-col">
                 <button onClick={onClose} className="absolute top-0 right-0 text-white/50 hover:text-white"><X className="w-8 h-8" /></button>
@@ -512,7 +589,16 @@ const BreathingExercise: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                 <div className="relative z-10 text-center text-white">
                     <h2 className="text-4xl font-bold mb-2">{text}</h2>
                     <div className="inline-block px-4 py-1 rounded-full bg-white/10 border border-white/20 text-sm font-mono">{Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, '0')}</div>
-                    <p className="mt-4 text-xs text-white/50 flex items-center justify-center gap-2"><Music className="w-3 h-3"/> Playing: Ambient Piano</p>
+                    
+                    {!isPlaying ? (
+                        <button onClick={manualPlay} className="mt-6 flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-full text-xs font-bold transition-colors">
+                            <Play className="w-3 h-3 fill-current" /> Tap to Start Music
+                        </button>
+                    ) : (
+                        <p className="mt-6 text-xs text-white/50 flex items-center justify-center gap-2 animate-pulse">
+                            <Music className="w-3 h-3"/> Calming Audio Active
+                        </p>
+                    )}
                 </div>
              </div>
         </div>
@@ -852,7 +938,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
               </div>
 
               {/* NEW AI IMAGE GENERATOR WIDGET */}
-              <ArtTherapyGenerator />
+              <ArtTherapyGenerator userId={dashboardUser.id} />
           </div>
 
           {/* Main Content */}
@@ -866,34 +952,36 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                           <p className="text-gray-600 text-lg relative z-10 max-w-xl">"{dailyInsight}"</p>
                       </div>
 
-                      {/* Games & Tools */}
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                           <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-80 shadow-sm overflow-hidden">
-                                <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
-                                    <MindfulMatchGame />
-                                </div>
-                                <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
-                                    <CloudHopGame />
-                                </div>
-                           </div>
-                           <div className="space-y-4">
-                               <MoodTracker onMoodSelect={setWeather} />
-                               <button onClick={() => setShowBreathing(true)} className="w-full h-[100px] bg-[#FFFBEB] border border-yellow-200 p-6 rounded-3xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-pointer group hover:shadow-md">
-                                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm"><Wind className="w-5 h-5 text-blue-600" /></div>
-                                   <div className="text-left">
-                                       <h4 className="font-bold text-md text-gray-900">Breathe</h4>
-                                       <p className="text-xs text-gray-500">2 min reset</p>
-                                   </div>
-                               </button>
-                               <button onClick={() => setShowJournal(true)} className="w-full h-[100px] bg-[#FFFBEB] border border-yellow-200 p-6 rounded-3xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-pointer group hover:shadow-md">
-                                   <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-sm"><BookOpen className="w-5 h-5 text-purple-600" /></div>
-                                   <div className="text-left">
-                                       <h4 className="font-bold text-md text-gray-900">Journal</h4>
-                                       <p className="text-xs text-gray-500">Log thoughts</p>
-                                   </div>
-                               </button>
-                           </div>
-                      </div>
+                      {/* Games & Tools - COLLAPSIBLE */}
+                      <CollapsibleSection title="Games & Tools" icon={Gamepad2}>
+                          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                               <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-80 shadow-sm overflow-hidden">
+                                    <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
+                                        <MindfulMatchGame />
+                                    </div>
+                                    <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
+                                        <CloudHopGame />
+                                    </div>
+                               </div>
+                               <div className="space-y-4">
+                                   <MoodTracker onMoodSelect={setWeather} />
+                                   <button onClick={() => setShowBreathing(true)} className="w-full h-[100px] bg-[#FFFBEB] border border-yellow-200 p-6 rounded-3xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-pointer group hover:shadow-md">
+                                       <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors shadow-sm"><Wind className="w-5 h-5 text-blue-600" /></div>
+                                       <div className="text-left">
+                                           <h4 className="font-bold text-md text-gray-900">Breathe</h4>
+                                           <p className="text-xs text-gray-500">2 min reset</p>
+                                       </div>
+                                   </button>
+                                   <button onClick={() => setShowJournal(true)} className="w-full h-[100px] bg-[#FFFBEB] border border-yellow-200 p-6 rounded-3xl flex items-center gap-4 hover:scale-[1.02] transition-transform cursor-pointer group hover:shadow-md">
+                                       <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center group-hover:bg-purple-500 group-hover:text-white transition-colors shadow-sm"><BookOpen className="w-5 h-5 text-purple-600" /></div>
+                                       <div className="text-left">
+                                           <h4 className="font-bold text-md text-gray-900">Journal</h4>
+                                           <p className="text-xs text-gray-500">Log thoughts</p>
+                                       </div>
+                                   </button>
+                               </div>
+                          </div>
+                      </CollapsibleSection>
 
                       {/* Specialists Grid */}
                       <div>
