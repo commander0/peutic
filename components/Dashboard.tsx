@@ -91,10 +91,20 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
                     prompt: prompt,
                     createdAt: new Date().toISOString()
                 };
+                
+                // Save to DB
                 Database.saveArt(newEntry);
+                
+                // Auto Download
+                const link = document.createElement('a');
+                link.href = result;
+                link.download = `peutic_art_${newEntry.id}.png`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
                 setGallery(prev => [newEntry, ...prev]);
                 setPrompt('');
-                // Auto-open gallery when new art is generated
                 setIsGalleryOpen(true);
             }
         } catch (e) {
@@ -365,7 +375,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
 
     return (
         // RESIZED to h-80 and p-1 for flush fit
-        <div className="bg-gradient-to-br from-yellow-50/50 to-white h-full flex flex-col rounded-2xl p-1 border border-yellow-100 overflow-hidden relative shadow-inner">
+        <div className="bg-gradient-to-br from-yellow-50/50 to-white h-80 flex flex-col rounded-2xl p-1 border border-yellow-100 overflow-hidden relative shadow-inner">
             <div className="flex justify-between items-center mb-1 z-10 px-1 pt-1">
                 <h3 className="font-black text-sm text-yellow-900 uppercase tracking-widest">Mindful Match</h3>
                 <button onClick={initGame} className="p-1 hover:bg-yellow-100 rounded-full transition-colors"><RefreshCw className="w-4 h-4 text-yellow-600" /></button>
@@ -982,6 +992,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                       {/* Games & Tools - COLLAPSIBLE - DEFAULT CLOSED */}
                       <CollapsibleSection title="Games & Tools" icon={Gamepad2} defaultOpen={false}>
                           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                               {/* UPDATED: h-80 for compact flush fit */}
                                <div className="lg:col-span-2 bg-[#FFFBEB] border border-yellow-200 p-1 rounded-3xl flex gap-1 h-80 shadow-sm overflow-hidden">
                                     <div className="flex-1 relative rounded-2xl overflow-hidden group border border-yellow-100 h-full">
                                         <MindfulMatchGame />
