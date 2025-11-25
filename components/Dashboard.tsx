@@ -5,10 +5,10 @@ import {
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
   Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
   Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play, Zap, Star, Ghost, Edit2, Camera, Droplets, Users, Trash2, Bell,
-  CloudRain, Image as ImageIcon, Wand2, Download, ChevronDown, ChevronUp, ChevronRight
+  CloudRain, Image as ImageIcon, Wand2, Download, ChevronDown, ChevronUp, ChevronRight, Lightbulb
 } from 'lucide-react';
 import { Database, STABLE_AVATAR_POOL } from '../services/database';
-import { generateWellnessImage } from '../services/geminiService';
+import { generateAffirmation } from '../services/geminiService';
 
 interface DashboardProps {
   user: User;
@@ -66,50 +66,120 @@ const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = 
     return <img src={imgSrc} alt={alt} className={className} onError={() => setHasError(true)} loading="lazy" />;
 };
 
-// --- ART THERAPY GENERATOR (PERSISTENT GALLERY) ---
-const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
-    const [prompt, setPrompt] = useState('');
+// --- LOCAL WISDOM CARD GENERATOR (Canvas API) ---
+const renderWisdomCard = (text: string): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1080;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // 1. Background
+    const hue = Math.floor(Math.random() * 360);
+    const grd = ctx.createLinearGradient(0, 0, 1080, 1080);
+    grd.addColorStop(0, `hsl(${hue}, 40%, 95%)`);
+    grd.addColorStop(1, `hsl(${(hue + 40) % 360}, 30%, 90%)`);
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 1080, 1080);
+
+    // 2. Decorative Circle
+    ctx.fillStyle = `hsla(${hue}, 60%, 80%, 0.2)`;
+    ctx.beginPath();
+    ctx.arc(540, 540, 400, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3. Text Configuration
+    ctx.fillStyle = '#1a1a1a';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    // Quote logic
+    const words = text.split(' ');
+    let fontSize = 80;
+    if (words.length > 15) fontSize = 60;
+    
+    ctx.font = `bold ${fontSize}px Manrope, sans-serif`;
+    
+    // Word Wrap
+    const maxWidth = 800;
+    const lineHeight = fontSize * 1.4;
+    let lines = [];
+    let currentLine = words[0];
+
+    for (let i = 1; i < words.length; i++) {
+        const testLine = currentLine + ' ' + words[i];
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth) {
+            lines.push(currentLine);
+            currentLine = words[i];
+        } else {
+            currentLine = testLine;
+        }
+    }
+    lines.push(currentLine);
+
+    // Render Text
+    let y = 540 - ((lines.length - 1) * lineHeight) / 2;
+    lines.forEach(line => {
+        ctx.fillText(line, 540, y);
+        y += lineHeight;
+    });
+
+    // Footer
+    ctx.font = '500 30px Manrope, sans-serif';
+    ctx.fillStyle = '#666';
+    ctx.fillText('PEUTIC • DAILY WISDOM', 540, 980);
+
+    return canvas.toDataURL('image/png');
+};
+
+// --- WISDOM & CLARITY GENERATOR ---
+const WisdomGenerator: React.FC<{ userId: string }> = ({ userId }) => {
+    const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [gallery, setGallery] = useState<ArtEntry[]>([]);
-    const [isGeneratorOpen, setIsGeneratorOpen] = useState(false);
-    const [isGalleryOpen, setIsGalleryOpen] = useState(false);
+    const [isOpen, setIsOpen] = useState(false);
 
     useEffect(() => {
         setGallery(Database.getUserArt(userId));
     }, [userId]);
 
     const handleGenerate = async () => {
-        if (!prompt.trim()) return;
+        if (!input.trim()) return;
         setLoading(true);
+        
         try {
-            const result = await generateWellnessImage(prompt);
-            if (result) {
+            // 1. Get text affirmation (AI or Local)
+            const wisdom = await generateAffirmation(input);
+            
+            // 2. Render to image locally
+            const imageUrl = renderWisdomCard(wisdom);
+
+            if (imageUrl) {
                 const newEntry: ArtEntry = {
-                    id: `art_${Date.now()}`,
+                    id: `wisdom_${Date.now()}`,
                     userId: userId,
-                    imageUrl: result,
-                    prompt: prompt,
-                    createdAt: new Date().toISOString()
+                    imageUrl: imageUrl,
+                    prompt: input, // Store the worry/input
+                    createdAt: new Date().toISOString(),
+                    title: "Wisdom Card"
                 };
                 
-                // Save to DB (with quota protection)
-                Database.saveArt(newEntry);
+                Database.saveArt(newEntry); // Persist
+                setGallery(prev => [newEntry, ...prev]);
                 
-                // Auto Download Feature to ensure user keeps their art
+                // Auto Download
                 const link = document.createElement('a');
-                link.href = result;
-                link.download = `peutic_art_${newEntry.id}.png`;
+                link.href = imageUrl;
+                link.download = `peutic_wisdom_${Date.now()}.png`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
 
-                setGallery(prev => [newEntry, ...prev]);
-                setPrompt('');
-                setIsGalleryOpen(true);
+                setInput('');
             }
         } catch (e) {
             console.error(e);
-            alert("Could not generate image right now. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -117,77 +187,55 @@ const ArtTherapyGenerator: React.FC<{ userId: string }> = ({ userId }) => {
 
     const handleDelete = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
-        if(confirm("Delete this artwork permanently?")) {
+        if(confirm("Delete this card?")) {
             Database.deleteArt(id);
             setGallery(prev => prev.filter(g => g.id !== id));
         }
     };
 
     return (
-        <div className="space-y-4">
-            {/* GENERATOR SECTION */}
-            <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-yellow-100">
-                <button onClick={() => setIsGeneratorOpen(!isGeneratorOpen)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
-                     <div className="flex items-center gap-2">
-                        <div className="p-2 bg-purple-100 rounded-lg"><Wand2 className="w-4 h-4 text-purple-600" /></div>
-                        <h3 className="font-bold text-gray-900 text-sm">AI Art Therapy</h3>
-                     </div>
-                     {isGeneratorOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                </button>
-                
-                {isGeneratorOpen && (
-                    <div className="p-4 pt-0">
-                        <textarea 
-                            className="w-full h-24 bg-gray-50 rounded-xl border border-gray-200 p-3 text-sm focus:border-purple-400 focus:ring-1 focus:ring-purple-400 outline-none resize-none transition-all"
-                            placeholder="Visualize your calm place... (e.g., 'A peaceful cabin in a snowy forest')"
-                            value={prompt}
-                            onChange={(e) => setPrompt(e.target.value)}
-                        />
-                        <button 
-                            onClick={handleGenerate}
-                            disabled={loading || !prompt}
-                            className={`mt-2 w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${loading || !prompt ? 'bg-gray-100 text-gray-400' : 'bg-purple-600 text-white hover:bg-purple-500 hover:shadow-md'}`}
-                        >
-                            {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
-                            {loading ? 'Creating...' : 'Visualize'}
-                        </button>
-                        <p className="text-[10px] text-gray-400 text-center mt-2">Powered by Gemini AI</p>
-                    </div>
-                )}
-            </div>
-
-            {/* GALLERY SECTION - NO MAX HEIGHT - EXPANDS FULLY */}
-            {gallery.length > 0 && (
-                <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-yellow-100">
-                     <button onClick={() => setIsGalleryOpen(!isGalleryOpen)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
-                         <div className="flex items-center gap-2">
-                            <ImageIcon className="w-4 h-4 text-gray-400" />
-                            <h3 className="font-bold text-gray-900 text-sm">Your Gallery</h3>
-                         </div>
-                         {isGalleryOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
-                     </button>
-                     
-                     {isGalleryOpen && (
-                         <div className="p-4 pt-0 space-y-4">
+        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-yellow-100 mb-6">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full flex items-center justify-between p-4 hover:bg-gray-50">
+                 <div className="flex items-center gap-2">
+                    <div className="p-2 bg-purple-100 rounded-lg"><Lightbulb className="w-4 h-4 text-purple-600" /></div>
+                    <h3 className="font-bold text-gray-900 text-sm">Get Clarity</h3>
+                 </div>
+                 {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+            
+            {isOpen && (
+                <div className="p-4 pt-0">
+                    <textarea 
+                        className="w-full h-20 bg-gray-50 rounded-xl border border-gray-200 p-3 text-sm focus:border-purple-400 focus:ring-1 focus:ring-purple-400 outline-none resize-none transition-all mb-2"
+                        placeholder="What's weighing on your mind?"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                    />
+                    <button 
+                        onClick={handleGenerate}
+                        disabled={loading || !input}
+                        className={`w-full py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition-all ${loading || !input ? 'bg-gray-100 text-gray-400' : 'bg-purple-600 text-white hover:bg-purple-500 hover:shadow-md'}`}
+                    >
+                        {loading ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
+                        {loading ? 'Finding Clarity...' : 'Reframe Thought'}
+                    </button>
+                    
+                    {/* Gallery */}
+                    {gallery.length > 0 && (
+                        <div className="mt-6 space-y-4">
+                            <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Your Cards</h4>
                             {gallery.map((art) => (
                                 <div key={art.id} className="bg-gray-50 p-2 rounded-2xl border border-gray-100 shadow-sm relative group">
-                                    <div className="aspect-square rounded-xl overflow-hidden mb-2 relative">
-                                        <img src={art.imageUrl} alt={art.prompt} className="w-full h-full object-cover" />
-                                        <div className="absolute top-2 right-2 flex gap-2">
-                                             <button onClick={(e) => handleDelete(e, art.id)} className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-colors z-20" title="Delete Artwork">
-                                                 <Trash2 className="w-3 h-3"/>
-                                             </button>
-                                        </div>
+                                    <img src={art.imageUrl} alt="Wisdom Card" className="w-full rounded-xl shadow-sm" />
+                                    <div className="absolute top-3 right-3 flex gap-2">
+                                         <button onClick={(e) => handleDelete(e, art.id)} className="p-2 bg-red-600 hover:bg-red-700 text-white rounded-full shadow-lg transition-colors" title="Delete">
+                                             <Trash2 className="w-3 h-3"/>
+                                         </button>
                                     </div>
-                                    <p className="text-xs text-gray-600 line-clamp-2 px-1 italic">"{art.prompt}"</p>
-                                    <p className="text-[10px] text-gray-400 px-1 mt-1">{new Date(art.createdAt).toLocaleDateString()}</p>
-                                    <a href={art.imageUrl} download={`peutic_art_${art.id}.png`} className="absolute bottom-12 right-2 bg-white/90 p-2 rounded-full shadow-sm hover:bg-white text-black z-10">
-                                        <Download className="w-3 h-3" />
-                                    </a>
                                 </div>
                             ))}
-                         </div>
-                     )}
+                        </div>
+                    )}
                 </div>
             )}
         </div>
@@ -374,7 +422,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
     useEffect(() => { if (cards.length > 0 && solved.length === cards.length) { setWon(true); onWin?.(); } }, [solved]);
 
     return (
-        // RESIZED to h-80 and p-1 for flush fit
+        // H-80 for compact height, P-1 for flush
         <div className="bg-gradient-to-br from-yellow-50/50 to-white h-80 flex flex-col rounded-2xl p-1 border border-yellow-100 overflow-hidden relative shadow-inner">
             <div className="flex justify-between items-center mb-1 z-10 px-1 pt-1">
                 <h3 className="font-black text-sm text-yellow-900 uppercase tracking-widest">Mindful Match</h3>
@@ -387,7 +435,7 @@ const MindfulMatchGame: React.FC<{ onWin?: () => void }> = ({ onWin }) => {
                     <button onClick={initGame} className="mt-4 bg-black text-white px-6 py-2 rounded-full font-bold hover:scale-105 transition-transform">Replay</button>
                 </div>
             ) : (
-                // Use grid-rows-4 with gap-1 to perfectly distribute space flush
+                // Grid rows 4 and gap-1 for perfect flush fit
                 <div className="grid grid-cols-4 grid-rows-4 gap-1 h-full p-0 flex-1">
                     {cards.map((card, i) => {
                         const isVisible = flipped.includes(i) || solved.includes(i);
@@ -975,7 +1023,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
               </div>
 
               {/* NEW AI IMAGE GENERATOR WIDGET */}
-              <ArtTherapyGenerator userId={dashboardUser.id} />
+              <WisdomGenerator userId={dashboardUser.id} />
           </div>
 
           {/* Main Content */}
