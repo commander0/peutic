@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, JournalEntry, ArtEntry } from '../types';
 import { 
@@ -5,7 +6,7 @@ import {
   LayoutDashboard, Plus, Search, Filter, X, Lock, CheckCircle, AlertTriangle, ShieldCheck, Heart, Calendar,
   Smile, PenTool, Wind, BookOpen, Save, Sparkles, Activity, Info, Flame, Trophy, Target, Hourglass, Coffee,
   Sun, Cloud, Umbrella, Music, Feather, Anchor, Gamepad2, RefreshCw, Play, Zap, Star, Ghost, Edit2, Camera, Droplets, Users, Trash2, Bell,
-  CloudRain, Image as ImageIcon, Wand2, Download, ChevronDown, ChevronUp, ChevronRight, Lightbulb
+  CloudRain, Image as ImageIcon, Wand2, Download, ChevronDown, ChevronUp, ChevronRight, Lightbulb, User as UserIcon, Shield
 } from 'lucide-react';
 import { Database, STABLE_AVATAR_POOL } from '../services/database';
 import { generateAffirmation } from '../services/geminiService';
@@ -875,6 +876,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [dailyInsight, setDailyInsight] = useState<string>('');
+  const [nameEditMode, setNameEditMode] = useState(false);
+  const [tempName, setTempName] = useState(user.name);
   
   const [dashboardUser, setDashboardUser] = useState(user);
   const [balance, setBalance] = useState(user.balance);
@@ -962,6 +965,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       }
   };
 
+  const handleSaveName = () => {
+    const updated = { ...dashboardUser, name: tempName };
+    Database.updateUser(updated);
+    setDashboardUser(updated);
+    setNameEditMode(false);
+  }
+
   const filteredCompanions = companions.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.specialty.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
@@ -978,9 +988,14 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
               <span className="font-black text-xl tracking-tight">Peutic</span>
           </div>
           <div className="flex items-center gap-4">
-              <div className="hidden md:flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-yellow-200 shadow-sm">
-                  <Flame className="w-4 h-4 text-orange-500" /> <span className="text-xs font-bold text-gray-600">{streak} Day Streak</span>
+              {/* STREAK INDICATOR */}
+              <div className="hidden md:flex items-center gap-2 bg-gradient-to-r from-orange-50 to-amber-50 px-4 py-2 rounded-full border border-orange-100 shadow-sm">
+                  <div className="p-1 bg-orange-500 rounded-full">
+                      <Flame className="w-3 h-3 text-white fill-white animate-pulse" /> 
+                  </div>
+                  <span className="text-xs font-black text-orange-600 tracking-wide">{dashboardUser.streak || 1} Day Streak</span>
               </div>
+              
               <div className="flex items-center gap-2 bg-black text-white px-5 py-2.5 rounded-full shadow-xl hover:scale-105 transition-transform cursor-pointer" onClick={() => setShowPayment(true)}>
                   <span className="font-mono font-bold text-yellow-400">{Math.floor(balance)}m</span>
                   <Plus className="w-4 h-4" />
@@ -1070,13 +1085,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                       </CollapsibleSection>
 
                       {/* Specialists Grid */}
-                      <div>
+                      <div className="relative pb-20">
                           <div className="flex justify-between items-end mb-6 px-2">
                               <h3 className="font-black text-2xl text-gray-900">Your Care Team</h3>
                               <span className="text-xs font-bold bg-white px-3 py-1 rounded-full border border-gray-200">Live 24/7</span>
                           </div>
                           {/* 2 Cols Mobile, 3 Cols Desktop */}
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
                               {loadingCompanions ? [1,2,3].map(i => <div key={i} className="h-72 bg-gray-200/50 rounded-3xl animate-pulse"></div>) : (
                                   filteredCompanions.map(c => (
                                       <div key={c.id} onClick={() => handleConnectRequest(c)} className="bg-[#FFFBEB] border border-yellow-200 p-4 rounded-3xl hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group relative overflow-hidden z-0">
@@ -1095,6 +1110,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                                       </div>
                                   ))
                               )}
+                          </div>
+                          
+                          {/* AVAILABILITY BANNER */}
+                          <div className="mt-8 p-4 bg-gray-50 border border-gray-100 rounded-xl text-center">
+                              <p className="text-xs text-gray-500 leading-relaxed">
+                                  Note: Due to high demand, your chosen specialist may be assisting another member. If unavailable, we will instantly connect you with a specialist of equal or greater experience to ensure you receive support without delay.
+                              </p>
                           </div>
                       </div>
                   </div>
@@ -1134,6 +1156,50 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                   <div className="space-y-8 animate-in fade-in">
                       <h2 className="text-2xl font-black mb-6">Account Settings</h2>
                       
+                      {/* Profile Card */}
+                      <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
+                          <div className="flex justify-between items-center mb-6">
+                              <h3 className="font-bold text-lg flex items-center gap-2"><UserIcon className="w-5 h-5"/> Profile</h3>
+                              {!nameEditMode ? (
+                                  <button onClick={() => setNameEditMode(true)} className="text-xs font-bold text-yellow-600 hover:text-yellow-700">Edit</button>
+                              ) : (
+                                  <button onClick={handleSaveName} className="text-xs font-bold text-green-600 hover:text-green-700">Save</button>
+                              )}
+                          </div>
+                          <div className="space-y-4">
+                               <div>
+                                  <label className="text-xs font-bold text-gray-400 uppercase">Display Name</label>
+                                  {nameEditMode ? (
+                                      <input className="w-full p-2 border border-gray-200 rounded-lg mt-1 focus:outline-none focus:border-yellow-400 transition-colors" value={tempName} onChange={e => setTempName(e.target.value)} />
+                                  ) : (
+                                      <p className="font-bold text-gray-900">{dashboardUser.name}</p>
+                                  )}
+                               </div>
+                               <div>
+                                  <label className="text-xs font-bold text-gray-400 uppercase">Email</label>
+                                  <p className="font-bold text-gray-900">{dashboardUser.email}</p>
+                               </div>
+                               <div>
+                                  <label className="text-xs font-bold text-gray-400 uppercase">Member ID</label>
+                                  <p className="font-mono text-xs text-gray-500">{dashboardUser.id}</p>
+                               </div>
+                          </div>
+                      </div>
+
+                      {/* Privacy Card */}
+                      <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
+                           <h3 className="font-bold text-lg mb-6 flex items-center gap-2"><Shield className="w-5 h-5"/> Privacy & Data</h3>
+                           <div className="flex justify-between items-center mb-4">
+                                <div>
+                                    <p className="font-bold text-gray-900">Export Personal Data</p>
+                                    <p className="text-xs text-gray-500">Download a copy of your journal and session history.</p>
+                                </div>
+                                <button onClick={() => Database.exportData('USERS')} className="px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-xs font-bold flex items-center gap-2 transition-colors">
+                                    <Download className="w-3 h-3"/> Export JSON
+                                </button>
+                           </div>
+                      </div>
+
                       <div className="bg-white border border-gray-200 rounded-3xl p-8 shadow-sm">
                           <h3 className="font-bold text-lg mb-4 flex items-center gap-2"><Bell className="w-5 h-5"/> Notifications</h3>
                           <div className="space-y-4">

@@ -21,6 +21,8 @@ export interface User {
     marketing: boolean;
     updates: boolean;
   };
+  streak: number;
+  lastLoginDate: string;
 }
 
 export interface Companion {

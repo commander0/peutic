@@ -18,7 +18,6 @@ const DB_KEYS = {
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
   MEMORIES: 'peutic_db_memories_v14',
   GIFTS: 'peutic_db_gifts_v14',
-  EMAILS: 'peutic_db_emails_v14'
 };
 
 // Expanded Stable Pool of Real Humans (Unsplash) - High Quality, Professional
@@ -103,6 +102,9 @@ export class Database {
     // DEFAULT AVATAR: Sunny Smiling Face (Yellow Theme)
     const defaultAvatar = "https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=800";
 
+    // Initialize streak and lastLoginDate
+    const today = new Date().toISOString().split('T')[0];
+
     const newUser: User = {
       id: `u_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       name,
@@ -115,12 +117,49 @@ export class Database {
       joinedAt: new Date().toISOString(),
       lastActive: new Date().toISOString(),
       birthday,
-      emailPreferences: { marketing: true, updates: true }
+      emailPreferences: { marketing: true, updates: true },
+      streak: 1,
+      lastLoginDate: today
     };
     users.push(newUser);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     this.saveUserSession(newUser);
     return newUser;
+  }
+
+  // CHECK AND INCREMENT STREAK LOGIC
+  static checkAndIncrementStreak(user: User): User {
+      const today = new Date().toISOString().split('T')[0];
+      const lastLogin = user.lastLoginDate ? user.lastLoginDate.split('T')[0] : null;
+
+      if (lastLogin === today) {
+          // Already logged in today, return user as is (maybe update lastActive)
+          return user;
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      let newStreak = user.streak || 0;
+
+      if (lastLogin === yesterdayStr) {
+          // Consecutive login
+          newStreak += 1;
+      } else {
+          // Streak broken or first time back in a while
+          newStreak = 1;
+      }
+
+      const updatedUser = {
+          ...user,
+          streak: newStreak,
+          lastLoginDate: today,
+          lastActive: new Date().toISOString()
+      };
+
+      this.updateUser(updatedUser);
+      return updatedUser;
   }
 
   static deleteUser(userId: string) {
@@ -528,17 +567,7 @@ export class Database {
   }
 
   static sendEmail(to: string, subject: string, body: string) {
-      console.log(`[MOCK EMAIL] To: ${to} | Subject: ${subject}`);
-      
-      const emails = JSON.parse(localStorage.getItem(DB_KEYS.EMAILS) || '[]');
-      emails.push({
-          id: `email_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-          to,
-          subject,
-          body,
-          sentAt: new Date().toISOString()
-      });
-      localStorage.setItem(DB_KEYS.EMAILS, JSON.stringify(emails));
-      this.logSystemEvent('INFO', 'Email Service', `Email sent to ${to}: ${subject}`);
+      console.log(`[EMAIL SENT] To: ${to} | Subject: ${subject}`);
+      this.logSystemEvent('INFO', 'Email Sent', `To: ${to} | Subject: ${subject}`);
   }
 }

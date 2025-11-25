@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { User, UserRole, Companion } from './types';
@@ -93,6 +94,10 @@ const MainApp: React.FC = () => {
             if (avatar) { currentUser.avatar = avatar; Database.updateUser(currentUser); }
         }
     }
+    
+    // NEW: Check and update streak on login
+    currentUser = Database.checkAndIncrementStreak(currentUser);
+
     setUser(currentUser);
     Database.saveUserSession(currentUser);
     lastActivityRef.current = Date.now();
