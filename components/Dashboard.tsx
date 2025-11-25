@@ -974,6 +974,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
   const filteredCompanions = companions.filter(c => c.name.toLowerCase().includes(searchTerm.toLowerCase()) || c.specialty.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  const isGoalMet = weeklyGoal >= weeklyTarget;
+  const progressPercent = Math.min(100, (weeklyGoal / weeklyTarget) * 100);
+
   return (
     <div className="min-h-screen bg-[#FFFBEB] font-sans text-gray-900 selection:bg-yellow-200 relative overflow-hidden">
       <div className="fixed inset-0 pointer-events-none opacity-[0.03] z-0" style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")` }}></div>
@@ -1017,15 +1020,30 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                   <h3 className="font-black text-2xl">{dashboardUser.name}</h3>
                   <p className="text-xs font-bold text-yellow-600 uppercase tracking-widest mb-6">Premium Member</p>
                   
-                  <div className="bg-white p-4 rounded-2xl text-left border border-yellow-100 shadow-inner">
-                      <div className="flex justify-between text-xs font-bold text-gray-500 mb-2">
-                          <span>Weekly Goal</span>
-                          <span className="text-black font-black">{weeklyGoal}/{weeklyTarget}</span>
+                  {/* WEEKLY GOAL CARD - ENHANCED */}
+                  <div className={`p-6 rounded-3xl text-left border shadow-inner transition-all duration-500 relative overflow-hidden ${isGoalMet ? 'bg-white border-blue-200 shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'bg-white border-yellow-100'}`}>
+                      {isGoalMet && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-500"></div>}
+                      
+                      <div className="flex justify-between text-xs font-bold text-gray-500 mb-3 z-10 relative">
+                          <span className="flex items-center gap-1">{isGoalMet ? <Trophy className="w-3 h-3 text-blue-500"/> : <Target className="w-3 h-3"/>} Weekly Goal</span>
+                          <span className={`font-black ${isGoalMet ? 'text-blue-600' : 'text-black'}`}>{weeklyGoal}/{weeklyTarget}</span>
                       </div>
-                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden mb-2">
-                          <div className="h-full bg-green-500 transition-all duration-1000" style={{ width: `${Math.min(100, (weeklyGoal / weeklyTarget) * 100)}%` }}></div>
+                      
+                      <div className="h-3 bg-gray-100 rounded-full overflow-visible mb-3 relative">
+                          <div 
+                             className={`absolute top-0 left-0 h-full rounded-full transition-all duration-1000 ${isGoalMet ? 'bg-gradient-to-r from-blue-400 to-blue-600 shadow-[0_0_10px_#3b82f6]' : 'bg-green-500'}`} 
+                             style={{ width: `${progressPercent}%` }}
+                          >
+                             {isGoalMet && (
+                                <div className="absolute -right-2 -top-3 filter drop-shadow-md z-20">
+                                    <Flame className="w-6 h-6 text-blue-500 fill-blue-400 animate-bounce" />
+                                </div>
+                             )}
+                          </div>
                       </div>
-                      <p className="text-[10px] text-gray-400 font-bold text-center italic">{weeklyMessage}</p>
+                      <p className={`text-[10px] font-bold text-center italic transition-colors ${isGoalMet ? 'text-blue-500' : 'text-gray-400'}`}>
+                          {isGoalMet ? "🔥 Goal Crushed! Amazing Work! 🔥" : weeklyMessage}
+                      </p>
                   </div>
               </div>
 
@@ -1113,9 +1131,13 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                           </div>
                           
                           {/* AVAILABILITY BANNER */}
-                          <div className="mt-8 p-4 bg-gray-50 border border-gray-100 rounded-xl text-center">
-                              <p className="text-xs text-gray-500 leading-relaxed">
-                                  Note: Due to high demand, your chosen specialist may be assisting another member. If unavailable, we will instantly connect you with a specialist of equal or greater experience to ensure you receive support without delay.
+                          <div className="mt-8 p-4 bg-gray-50 border border-gray-100 rounded-xl text-center animate-in slide-in-from-bottom-5 fade-in duration-700">
+                              <div className="flex items-center justify-center gap-2 mb-1">
+                                  <Info className="w-4 h-4 text-yellow-600" />
+                                  <span className="text-xs font-bold text-gray-600 uppercase tracking-wider">Service Notice</span>
+                              </div>
+                              <p className="text-xs text-gray-500 leading-relaxed max-w-2xl mx-auto">
+                                  Due to high demand, your chosen specialist may be assisting another member. If unavailable, we will instantly connect you with a specialist of equal or greater experience to ensure you receive support without delay.
                               </p>
                           </div>
                       </div>

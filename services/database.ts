@@ -1,3 +1,4 @@
+
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry, BreathLog } from '../types';
 
 const DB_KEYS = {
@@ -566,8 +567,5 @@ export class Database {
       URL.revokeObjectURL(url);
   }
 
-  static sendEmail(to: string, subject: string, body: string) {
-      console.log(`[EMAIL SENT] To: ${to} | Subject: ${subject}`);
-      this.logSystemEvent('INFO', 'Email Sent', `To: ${to} | Subject: ${subject}`);
-  }
+  // Removed sendEmail
 }

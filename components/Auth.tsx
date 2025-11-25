@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { UserRole } from '../types';
 import { Facebook, AlertCircle, Send, Heart, Check } from 'lucide-react';
@@ -214,7 +215,6 @@ const Auth: React.FC<AuthProps> = ({ onLogin, onCancel, initialMode = 'login' })
       const fullName = `${firstName.trim()} ${lastName.trim()}`;
       const formattedName = fullName.length > 1 ? (fullName.charAt(0).toUpperCase() + fullName.slice(1)) : "Buddy";
       onLogin(UserRole.USER, formattedName, undefined, email, birthday, 'email');
-      Database.sendEmail(email, "Welcome to Peutic", "Your journey begins now.");
   };
 
   // --- RENDER ONBOARDING ---
