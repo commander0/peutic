@@ -416,15 +416,9 @@ export class Database {
   static saveArt(entry: ArtEntry) {
       let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
       
-      // 1. Add new entry to the end
+      // 1. Add new entry to the end (UNLIMITED UNTIL ERROR)
       art.push(entry);
       
-      // 2. Preventive Pruning: Keep only the last 10 images to avoid hitting quota too often
-      // (Assuming images are ~200KB-500KB base64, 10 is safe for 5MB limit)
-      if (art.length > 10) {
-          art = art.slice(-10);
-      }
-
       try {
           localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
       } catch (e: any) {
@@ -432,20 +426,21 @@ export class Database {
           if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
               console.warn("LocalStorage quota exceeded. Pruning old art to save new entry.");
               
-              // Aggressive pruning: keep only the last 3 items including the new one
-              const prunedArt = art.slice(-3);
-              
-              try {
-                  localStorage.setItem(DB_KEYS.ART, JSON.stringify(prunedArt));
-              } catch (retryError) {
-                  console.error("Failed to save art even after pruning.", retryError);
-                  // Last resort: save just the new one if possible, or fail gracefully
-                  try {
-                      localStorage.setItem(DB_KEYS.ART, JSON.stringify([entry]));
-                  } catch (finalErr) {
-                      // If even one image is too big, we can't save it.
-                      throw new Error("Storage full. Unable to save artwork.");
-                  }
+              // Fallback: Remove oldest items one by one until it fits
+              let saved = false;
+              while (art.length > 1 && !saved) {
+                 art.shift(); // Remove oldest
+                 try {
+                    localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+                    saved = true;
+                 } catch (retryErr) {
+                    // Continue loop
+                 }
+              }
+
+              if (!saved) {
+                 // If we can't even save the single new image
+                 throw new Error("Storage full. Unable to save artwork.");
               }
           } else {
               throw e;
