@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Shield, Heart, Star, Clock, CheckCircle, ArrowRight, Lock, Globe, ChevronDown, Play, MessageCircle, Signal, Cookie, Award, CreditCard } from 'lucide-react';
 import { LanguageCode, getTranslation } from '../services/i18n';
@@ -50,6 +51,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onLoginClick }) => {
   const [saleMode, setSaleMode] = useState(true);
 
   useEffect(() => {
+    // FIX: Ensure we get the latest settings for pricing
     const settings = Database.getSettings();
     setSaleMode(settings.saleMode);
     

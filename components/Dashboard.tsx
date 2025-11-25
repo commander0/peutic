@@ -924,15 +924,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       return () => clearInterval(interval);
   }, [user.id]);
 
-  // Weather Auto-Clear Effect (8 seconds)
-  useEffect(() => {
-      if (weather) {
-          const timer = setTimeout(() => {
-              setWeather(null);
-          }, 8000);
-          return () => clearTimeout(timer);
-      }
-  }, [weather]);
+  // Weather Auto-Clear Effect (8 seconds) - REMOVED to be Unlimited
+  // useEffect(() => { ... }, [weather]);
 
   const handlePaymentSuccess = (minutesAdded: number, cost: number) => {
       Database.topUpWallet(minutesAdded, cost);
@@ -940,7 +933,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       setShowPayment(false);
       setPaymentError(undefined);
       setWeather('confetti');
-      // Auto-clear handled by effect
   };
 
   const handleConnectRequest = (companion: Companion) => {
