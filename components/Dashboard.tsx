@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Companion, Transaction, JournalEntry, ArtEntry } from '../types';
 import { 
@@ -933,6 +932,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       setShowPayment(false);
       setPaymentError(undefined);
       setWeather('confetti');
+      // Auto-clear handled by effect
   };
 
   const handleConnectRequest = (companion: Companion) => {
