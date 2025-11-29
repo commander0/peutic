@@ -52,7 +52,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         const active = Database.getActiveSessionCount();
         const limit = settings.maxConcurrentSessions;
 
-        // FIXED: This now correctly adds user to queue list and returns valid position (e.g., 1)
+        // FIXED: Now properly registers user in queue list
         const pos = Database.joinQueue(userId);
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
@@ -84,7 +84,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     return () => {
         clearInterval(queueInterval);
-        // FIXED: Properly remove user from both Queue and Active lists on unmount
+        // FIXED: Clean up user from active/queue lists on unmount
         Database.endSession(userId);
     };
   }, []);
@@ -93,9 +93,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      // FIXED: Use specific userId to mark as active
+      // FIXED: Officially move user to active session list
       Database.enterActiveSession(userId);
-      // Remove from queue since they are now connecting
       Database.leaveQueue(userId);
 
       try {
@@ -219,6 +218,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
+        
+        {/* --- HEADER OVERLAY --- */}
         <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none bg-gradient-to-b from-black/80 via-black/20 to-transparent pb-20 transition-opacity duration-500">
             <div className="flex items-center gap-4 pointer-events-auto">
                 <div className={`bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} text-white font-mono shadow-xl flex items-center gap-3 transition-colors duration-500`}>
@@ -229,6 +230,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             </div>
             <div className="flex items-center gap-2 pointer-events-auto">
+                {/* Network Quality */}
                 <div className="flex gap-1 h-4 items-end">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div>
@@ -237,7 +239,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
+        {/* --- MAIN CONTENT AREA --- */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
+            
+            {/* QUEUE SCREEN */}
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="relative mb-8">
@@ -247,6 +252,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                     </div>
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">You are in queue</h3>
                     <p className="text-gray-400 text-sm mb-6">Our specialists are currently assisting others.</p>
+                    
                     <div className="grid grid-cols-2 gap-4 text-center max-w-sm w-full">
                          <div className="bg-gray-800 p-4 rounded-xl">
                              <div className="text-2xl font-black text-white">{queuePos}</div>
@@ -274,6 +280,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
             
+            {/* Error State */}
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center backdrop-blur-md">
@@ -300,6 +307,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
+        {/* --- USER PIP --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
@@ -313,13 +321,15 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-center items-end z-30 pointer-events-none bg-gradient-to-t from-black/90 via-black/50 to-transparent h-48">
-            <div className="flex items-center gap-3 md:gap-6 pointer-events-auto bg-black/40 backdrop-blur-xl px-6 md:px-8 py-4 rounded-full border border-white/10 shadow-2xl hover:bg-black/50 transition-all transform hover:-translate-y-1">
-                <button onClick={() => setMicOn(!micOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${micOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{micOn ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
-                <button onClick={() => setCamOn(!camOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${camOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{camOn ? <VideoIcon className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
-                <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${blurBackground ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : 'bg-gray-800/80 text-white hover:bg-gray-700'}`}><Aperture className="w-5 h-5 md:w-6 md:h-6" /></button>
-                <div className="w-px h-8 bg-white/10 mx-2"></div>
-                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-full font-bold flex items-center gap-2 shadow-lg shadow-red-600/20 transition-transform hover:scale-105 active:scale-95"><PhoneOff className="w-5 h-5" /><span className="hidden md:inline tracking-wide">End Session</span></button>
+        {/* --- COMPACT BOTTOM CONTROLS --- */}
+        {/* Removed the large gradient and height container. Now it's a floating pill bar out of the way. */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-30 pointer-events-auto">
+            <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-3 rounded-full border border-white/10 shadow-2xl hover:bg-black/80 transition-all">
+                <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}</button>
+                <button onClick={() => setCamOn(!camOn)} className={`p-3 rounded-full transition-all ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{camOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}</button>
+                <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 rounded-full transition-all ${blurBackground ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}><Aperture className="w-5 h-5" /></button>
+                <div className="w-px h-6 bg-white/20 mx-1"></div>
+                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold flex items-center gap-2 transition-colors"><PhoneOff className="w-4 h-4" /> <span className="text-sm">End</span></button>
             </div>
         </div>
     </div>
