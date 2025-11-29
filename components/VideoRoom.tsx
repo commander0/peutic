@@ -17,7 +17,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Media State - Mic defaults to TRUE
+  // --- 1. SET MIC TO TRUE BY DEFAULT ---
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   
@@ -158,7 +158,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, 
-            // Audio TRUE triggers mic, but 'muted' on video tag prevents echo
+            // --- 2. ENSURE HARDWARE MIC IS ON ---
             audio: true 
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -323,7 +323,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         {/* --- USER PIP --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             {camOn ? (
-                // muted=true prevents feedback loop, playsInline required for iOS
+                // --- 3. MUTED PREVENTS FEEDBACK ---
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
             ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-6 h-6 mb-1 opacity-50" /></div>
@@ -333,12 +333,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- BOTTOM CONTROLS: FLOATING BUTTONS (NO BAR) --- */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-40 animate-in slide-in-from-bottom-10 fade-in duration-500">
-            <button onClick={() => setMicOn(!micOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 backdrop-blur-md border border-white/10 ${micOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
+        {/* --- BOTTOM CONTROLS: SINGLE PILL (NO BACKGROUND BAR) --- */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-40 bg-black/80 backdrop-blur-xl px-6 py-3 rounded-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-500">
+            <button onClick={() => setMicOn(!micOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 ${micOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
                 {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
             </button>
-            <button onClick={() => setCamOn(!camOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 backdrop-blur-md border border-white/10 ${camOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
+            <button onClick={() => setCamOn(!camOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 ${camOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
                 {camOn ? <VideoIcon className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
             
