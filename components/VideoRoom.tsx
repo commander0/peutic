@@ -51,15 +51,14 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     // 1. Join Queue
     const initQueue = () => {
         const settings = Database.getSettings();
-        // We track active sessions but won't block #1 from entering if it's "full" due to ghosts
-        const active = Database.getActiveSessionCount(); 
+        const active = Database.getActiveSessionCount();
+        const limit = settings.maxConcurrentSessions;
 
         const pos = Database.joinQueue(userId);
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
 
-        // FIX: Removed '&& active < limit'. If you are #1, you go in.
-        if (pos === 1) {
+        if (pos === 1 && active < limit) {
              startTavusConnection();
         }
     };
@@ -67,11 +66,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     const queueInterval = setInterval(() => {
         if (connectionState === 'QUEUED') {
             const pos = Database.getQueuePosition(userId);
+            const settings = Database.getSettings();
+            const active = Database.getActiveSessionCount();
+            
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
-            // FIX: Removed '&& active < limit'. If you are #1, you go in.
-            if (pos === 1) {
+            if (pos === 1 && active < settings.maxConcurrentSessions) {
                 clearInterval(queueInterval);
                 startTavusConnection();
             }
@@ -210,8 +211,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const getIframeUrl = () => {
       if (!conversationUrl) return '';
       try {
+          // Append username query param to pre-fill the input box in the iframe
           const url = new URL(conversationUrl);
           url.searchParams.set('username', userName); 
+          // url.searchParams.set('skip_prejoin', 'true'); // Uncomment if you want to try forcing skip entirely
           return url.toString();
       } catch (e) {
           return conversationUrl;
@@ -257,6 +260,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             </div>
             <div className="flex items-center gap-2 pointer-events-auto">
+                {/* Network Quality */}
                 <div className="flex gap-1 h-4 items-end">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div>
@@ -306,6 +310,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
             
+            {/* Error State */}
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center backdrop-blur-md">
@@ -317,6 +322,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
 
+            {/* CONNECTED: Modified to use getIframeUrl() for pre-filling name */}
             {connectionState === 'CONNECTED' && conversationUrl && (
                 <iframe src={getIframeUrl()} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
             )}
