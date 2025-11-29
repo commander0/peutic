@@ -58,6 +58,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         if (conversationIdRef.current) {
             endTavusConversation(conversationIdRef.current);
         }
+        // Cleanup Session if page closed abruptly
+        Database.endSession(userId);
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
@@ -67,42 +69,44 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- Session Initialization ---
   useEffect(() => {
-    const initQueue = () => {
-        const settings = Database.getSettings();
-        const active = Database.getActiveSessionCount();
-        const limit = settings.maxConcurrentSessions;
-
-        const pos = Database.joinQueue(userId);
-        setQueuePos(pos);
-        setEstWait(Database.getEstimatedWaitTime(pos));
-
-        if (pos === 1 && active < limit) {
-             startTavusConnection();
+    // 1. Initial Attempt
+    const tryJoin = () => {
+        const canJoin = Database.attemptJoinSession(userId);
+        if (canJoin) {
+            startTavusConnection();
+        } else {
+            // Get Queue Stats
+            const pos = Database.getQueuePosition(userId);
+            setQueuePos(pos);
+            setEstWait(Database.getEstimatedWaitTime(pos));
         }
     };
 
+    tryJoin();
+
+    // 2. Poll for Slot (Queue System)
     const queueInterval = setInterval(() => {
         if (connectionState === 'QUEUED') {
-            const pos = Database.getQueuePosition(userId);
-            const settings = Database.getSettings();
-            
-            setQueuePos(pos);
-            setEstWait(Database.getEstimatedWaitTime(pos));
-
-            if (pos === 1 && Database.getActiveSessionCount() < settings.maxConcurrentSessions) {
+            const canJoin = Database.attemptJoinSession(userId);
+            if (canJoin) {
                 clearInterval(queueInterval);
                 startTavusConnection();
+            } else {
+                const pos = Database.getQueuePosition(userId);
+                setQueuePos(pos);
+                setEstWait(Database.getEstimatedWaitTime(pos));
             }
         }
-    }, 3000);
-
-    initQueue();
+    }, 2000);
 
     return () => {
         clearInterval(queueInterval);
-        Database.leaveQueue(userId);
+        // Only remove if we didn't start (or we are unmounting)
+        if (connectionState === 'QUEUED') {
+            Database.leaveQueue(userId);
+        }
         if (connectionState === 'CONNECTED' || connectionState === 'DEMO_MODE') {
-             Database.decrementActiveSessions();
+             Database.endSession(userId); // Round Robin cleanup
         }
         if (conversationIdRef.current) {
              endTavusConversation(conversationIdRef.current);
@@ -113,9 +117,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const startTavusConnection = async () => {
       setConnectionState('CONNECTING');
       setErrorMsg('');
-      Database.incrementActiveSessions();
-      Database.leaveQueue(userId);
-
+      
       try {
           const user = Database.getUser();
           if (!user || user.balance <= 0) throw new Error("Insufficient Credits: Session Access Denied.");
@@ -148,6 +150,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           }
           setConnectionState('ERROR');
           setErrorMsg(err.message || "Failed to establish secure connection.");
+          
+          // Release slot if error occurred
+          Database.endSession(userId);
       }
   };
 
@@ -205,6 +210,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   const handleEndSession = async () => {
       if (conversationId) await endTavusConversation(conversationId);
+      // Release Slot for next person
+      Database.endSession(userId);
       setShowSummary(true);
   };
 
