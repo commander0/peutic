@@ -11,8 +11,10 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals_v14',
   ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
+  // QUEUE KEYS
   QUEUE_LIST: 'peutic_db_queue_list_v15',
   ACTIVE_SESSIONS_LIST: 'peutic_db_active_sessions_list_v15',
+  
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
@@ -88,8 +90,6 @@ export const INITIAL_COMPANIONS: Companion[] = [
 ];
 
 export class Database {
-  // ... (Previous User Methods - No Changes Needed until Queue Section) ...
-  
   static getAllUsers(): User[] {
     const usersStr = localStorage.getItem(DB_KEYS.ALL_USERS);
     return usersStr ? JSON.parse(usersStr) : [];
@@ -323,10 +323,6 @@ export class Database {
       return Math.max(0, (position) * 3); // Approx 3 mins per person
   }
 
-  // --- DEPRECATED STUBS REMOVED ---
-  // (We use enterActiveSession and endSession now)
-
-  // ... (Rest of file: Journal, Mood, Art, Breathe, etc. - No changes needed) ...
   static saveJournal(entry: JournalEntry) { const j = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]'); j.push(entry); localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(j)); }
   static getJournals(userId: string): JournalEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]').filter((j: JournalEntry) => j.userId === userId).reverse(); }
   static saveMood(userId: string, mood: 'confetti' | 'rain' | null) { if (!mood) return; const m = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]'); m.push({ id: `mood_${Date.now()}`, userId, date: new Date().toISOString(), mood }); localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(m)); }
