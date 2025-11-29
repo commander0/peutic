@@ -14,8 +14,8 @@ import { Database, STABLE_AVATAR_POOL } from '../services/database';
 import { User, UserRole, Companion, Transaction, GlobalSettings, SystemLog, ServerMetric, PromoCode } from '../types';
 
 // --- STAT CARD COMPONENT ---
-const StatCard = ({ title, value, icon: Icon, subValue, subLabel }: any) => (
-  <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 p-6 rounded-2xl shadow-lg hover:border-yellow-500/30 transition-all group">
+const StatCard = ({ title, value, icon: Icon, subValue, subLabel, progress }: any) => (
+  <div className="bg-gray-900/50 backdrop-blur-xl border border-gray-800 p-6 rounded-2xl shadow-lg hover:border-yellow-500/30 transition-all group relative overflow-hidden">
       <div className="flex justify-between items-start mb-4">
           <div>
               <p className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">{title}</p>
@@ -27,9 +27,18 @@ const StatCard = ({ title, value, icon: Icon, subValue, subLabel }: any) => (
       </div>
       {subValue && (
           <div className="flex items-center gap-2 text-xs">
-              <span className="text-green-500 font-bold">{subValue}</span>
+              <span className={`font-bold ${subValue.includes('Capacity') || subValue.includes('QUEUE') ? 'text-red-500' : 'text-green-500'}`}>{subValue}</span>
               <span className="text-gray-600">{subLabel}</span>
           </div>
+      )}
+      {/* Optional Progress Bar for Capacity */}
+      {progress !== undefined && (
+        <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800">
+            <div 
+                className={`h-full transition-all duration-500 ${progress >= 100 ? 'bg-red-500' : 'bg-green-500'}`} 
+                style={{ width: `${Math.min(progress, 100)}%` }} 
+            />
+        </div>
       )}
   </div>
 );
@@ -89,8 +98,17 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
 
-  // Refresh Loop
+  // Constants
+  const MAX_CONCURRENT_CAPACITY = 15;
+
+  // Enforce Queue Logic & Refresh Loop
   useEffect(() => {
+    // 1. Enforce the 15 user limit immediately upon dashboard load
+    const currentSettings = Database.getSettings();
+    if (currentSettings.maxConcurrentSessions !== MAX_CONCURRENT_CAPACITY) {
+        Database.saveSettings({ ...currentSettings, maxConcurrentSessions: MAX_CONCURRENT_CAPACITY });
+    }
+
     const refresh = () => {
         setUsers(Database.getAllUsers());
         setCompanions(Database.getCompanions());
@@ -106,7 +124,11 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   }, []);
 
   const totalRevenue = transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + (t.cost || 0), 0);
+  
+  // Queue Calculations
   const activeSessionsCount = metrics[0]?.activeSessions || 0;
+  const capacityPercentage = (activeSessionsCount / MAX_CONCURRENT_CAPACITY) * 100;
+  const isQueueActive = activeSessionsCount >= MAX_CONCURRENT_CAPACITY;
   
   const revenueByDate = transactions
     .filter(t => t.amount > 0)
@@ -302,8 +324,18 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               <div className="space-y-6">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <StatCard title="Lifetime Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} subValue="+12%" subLabel="vs last month" />
+                      
+                      {/* Live Queue Monitor Card */}
+                      <StatCard 
+                          title="Live Session Monitor" 
+                          value={`${activeSessionsCount} / ${MAX_CONCURRENT_CAPACITY}`} 
+                          icon={Video} 
+                          subValue={isQueueActive ? "QUEUE ACTIVE (Full)" : "OPEN (No Wait)"} 
+                          subLabel={`${MAX_CONCURRENT_CAPACITY - activeSessionsCount} slots remaining`}
+                          progress={capacityPercentage}
+                      />
+                      
                       <StatCard title="Total Users" value={users.length} icon={Users} subValue={`+${users.filter(u => new Date(u.joinedAt).getDate() === new Date().getDate()).length}`} subLabel="today" />
-                      <StatCard title="Active Sessions" value={activeSessionsCount} icon={Video} subValue={`${settings.maxConcurrentSessions} max`} subLabel="capacity" />
                       <StatCard title="System Health" value="99.9%" icon={Server} />
                   </div>
               </div>
