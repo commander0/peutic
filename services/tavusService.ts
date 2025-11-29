@@ -75,6 +75,24 @@ export const createTavusConversation = async (replicaId: string, userName: strin
   }
 };
 
+export const endTavusConversation = async (conversationId: string): Promise<void> => {
+  if (!API_KEY) return;
+  
+  try {
+    // We use keepalive: true to ensure this request completes even if the 
+    // user closes the tab or the browser unloads the page immediately.
+    await fetch(`${TAVUS_API_URL}/conversations/${conversationId}/end`, {
+        method: 'POST',
+        keepalive: true, // CRITICAL: Ensures request survives page unload
+        headers: {
+            'x-api-key': API_KEY,
+        },
+    });
+  } catch (error) {
+    console.warn("Failed to end Tavus conversation remotely:", error);
+  }
+};
+
 export const listReplicas = async (): Promise<any[]> => {
   try {
     const response = await fetch(`${TAVUS_API_URL}/replicas`, {
