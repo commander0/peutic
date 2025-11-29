@@ -5,7 +5,7 @@ import {
     Loader2, AlertCircle, RefreshCcw, Shield, Signal, GripHorizontal, 
     Maximize2, Minimize2, Aperture, Star, CheckCircle, ThumbsUp, AlertTriangle, Users
 } from 'lucide-react';
-import { createTavusConversation } from '../services/tavusService';
+import { createTavusConversation, endTavusConversation } from '../services/tavusService';
 import { Database } from '../services/database';
 
 interface VideoRoomProps {
@@ -28,6 +28,11 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [connectionState, setConnectionState] = useState<'QUEUED' | 'CONNECTING' | 'CONNECTED' | 'ERROR' | 'DEMO_MODE'>('QUEUED');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
+  
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  // Ref to track ID inside event listeners (closure trap prevention)
+  const conversationIdRef = useRef<string | null>(null);
+
   const [networkQuality, setNetworkQuality] = useState(4); // 1-4 bars
   
   // Queue State
@@ -45,7 +50,28 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   const userId = useRef(`user_${Date.now()}`).current;
 
-  // --- Session Initialization ---
+  // Sync state to ref for unload handlers
+  useEffect(() => {
+      conversationIdRef.current = conversationId;
+  }, [conversationId]);
+
+  // --- Browser/Tab Close Cleanup ---
+  useEffect(() => {
+    // This handles the user closing the tab or refreshing the page entirely
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+        if (conversationIdRef.current) {
+            endTavusConversation(conversationIdRef.current);
+        }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, []);
+
+  // --- Session Initialization & React Cleanup ---
   useEffect(() => {
     // 1. Join Queue
     const initQueue = () => {
@@ -88,8 +114,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         if (connectionState === 'CONNECTED' || connectionState === 'DEMO_MODE') {
              Database.decrementActiveSessions();
         }
+        // React component unmount cleanup (e.g. navigating within the app)
+        if (conversationIdRef.current) {
+             endTavusConversation(conversationIdRef.current);
+        }
     };
-  }, []);
+  }, []); // Empty dependency array means this runs on mount/unmount
 
   const startTavusConnection = async () => {
       setConnectionState('CONNECTING');
@@ -115,6 +145,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           
           if (response.conversation_url) {
                setConversationUrl(response.conversation_url);
+               setConversationId(response.conversation_id);
                setConnectionState('CONNECTED');
           } else {
               throw new Error("Invalid response from video server.");
@@ -201,7 +232,11 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   }, [showSummary, remainingMinutes, connectionState]);
 
   // --- End Session Logic ---
-  const handleEndSession = () => {
+  const handleEndSession = async () => {
+      // Trigger API termination immediately when UI ends
+      if (conversationId) {
+          await endTavusConversation(conversationId);
+      }
       setShowSummary(true);
   };
 
@@ -359,7 +394,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
-                    <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
+                    <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
                 )}
@@ -370,13 +405,16 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         </div>
 
         {/* --- BOTTOM CONTROLS --- */}
-        <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-center items-end z-30 pointer-events-none bg-gradient-to-t from-black/90 via-black/50 to-transparent h-48">
-            <div className="flex items-center gap-3 md:gap-6 pointer-events-auto bg-black/40 backdrop-blur-xl px-6 md:px-8 py-4 rounded-full border border-white/10 shadow-2xl hover:bg-black/50 transition-all transform hover:-translate-y-1">
+        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 flex justify-center items-end z-30 pointer-events-none bg-gradient-to-t from-black/90 via-black/50 to-transparent h-auto min-h-[12rem]">
+            {/* Wrapped in flex-wrap to prevent overlap */}
+            <div className="flex flex-wrap justify-center items-center gap-2 md:gap-6 pointer-events-auto bg-black/40 backdrop-blur-xl px-4 md:px-8 py-3 md:py-4 rounded-2xl md:rounded-full border border-white/10 shadow-2xl hover:bg-black/50 transition-all">
                 <button onClick={() => setMicOn(!micOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${micOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{micOn ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
                 <button onClick={() => setCamOn(!camOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${camOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{camOn ? <VideoIcon className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
                 <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${blurBackground ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : 'bg-gray-800/80 text-white hover:bg-gray-700'}`}><Aperture className="w-5 h-5 md:w-6 md:h-6" /></button>
-                <div className="w-px h-8 bg-white/10 mx-2"></div>
-                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white px-6 md:px-8 py-3 md:py-4 rounded-full font-bold flex items-center gap-2 shadow-lg shadow-red-600/20 transition-transform hover:scale-105 active:scale-95"><PhoneOff className="w-5 h-5" /><span className="hidden md:inline tracking-wide">End Session</span></button>
+                
+                <div className="w-px h-8 bg-white/10 mx-2 hidden md:block"></div>
+                
+                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white px-4 md:px-8 py-3 md:py-4 rounded-full font-bold flex items-center gap-2 shadow-lg shadow-red-600/20 transition-transform hover:scale-105 active:scale-95 whitespace-nowrap"><PhoneOff className="w-5 h-5" /><span className="tracking-wide text-sm md:text-base">End Session</span></button>
             </div>
         </div>
     </div>
