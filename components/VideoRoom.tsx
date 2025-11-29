@@ -52,7 +52,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         const active = Database.getActiveSessionCount();
         const limit = settings.maxConcurrentSessions;
 
-        // FIXED: Now properly registers user in queue list
         const pos = Database.joinQueue(userId);
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
@@ -84,7 +83,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     return () => {
         clearInterval(queueInterval);
-        // FIXED: Clean up user from active/queue lists on unmount
         Database.endSession(userId);
     };
   }, []);
@@ -93,7 +91,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      // FIXED: Officially move user to active session list
       Database.enterActiveSession(userId);
       Database.leaveQueue(userId);
 
@@ -321,15 +318,16 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- COMPACT BOTTOM CONTROLS --- */}
-        {/* MOVED TO BOTTOM-RIGHT CORNER */}
-        <div className="absolute bottom-6 right-6 z-30 pointer-events-auto">
-            <div className="flex items-center gap-3 bg-black/60 backdrop-blur-md px-5 py-3 rounded-full border border-white/10 shadow-2xl hover:bg-black/80 transition-all">
+        {/* --- VERTICAL CONTROLS (TOP LEFT) --- */}
+        <div className="absolute top-24 left-4 z-30 pointer-events-auto">
+            <div className="flex flex-col items-center gap-3 bg-black/60 backdrop-blur-md px-3 py-5 rounded-full border border-white/10 shadow-2xl hover:bg-black/80 transition-all">
                 <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}</button>
                 <button onClick={() => setCamOn(!camOn)} className={`p-3 rounded-full transition-all ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{camOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}</button>
                 <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 rounded-full transition-all ${blurBackground ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}><Aperture className="w-5 h-5" /></button>
-                <div className="w-px h-6 bg-white/20 mx-1"></div>
-                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-700 text-white px-5 py-3 rounded-full font-bold flex items-center gap-2 transition-colors"><PhoneOff className="w-4 h-4" /> <span className="text-sm">End</span></button>
+                <div className="w-6 h-px bg-white/20 my-1"></div>
+                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors shadow-lg shadow-red-600/20" title="End Session">
+                    <PhoneOff className="w-5 h-5" />
+                </button>
             </div>
         </div>
     </div>
