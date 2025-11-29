@@ -4,7 +4,7 @@ import {
     Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, 
     Loader2, AlertCircle, RefreshCcw, Aperture, Star, CheckCircle, Users
 } from 'lucide-react';
-import { createTavusConversation, endTavusConversation } from '../services/tavusService';
+import { createTavusConversation } from '../services/tavusService';
 import { Database } from '../services/database';
 
 interface VideoRoomProps {
@@ -27,7 +27,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [connectionState, setConnectionState] = useState<'QUEUED' | 'CONNECTING' | 'CONNECTED' | 'ERROR' | 'DEMO_MODE'>('QUEUED');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
-  const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [networkQuality, setNetworkQuality] = useState(4); 
   
   // Queue State
@@ -44,7 +43,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [lowBalanceWarning, setLowBalanceWarning] = useState(false);
 
   const userId = useRef(`user_${Date.now()}`).current;
-  const conversationIdRef = useRef<string | null>(null); // Ref for cleanup access
 
   // --- Session Initialization ---
   useEffect(() => {
@@ -58,11 +56,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
 
+        // If we are at the front of queue AND there is capacity
         if (pos === 1 && active < limit) {
              startTavusConnection();
         }
     };
 
+    // Poll for queue position
     const queueInterval = setInterval(() => {
         if (connectionState === 'QUEUED') {
             const pos = Database.getQueuePosition(userId);
@@ -81,21 +81,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
-    // CLEANUP ON UNMOUNT OR TAB CLOSE
-    const cleanup = () => {
+    return () => {
         clearInterval(queueInterval);
         Database.endSession(userId);
-        if (conversationIdRef.current) {
-            endTavusConversation(conversationIdRef.current);
-        }
-    };
-
-    // Add listener for browser close/refresh
-    window.addEventListener('beforeunload', cleanup);
-
-    return () => {
-        window.removeEventListener('beforeunload', cleanup);
-        cleanup();
     };
   }, []);
 
@@ -121,8 +109,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           
           if (response.conversation_url) {
                setConversationUrl(response.conversation_url);
-               setActiveConversationId(response.conversation_id);
-               conversationIdRef.current = response.conversation_id; // Update ref for cleanup
                setConnectionState('CONNECTED');
           } else {
               throw new Error("Invalid response from video server.");
@@ -183,14 +169,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     return () => clearInterval(interval);
   }, [showSummary, remainingMinutes, connectionState]);
 
-  const handleEndSession = () => {
-      if (activeConversationId) {
-          endTavusConversation(activeConversationId);
-          setActiveConversationId(null);
-          conversationIdRef.current = null;
-      }
-      setShowSummary(true);
-  };
+  const handleEndSession = () => setShowSummary(true);
 
   const submitFeedbackAndClose = () => {
       const minutesUsed = Math.ceil(duration / 60);
