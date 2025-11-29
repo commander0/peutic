@@ -207,6 +207,20 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
+  // --- HELPER: Construct Iframe URL with Pre-filled Name ---
+  const getIframeUrl = () => {
+      if (!conversationUrl) return '';
+      try {
+          // Append username query param to pre-fill the input box in the iframe
+          const url = new URL(conversationUrl);
+          url.searchParams.set('username', userName); 
+          // url.searchParams.set('skip_prejoin', 'true'); // Uncomment if you want to try forcing skip entirely
+          return url.toString();
+      } catch (e) {
+          return conversationUrl;
+      }
+  };
+
   // --- RENDER ---
   if (showSummary) {
       return (
@@ -308,8 +322,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
 
+            {/* CONNECTED: Modified to use getIframeUrl() for pre-filling name */}
             {connectionState === 'CONNECTED' && conversationUrl && (
-                <iframe src={conversationUrl} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
+                <iframe src={getIframeUrl()} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
             )}
 
             {connectionState === 'DEMO_MODE' && (
@@ -323,8 +338,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP (Mobile: w-20, Desktop: w-40) --- */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+        {/* --- USER PIP (Mobile: top-24, Desktop: top-4) --- */}
+        <div className="absolute top-24 md:top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
                     <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
