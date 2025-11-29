@@ -50,15 +50,15 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   useEffect(() => {
     // 1. Join Queue
     const initQueue = () => {
-        const settings = Database.getSettings();
-        const active = Database.getActiveSessionCount();
-        const limit = settings.maxConcurrentSessions;
-
+        // Register in queue
         const pos = Database.joinQueue(userId);
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
 
-        if (pos === 1 && active < limit) {
+        // FIX: If you are at the front (#1), enter immediately.
+        // We let the backend reject if it's truly over capacity (402/429), 
+        // preventing users from getting "stuck" due to ghost sessions.
+        if (pos === 1) {
              startTavusConnection();
         }
     };
@@ -66,13 +66,11 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     const queueInterval = setInterval(() => {
         if (connectionState === 'QUEUED') {
             const pos = Database.getQueuePosition(userId);
-            const settings = Database.getSettings();
-            const active = Database.getActiveSessionCount();
-            
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
-            if (pos === 1 && active < settings.maxConcurrentSessions) {
+            // FIX: Polling check for position #1
+            if (pos === 1) {
                 clearInterval(queueInterval);
                 startTavusConnection();
             }
@@ -81,6 +79,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
+    // CLEANUP: Kill session on unmount or refresh
     const cleanup = () => {
         clearInterval(queueInterval);
         Database.endSession(userId);
@@ -101,6 +100,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
+      // Move to active list
       Database.enterActiveSession(userId);
       Database.leaveQueue(userId);
 
@@ -207,14 +207,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
-  // --- HELPER: Construct Iframe URL with Pre-filled Name ---
+  // --- HELPER: Pre-fill Name to Skip Input Screen ---
   const getIframeUrl = () => {
       if (!conversationUrl) return '';
       try {
-          // Append username query param to pre-fill the input box in the iframe
           const url = new URL(conversationUrl);
           url.searchParams.set('username', userName); 
-          // url.searchParams.set('skip_prejoin', 'true'); // Uncomment if you want to try forcing skip entirely
           return url.toString();
       } catch (e) {
           return conversationUrl;
@@ -322,7 +320,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
 
-            {/* CONNECTED: Modified to use getIframeUrl() for pre-filling name */}
+            {/* CONNECTED: Iframe pre-fills username to skip input box */}
             {connectionState === 'CONNECTED' && conversationUrl && (
                 <iframe src={getIframeUrl()} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
             )}
@@ -339,6 +337,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         </div>
 
         {/* --- USER PIP (Mobile: top-24, Desktop: top-4) --- */}
+        {/* Adjusted to top-24 on mobile to prevent blocking status bar/notches */}
         <div className="absolute top-24 md:top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
