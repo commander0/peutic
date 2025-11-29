@@ -1,9 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Companion } from '../types';
 import { 
-    Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, MessageSquare, 
-    Loader2, AlertCircle, RefreshCcw, Shield, Signal, GripHorizontal, 
-    Maximize2, Minimize2, Aperture, Star, CheckCircle, ThumbsUp, AlertTriangle, Users
+    Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, 
+    Loader2, AlertCircle, RefreshCcw, Aperture, Star, CheckCircle, Users
 } from 'lucide-react';
 import { createTavusConversation } from '../services/tavusService';
 import { Database } from '../services/database';
@@ -28,7 +27,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [connectionState, setConnectionState] = useState<'QUEUED' | 'CONNECTING' | 'CONNECTED' | 'ERROR' | 'DEMO_MODE'>('QUEUED');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
-  const [networkQuality, setNetworkQuality] = useState(4); // 1-4 bars
+  const [networkQuality, setNetworkQuality] = useState(4); 
   
   // Queue State
   const [queuePos, setQueuePos] = useState(0);
@@ -53,6 +52,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         const active = Database.getActiveSessionCount();
         const limit = settings.maxConcurrentSessions;
 
+        // FIXED: This now correctly adds user to queue list and returns valid position (e.g., 1)
         const pos = Database.joinQueue(userId);
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
@@ -84,10 +84,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     return () => {
         clearInterval(queueInterval);
-        Database.leaveQueue(userId);
-        if (connectionState === 'CONNECTED' || connectionState === 'DEMO_MODE') {
-             Database.decrementActiveSessions();
-        }
+        // FIXED: Properly remove user from both Queue and Active lists on unmount
+        Database.endSession(userId);
     };
   }, []);
 
@@ -95,9 +93,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      // We are now "Active"
-      Database.incrementActiveSessions();
-      // Remove from queue
+      // FIXED: Use specific userId to mark as active
+      Database.enterActiveSession(userId);
+      // Remove from queue since they are now connecting
       Database.leaveQueue(userId);
 
       try {
@@ -142,122 +140,77 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     const startVideo = async () => {
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
-            video: { 
-                width: { ideal: 640 }, 
-                height: { ideal: 360 }, 
-                facingMode: "user"
-            }, 
+            video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, 
             audio: true 
         });
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error("Error accessing media devices", err);
-      }
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      } catch (err) { console.error("Error accessing media devices", err); }
     };
-
     if (camOn && !showSummary) startVideo();
-
-    return () => {
-      if (stream) stream.getTracks().forEach(track => track.stop());
-    };
+    return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, [camOn, showSummary]);
 
   // --- Timers & Credit Enforcement ---
   useEffect(() => {
     if (showSummary) return;
-    // ONLY Start timer if Connected or Demo Mode
     if (connectionState !== 'CONNECTED' && connectionState !== 'DEMO_MODE') return;
 
     const interval = setInterval(() => {
         setDuration(d => {
             const newDuration = d + 1;
-            
-            // Deduct locally every minute
             if (newDuration % 60 === 0) {
                 setRemainingMinutes(prev => {
                     const nextVal = prev - 1;
-                    if (nextVal <= 0) {
-                        handleEndSession();
-                        return 0;
-                    }
+                    if (nextVal <= 0) { handleEndSession(); return 0; }
                     return nextVal;
                 });
             }
-            
-            // Trigger warning at 30s mark of last minute
-            if (remainingMinutes <= 1 && newDuration % 60 === 30) {
-                setLowBalanceWarning(true);
-            }
-
+            if (remainingMinutes <= 1 && newDuration % 60 === 30) setLowBalanceWarning(true);
             return newDuration;
         });
-        
-        // Simulate network fluctuations
         if (Math.random() > 0.9) setNetworkQuality(Math.max(2, Math.floor(Math.random() * 3) + 2)); 
     }, 1000);
     return () => clearInterval(interval);
   }, [showSummary, remainingMinutes, connectionState]);
 
-  // --- End Session Logic ---
-  const handleEndSession = () => {
-      setShowSummary(true);
-  };
+  const handleEndSession = () => setShowSummary(true);
 
   const submitFeedbackAndClose = () => {
       const minutesUsed = Math.ceil(duration / 60);
       if (minutesUsed > 0) {
         Database.deductBalance(minutesUsed);
         Database.addTransaction({
-            id: `sess_${Date.now()}`,
-            userName: userName,
-            date: new Date().toISOString(),
-            amount: -minutesUsed,
-            description: `Session with ${companion.name}`,
-            status: 'COMPLETED'
+            id: `sess_${Date.now()}`, userName: userName, date: new Date().toISOString(),
+            amount: -minutesUsed, description: `Session with ${companion.name}`, status: 'COMPLETED'
         });
       }
       onEndSession();
   };
 
-  const toggleFeedbackTag = (tag: string) => {
-      if (feedbackTags.includes(tag)) setFeedbackTags(feedbackTags.filter(t => t !== tag));
-      else setFeedbackTags([...feedbackTags, tag]);
-  };
-
-  const formatTime = (seconds: number) => {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
+  const toggleFeedbackTag = (tag: string) => { if (feedbackTags.includes(tag)) setFeedbackTags(feedbackTags.filter(t => t !== tag)); else setFeedbackTags([...feedbackTags, tag]); };
+  const formatTime = (seconds: number) => { const mins = Math.floor(seconds / 60); const secs = seconds % 60; return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`; };
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
   // --- RENDER ---
   if (showSummary) {
-      // (Summary UI same as previous code)
       return (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm">
               <div className="bg-gray-900 p-8 rounded-3xl max-w-md w-full text-center border border-gray-800 animate-in zoom-in duration-300 shadow-2xl">
                   <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50"><CheckCircle className="w-10 h-10 text-green-500" /></div>
                   <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Session Complete</h2>
                   <p className="text-gray-400 mb-8 text-sm">We hope you found clarity with {companion.name}.</p>
-                  
                   <div className="bg-black/50 rounded-2xl p-6 mb-8 border border-gray-800">
                       <div className="flex justify-between mb-3"><span className="text-gray-500 font-bold text-xs uppercase tracking-wider">Duration</span><span className="font-mono font-bold text-white">{formatTime(duration)}</span></div>
                       <div className="flex justify-between mb-3"><span className="text-gray-500 font-bold text-xs uppercase tracking-wider">Rate</span><span className="font-mono font-bold text-white">${settings.pricePerMinute}/min</span></div>
                       <div className="w-full h-px bg-gray-800 my-3"></div>
                       <div className="flex justify-between items-center"><span className="text-white font-bold text-lg">Total</span><span className="text-green-500 font-black text-2xl">${cost.toFixed(2)}</span></div>
                   </div>
-                  
                   <div className="mb-8">
                       <p className="text-xs font-bold uppercase text-gray-500 mb-4 tracking-widest">How was your experience?</p>
                       <div className="flex justify-center gap-3 mb-6">{[1, 2, 3, 4, 5].map(star => (<button key={star} onClick={() => setRating(star)} className="transition-transform hover:scale-110 focus:outline-none"><Star className={`w-8 h-8 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-700'}`} /></button>))}</div>
                       <div className="flex flex-wrap justify-center gap-2">{['Good Listener', 'Empathetic', 'Helpful', 'Calming', 'Insightful'].map(tag => (<button key={tag} onClick={() => toggleFeedbackTag(tag)} className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${feedbackTags.includes(tag) ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-700 hover:border-gray-500'}`}>{tag}</button>))}</div>
                   </div>
-                  
                   <button onClick={submitFeedbackAndClose} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-4 rounded-xl font-black tracking-wide transition-colors shadow-lg shadow-yellow-500/20">Return to Dashboard</button>
               </div>
           </div>
@@ -266,8 +219,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
-        
-        {/* --- HEADER OVERLAY --- */}
         <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none bg-gradient-to-b from-black/80 via-black/20 to-transparent pb-20 transition-opacity duration-500">
             <div className="flex items-center gap-4 pointer-events-auto">
                 <div className={`bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} text-white font-mono shadow-xl flex items-center gap-3 transition-colors duration-500`}>
@@ -278,7 +229,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             </div>
             <div className="flex items-center gap-2 pointer-events-auto">
-                {/* Network Quality */}
                 <div className="flex gap-1 h-4 items-end">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div>
@@ -287,10 +237,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- MAIN CONTENT AREA --- */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
-            
-            {/* QUEUE SCREEN */}
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="relative mb-8">
@@ -300,7 +247,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                     </div>
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">You are in queue</h3>
                     <p className="text-gray-400 text-sm mb-6">Our specialists are currently assisting others.</p>
-                    
                     <div className="grid grid-cols-2 gap-4 text-center max-w-sm w-full">
                          <div className="bg-gray-800 p-4 rounded-xl">
                              <div className="text-2xl font-black text-white">{queuePos}</div>
@@ -328,7 +274,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
             
-            {/* Error & Connected States (Same as before) */}
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center backdrop-blur-md">
@@ -355,7 +300,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP (STATIONARY, TOP-MIDDLE, SMALLER) --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
@@ -369,7 +313,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- BOTTOM CONTROLS --- */}
         <div className="absolute bottom-0 left-0 right-0 p-8 flex justify-center items-end z-30 pointer-events-none bg-gradient-to-t from-black/90 via-black/50 to-transparent h-48">
             <div className="flex items-center gap-3 md:gap-6 pointer-events-auto bg-black/40 backdrop-blur-xl px-6 md:px-8 py-4 rounded-full border border-white/10 shadow-2xl hover:bg-black/50 transition-all transform hover:-translate-y-1">
                 <button onClick={() => setMicOn(!micOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${micOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{micOn ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
