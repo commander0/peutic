@@ -119,14 +119,15 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
         setMetrics(Database.getServerMetrics());
     };
     refresh();
-    const interval = setInterval(refresh, 2000);
+    const interval = setInterval(refresh, 1000); // 1s refresh for live queue monitoring
     return () => clearInterval(interval);
   }, []);
 
   const totalRevenue = transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + (t.cost || 0), 0);
   
-  // Queue Calculations for Display
-  const activeSessionsCount = metrics[0]?.activeSessions || 0;
+  // LIVE Queue Calculations for Display (Pulls directly from DB active list)
+  const activeSessionsCount = Database.getActiveSessionCount();
+  const queueLength = Database.getQueueList().length;
   const capacityPercentage = (activeSessionsCount / MAX_CONCURRENT_CAPACITY) * 100;
   const isQueueActive = activeSessionsCount >= MAX_CONCURRENT_CAPACITY;
   
@@ -331,7 +332,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                           value={`${activeSessionsCount} / ${MAX_CONCURRENT_CAPACITY}`} 
                           icon={Video} 
                           subValue={isQueueActive ? "QUEUE ACTIVE (Full)" : "OPEN (No Wait)"} 
-                          subLabel={`${Math.max(0, MAX_CONCURRENT_CAPACITY - activeSessionsCount)} slots remaining`}
+                          subLabel={`${queueLength} users waiting`}
                           progress={capacityPercentage}
                       />
                       
@@ -341,6 +342,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
               </div>
           )}
 
+          {/* ... (Rest of dashboard remains similar) ... */}
           {activeTab === 'users' && (
               <div className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
                   <div className="p-4 border-b border-gray-800 flex gap-4">
