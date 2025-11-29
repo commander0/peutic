@@ -1,4 +1,3 @@
-
 const TAVUS_API_URL = 'https://tavusapi.com/v2';
 const API_KEY = 'ae15b9c744264844a555049b576094d8';
 
@@ -13,7 +12,6 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     throw new Error("Configuration Error: Missing Tavus API Key");
   }
 
-  // Updated system context to explicitly instruction Multilingual Capabilities
   const systemContext = context || `You are an empathetic, professional, and warm human specialist. You are speaking with ${userName}. Your role is to listen actively, provide emotional support, and help them process their thoughts. You are fluent in all languages. Detect the user's language instantly and respond in that same language with zero latency. Do not mention you are an AI.`;
 
   const body = {
@@ -24,7 +22,7 @@ export const createTavusConversation = async (replicaId: string, userName: strin
       max_call_duration: 3600,
       enable_recording: true,
       enable_transcription: true,
-      language: 'multilingual' // Enable Auto-Detect Multilingual Mode
+      language: 'multilingual'
     }
   };
 
@@ -72,6 +70,23 @@ export const createTavusConversation = async (replicaId: string, userName: strin
     }
     console.error("Tavus Service Exception:", error);
     throw error;
+  }
+};
+
+export const endTavusConversation = async (conversationId: string): Promise<void> => {
+  if (!conversationId || !API_KEY) return;
+
+  try {
+    // Send POST request to end the conversation explicitly
+    await fetch(`${TAVUS_API_URL}/conversations/${conversationId}/end`, {
+      method: 'POST',
+      headers: {
+        'x-api-key': API_KEY,
+      },
+    });
+    console.log(`Session ${conversationId} terminated successfully.`);
+  } catch (error) {
+    console.warn(`Failed to terminate session ${conversationId}:`, error);
   }
 };
 
