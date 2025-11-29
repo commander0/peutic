@@ -11,10 +11,8 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals_v14',
   ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
-  // Consolidated Queue Keys
   QUEUE_LIST: 'peutic_db_queue_list_v15',
   ACTIVE_SESSIONS_LIST: 'peutic_db_active_sessions_list_v15',
-  
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
