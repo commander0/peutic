@@ -158,7 +158,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, 
-            audio: false // Critical for echo prevention
+            // FIXED: Set audio to true so mic is active, but we rely on <video muted> to prevent feedback
+            audio: true 
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
       } catch (err) {
@@ -318,7 +319,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         {/* --- USER PIP: TOP-MIDDLE, SMALL --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             {camOn ? (
-                // MUTED is crucial here to prevent echo
+                // muted attribute is CRITICAL here to prevents feedback loop
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
             ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-6 h-6 mb-1 opacity-50" /></div>
