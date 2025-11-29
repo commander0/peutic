@@ -27,15 +27,15 @@ const StatCard = ({ title, value, icon: Icon, subValue, subLabel, progress }: an
       </div>
       {subValue && (
           <div className="flex items-center gap-2 text-xs">
-              <span className={`font-bold ${subValue.includes('Capacity') || subValue.includes('QUEUE') ? 'text-red-500' : 'text-green-500'}`}>{subValue}</span>
+              <span className={`font-bold ${subValue.includes('QUEUE ACTIVE') ? 'text-red-500' : 'text-green-500'}`}>{subValue}</span>
               <span className="text-gray-600">{subLabel}</span>
           </div>
       )}
-      {/* Optional Progress Bar for Capacity */}
+      {/* Visual Capacity Bar */}
       {progress !== undefined && (
-        <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-800">
+        <div className="absolute bottom-0 left-0 w-full h-1.5 bg-gray-800/50">
             <div 
-                className={`h-full transition-all duration-500 ${progress >= 100 ? 'bg-red-500' : 'bg-green-500'}`} 
+                className={`h-full transition-all duration-700 ease-out ${progress >= 100 ? 'bg-red-500' : 'bg-green-500'}`} 
                 style={{ width: `${Math.min(progress, 100)}%` }} 
             />
         </div>
@@ -98,12 +98,12 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [selectedCompanion, setSelectedCompanion] = useState<Companion | null>(null);
   const [newImageUrl, setNewImageUrl] = useState('');
 
-  // Constants
+  // --- QUEUE SYSTEM CONFIGURATION ---
   const MAX_CONCURRENT_CAPACITY = 15;
 
   // Enforce Queue Logic & Refresh Loop
   useEffect(() => {
-    // 1. Enforce the 15 user limit immediately upon dashboard load
+    // 1. Force settings to 15 capacity on load to ensure Database logic respects it
     const currentSettings = Database.getSettings();
     if (currentSettings.maxConcurrentSessions !== MAX_CONCURRENT_CAPACITY) {
         Database.saveSettings({ ...currentSettings, maxConcurrentSessions: MAX_CONCURRENT_CAPACITY });
@@ -125,7 +125,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
 
   const totalRevenue = transactions.filter(t => t.amount > 0).reduce((acc, t) => acc + (t.cost || 0), 0);
   
-  // Queue Calculations
+  // Queue Calculations for Display
   const activeSessionsCount = metrics[0]?.activeSessions || 0;
   const capacityPercentage = (activeSessionsCount / MAX_CONCURRENT_CAPACITY) * 100;
   const isQueueActive = activeSessionsCount >= MAX_CONCURRENT_CAPACITY;
@@ -325,13 +325,13 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                       <StatCard title="Lifetime Revenue" value={formatCurrency(totalRevenue)} icon={DollarSign} subValue="+12%" subLabel="vs last month" />
                       
-                      {/* Live Queue Monitor Card */}
+                      {/* LIVE QUEUE MONITOR - Enforces 15 user display */}
                       <StatCard 
                           title="Live Session Monitor" 
                           value={`${activeSessionsCount} / ${MAX_CONCURRENT_CAPACITY}`} 
                           icon={Video} 
                           subValue={isQueueActive ? "QUEUE ACTIVE (Full)" : "OPEN (No Wait)"} 
-                          subLabel={`${MAX_CONCURRENT_CAPACITY - activeSessionsCount} slots remaining`}
+                          subLabel={`${Math.max(0, MAX_CONCURRENT_CAPACITY - activeSessionsCount)} slots remaining`}
                           progress={capacityPercentage}
                       />
                       
