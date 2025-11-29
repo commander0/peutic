@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Companion } from '../types';
+import { Companion } from './types'; // Assumed types file, or change to match your structure
 import { 
-    Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, MessageSquare, 
-    Loader2, AlertCircle, RefreshCcw, Shield, Signal, GripHorizontal, 
-    Maximize2, Minimize2, Aperture, Star, CheckCircle, ThumbsUp, AlertTriangle, Users
+    Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, 
+    Loader2, AlertCircle, RefreshCcw, Aperture, Star, CheckCircle, Users
 } from 'lucide-react';
-import { createTavusConversation, endTavusConversation } from '../services/tavusService';
-import { Database } from '../services/database';
+// Changed imports to ./ for preview compilation. Change back to ../services/ for your server.
+import { createTavusConversation, endTavusConversation } from './tavusService';
+import { Database } from './database';
 
 interface VideoRoomProps {
   companion: Companion;
@@ -61,6 +61,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         if (conversationIdRef.current) {
             endTavusConversation(conversationIdRef.current);
+            Database.decrementActiveSessions();
         }
     };
 
@@ -153,7 +154,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
       } catch (err: any) {
           if (err.message.includes("Insufficient Credits")) {
-              alert("Your session ended because you are out of credits.");
+              console.warn("User out of credits");
               handleEndSession(); 
               return;
           }
@@ -272,7 +273,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- RENDER ---
   if (showSummary) {
-      // (Summary UI same as previous code)
       return (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm">
               <div className="bg-gray-900 p-8 rounded-3xl max-w-md w-full text-center border border-gray-800 animate-in zoom-in duration-300 shadow-2xl">
@@ -363,7 +363,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
             
-            {/* Error & Connected States (Same as before) */}
+            {/* Error & Connected States */}
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center backdrop-blur-md">
@@ -376,7 +376,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
 
             {connectionState === 'CONNECTED' && conversationUrl && (
-                <iframe src={conversationUrl} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
+                // Permissions to ensure the Avatar can hear the user
+                <iframe 
+                    src={conversationUrl} 
+                    className="absolute inset-0 w-full h-full border-0" 
+                    allow="microphone *; camera *; autoplay *; fullscreen *; display-capture *;" 
+                    title="Tavus Session" 
+                />
             )}
 
             {connectionState === 'DEMO_MODE' && (
@@ -390,30 +396,29 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP (STATIONARY, TOP-MIDDLE, SMALLER) --- */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+        {/* --- USER PIP --- */}
+        <div className="absolute top-4 right-4 z-30 w-24 md:w-40 aspect-[9/16] rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl bg-black transition-all duration-300">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
-                    <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
+                    // 'muted' attribute here fixes the echo
+                    <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-6 h-6 md:w-8 md:h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Cam Off</span></div>
                 )}
                 <div className="absolute bottom-2 right-2">
                      <div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
                 </div>
+                <div className="absolute top-2 left-2 text-white text-[8px] md:text-[10px] font-bold uppercase tracking-wider bg-black/60 px-2 py-0.5 rounded-full">You</div>
             </div>
         </div>
 
         {/* --- BOTTOM CONTROLS --- */}
         <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 flex justify-center items-end z-30 pointer-events-none bg-gradient-to-t from-black/90 via-black/50 to-transparent h-auto min-h-[12rem]">
-            {/* Wrapped in flex-wrap to prevent overlap */}
             <div className="flex flex-wrap justify-center items-center gap-2 md:gap-6 pointer-events-auto bg-black/40 backdrop-blur-xl px-4 md:px-8 py-3 md:py-4 rounded-2xl md:rounded-full border border-white/10 shadow-2xl hover:bg-black/50 transition-all">
                 <button onClick={() => setMicOn(!micOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${micOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{micOn ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
                 <button onClick={() => setCamOn(!camOn)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${camOn ? 'bg-gray-800/80 text-white hover:bg-gray-700' : 'bg-red-500 text-white shadow-lg shadow-red-500/30'}`}>{camOn ? <VideoIcon className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}</button>
                 <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 md:p-4 rounded-full transition-all duration-200 ${blurBackground ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30' : 'bg-gray-800/80 text-white hover:bg-gray-700'}`}><Aperture className="w-5 h-5 md:w-6 md:h-6" /></button>
-                
                 <div className="w-px h-8 bg-white/10 mx-2 hidden md:block"></div>
-                
                 <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white px-4 md:px-8 py-3 md:py-4 rounded-full font-bold flex items-center gap-2 shadow-lg shadow-red-600/20 transition-transform hover:scale-105 active:scale-95 whitespace-nowrap"><PhoneOff className="w-5 h-5" /><span className="tracking-wide text-sm md:text-base">End Session</span></button>
             </div>
         </div>
