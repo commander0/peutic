@@ -17,7 +17,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Media State
+  // Media State - Mic defaults to TRUE (Unmuted)
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   
@@ -158,7 +158,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, 
-            // FIXED: Set audio to true so mic is active, but we rely on <video muted> to prevent feedback
+            // FIXED: 'audio: true' ensures the mic is active immediately on start
             audio: true 
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -169,6 +169,16 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     if (camOn && !showSummary) startVideo();
     return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, [camOn, showSummary]);
+
+  // --- Mic Toggle Logic (Ensures hardware matches state) ---
+  useEffect(() => {
+    if (videoRef.current && videoRef.current.srcObject) {
+      const stream = videoRef.current.srcObject as MediaStream;
+      stream.getAudioTracks().forEach(track => {
+        track.enabled = micOn;
+      });
+    }
+  }, [micOn]);
 
   // --- Timers ---
   useEffect(() => {
@@ -319,7 +329,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         {/* --- USER PIP: TOP-MIDDLE, SMALL --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             {camOn ? (
-                // muted attribute is CRITICAL here to prevents feedback loop
+                // FIXED: 'muted' is CRITICAL. It allows the mic to capture audio but prevents the browser from playing it back to you (echo).
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
             ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-6 h-6 mb-1 opacity-50" /></div>
