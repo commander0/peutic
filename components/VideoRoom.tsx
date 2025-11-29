@@ -68,11 +68,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   // --- Session Initialization ---
   useEffect(() => {
     const initQueue = () => {
-        const settings = Database.getSettings();
-        const active = Database.getActiveSessionCount();
-        const limit = settings.maxConcurrentSessions;
-
-        // Use new Round Robin Logic
         const canJoin = Database.attemptJoinSession(userId);
 
         if (canJoin) {
@@ -291,11 +286,11 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         {/* --- TOP RIGHT: CONTROLS & NETWORK (Moved from Bottom to prevent blocking Avatar UI) --- */}
         <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
             {/* Network Indicator */}
-            <div className="bg-black/40 backdrop-blur-md px-3 py-3 rounded-full border border-white/10 flex items-end gap-1 h-[54px]">
+            <div className="bg-black/40 backdrop-blur-md px-3 py-3 rounded-full border border-white/10 flex items-end gap-1 h-[54px] hidden md:flex">
                 {[1, 2, 3, 4].map(i => ( <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div> ))}
             </div>
 
-            {/* Main Controls */}
+            {/* Main Controls - Top Right Position */}
             <div className="bg-black/80 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-2xl flex items-center gap-3 h-[54px]">
                 <button onClick={() => setMicOn(!micOn)} className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${micOn ? 'bg-gray-700 text-white' : 'bg-red-500 text-white'}`}>
                     {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
@@ -353,8 +348,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP: TOP-MIDDLE, SMALL --- */}
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+        {/* --- USER PIP: TOP-MIDDLE, SMALL & STATIONARY --- */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-24 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black pointer-events-none">
             {camOn ? (
                 // --- 3. MUTED PREVENTS FEEDBACK ---
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
