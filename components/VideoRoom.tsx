@@ -178,7 +178,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 height: { ideal: 360 }, 
                 facingMode: "user"
             }, 
-            audio: true 
+            // FIXED: Set audio to false to prevent echo and allow iframe exclusive mic access
+            audio: false 
         });
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
@@ -394,7 +395,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
-                    <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
+                    /* FIXED: Added muted attribute to prevent local audio feedback */
+                    <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
                 ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
                 )}
