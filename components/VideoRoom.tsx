@@ -17,7 +17,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Media State - Mic defaults to TRUE (Unmuted)
+  // Media State - Mic defaults to TRUE
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   
@@ -158,7 +158,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, 
-            // FIXED: 'audio: true' ensures the mic is active immediately on start
+            // Audio TRUE triggers mic, but 'muted' on video tag prevents echo
             audio: true 
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -170,7 +170,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, [camOn, showSummary]);
 
-  // --- Mic Toggle Logic (Ensures hardware matches state) ---
+  // --- Mic Toggle Logic ---
   useEffect(() => {
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -270,7 +270,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
         
-        {/* TOP OVERLAY: Status & Network */}
+        {/* TOP OVERLAY */}
         <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20 pointer-events-none">
             <div className={`bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} flex items-center gap-3 transition-colors duration-500`}>
                 <div className={`w-2 h-2 rounded-full ${connectionState === 'CONNECTED' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`}></div>
@@ -278,7 +278,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                     {connectionState === 'CONNECTED' ? formatTime(duration) : connectionState === 'QUEUED' ? 'Waiting...' : 'Connecting...'}
                 </span>
             </div>
-            {/* Signal Strength */}
             <div className="flex gap-1 h-4 items-end">
                 {[1, 2, 3, 4].map(i => ( <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div> ))}
             </div>
@@ -286,7 +285,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
         {/* MAIN VIDEO AREA */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
-            {/* STATES */}
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="w-20 h-20 rounded-full border-4 border-yellow-500/20 flex items-center justify-center animate-pulse mb-8"><Users className="w-8 h-8 text-yellow-500" /></div>
@@ -295,14 +293,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                     <button onClick={onEndSession} className="text-gray-500 hover:text-white text-xs font-bold uppercase tracking-widest">Leave Queue</button>
                 </div>
             )}
-
             {connectionState === 'CONNECTING' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/90 backdrop-blur-md">
                     <Loader2 className="w-12 h-12 animate-spin text-yellow-500 mb-6" />
                     <h3 className="text-2xl font-black text-white tracking-tight">Securing Link</h3>
                 </div>
             )}
-            
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center">
@@ -313,11 +309,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                     </div>
                 </div>
             )}
-
             {connectionState === 'CONNECTED' && conversationUrl && (
                 <iframe src={conversationUrl} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
             )}
-
             {connectionState === 'DEMO_MODE' && (
                 <div className="absolute inset-0 w-full h-full bg-black">
                     <img src={companion.imageUrl} className="w-full h-full object-cover opacity-60 animate-pulse-slow" alt="Background" />
@@ -326,10 +320,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP: TOP-MIDDLE, SMALL --- */}
+        {/* --- USER PIP --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             {camOn ? (
-                // FIXED: 'muted' is CRITICAL. It allows the mic to capture audio but prevents the browser from playing it back to you (echo).
+                // muted=true prevents feedback loop, playsInline required for iOS
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
             ) : (
                 <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-6 h-6 mb-1 opacity-50" /></div>
@@ -339,19 +333,19 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- BOTTOM CONTROLS: FLOATING PILL --- */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-3 z-40 bg-black/60 backdrop-blur-2xl px-6 py-3 rounded-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-500">
-            <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all duration-200 hover:scale-110 ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
-                {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+        {/* --- BOTTOM CONTROLS: FLOATING BUTTONS (NO BAR) --- */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-40 animate-in slide-in-from-bottom-10 fade-in duration-500">
+            <button onClick={() => setMicOn(!micOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 backdrop-blur-md border border-white/10 ${micOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
+                {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
             </button>
-            <button onClick={() => setCamOn(!camOn)} className={`p-3 rounded-full transition-all duration-200 hover:scale-110 ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
-                {camOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+            <button onClick={() => setCamOn(!camOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 backdrop-blur-md border border-white/10 ${camOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
+                {camOn ? <VideoIcon className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
             </button>
             
-            <div className="w-px h-6 bg-white/10 mx-1"></div>
+            <div className="w-px h-8 bg-white/10 mx-1"></div>
             
-            <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white p-3 rounded-full font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-110 active:scale-95" title="End Session">
-                <PhoneOff className="w-5 h-5" />
+            <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white p-4 rounded-full font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-110 active:scale-95 border border-red-400/20" title="End Session">
+                <PhoneOff className="w-6 h-6" />
             </button>
         </div>
     </div>
