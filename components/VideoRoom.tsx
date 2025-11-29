@@ -58,8 +58,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         if (conversationIdRef.current) {
             endTavusConversation(conversationIdRef.current);
         }
-        // Cleanup Session if page closed abruptly
-        Database.endSession(userId);
     };
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => {
@@ -69,22 +67,26 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- Session Initialization ---
   useEffect(() => {
-    // 1. Initial Attempt
-    const tryJoin = () => {
+    const initQueue = () => {
+        const settings = Database.getSettings();
+        const active = Database.getActiveSessionCount();
+        const limit = settings.maxConcurrentSessions;
+
+        // Use new Round Robin Logic
         const canJoin = Database.attemptJoinSession(userId);
+
         if (canJoin) {
-            startTavusConnection();
+             startTavusConnection();
         } else {
-            // Get Queue Stats
+            // Get initial queue position
+            setConnectionState('QUEUED');
             const pos = Database.getQueuePosition(userId);
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
         }
     };
 
-    tryJoin();
-
-    // 2. Poll for Slot (Queue System)
+    // Poll for Queue Slot
     const queueInterval = setInterval(() => {
         if (connectionState === 'QUEUED') {
             const canJoin = Database.attemptJoinSession(userId);
@@ -97,17 +99,19 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 setEstWait(Database.getEstimatedWaitTime(pos));
             }
         }
-    }, 2000);
+    }, 1000);
+
+    initQueue();
 
     return () => {
         clearInterval(queueInterval);
-        // Only remove if we didn't start (or we are unmounting)
+        // Clean up queue/session if we leave
         if (connectionState === 'QUEUED') {
             Database.leaveQueue(userId);
+        } else if (connectionState === 'CONNECTED' || connectionState === 'DEMO_MODE') {
+            Database.endSession(userId);
         }
-        if (connectionState === 'CONNECTED' || connectionState === 'DEMO_MODE') {
-             Database.endSession(userId); // Round Robin cleanup
-        }
+        
         if (conversationIdRef.current) {
              endTavusConversation(conversationIdRef.current);
         }
@@ -150,9 +154,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           }
           setConnectionState('ERROR');
           setErrorMsg(err.message || "Failed to establish secure connection.");
-          
-          // Release slot if error occurred
-          Database.endSession(userId);
+          Database.endSession(userId); // Release slot
       }
   };
 
@@ -163,7 +165,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       try {
         stream = await navigator.mediaDevices.getUserMedia({ 
             video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: "user" }, 
-            // --- 2. ENSURE HARDWARE MIC IS ON ---
+            // --- ENSURE HARDWARE MIC IS ON ---
             audio: true 
         });
         if (videoRef.current) videoRef.current.srcObject = stream;
@@ -210,8 +212,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   const handleEndSession = async () => {
       if (conversationId) await endTavusConversation(conversationId);
-      // Release Slot for next person
-      Database.endSession(userId);
+      Database.endSession(userId); // Release slot
       setShowSummary(true);
   };
 
@@ -277,16 +278,35 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
         
-        {/* TOP OVERLAY */}
-        <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start z-20 pointer-events-none">
-            <div className={`bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} flex items-center gap-3 transition-colors duration-500`}>
+        {/* --- TOP LEFT: STATUS --- */}
+        <div className="absolute top-6 left-6 z-50">
+            <div className={`bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} flex items-center gap-3`}>
                 <div className={`w-2 h-2 rounded-full ${connectionState === 'CONNECTED' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`}></div>
                 <span className={`font-mono font-bold text-sm ${lowBalanceWarning ? 'text-red-400' : 'text-white'}`}>
                     {connectionState === 'CONNECTED' ? formatTime(duration) : connectionState === 'QUEUED' ? 'Waiting...' : 'Connecting...'}
                 </span>
             </div>
-            <div className="flex gap-1 h-4 items-end">
+        </div>
+
+        {/* --- TOP RIGHT: CONTROLS & NETWORK (Moved from Bottom to prevent blocking Avatar UI) --- */}
+        <div className="absolute top-6 right-6 z-50 flex items-center gap-3">
+            {/* Network Indicator */}
+            <div className="bg-black/40 backdrop-blur-md px-3 py-3 rounded-full border border-white/10 flex items-end gap-1 h-[54px]">
                 {[1, 2, 3, 4].map(i => ( <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div> ))}
+            </div>
+
+            {/* Main Controls */}
+            <div className="bg-black/80 backdrop-blur-xl px-4 py-2 rounded-full border border-white/10 shadow-2xl flex items-center gap-3 h-[54px]">
+                <button onClick={() => setMicOn(!micOn)} className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${micOn ? 'bg-gray-700 text-white' : 'bg-red-500 text-white'}`}>
+                    {micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}
+                </button>
+                <button onClick={() => setCamOn(!camOn)} className={`p-2 rounded-full transition-all duration-200 hover:scale-110 ${camOn ? 'bg-gray-700 text-white' : 'bg-red-500 text-white'}`}>
+                    {camOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}
+                </button>
+                <div className="w-px h-6 bg-white/10 mx-1"></div>
+                <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white p-2 rounded-full font-bold transition-all hover:scale-110 active:scale-95" title="End Session">
+                    <PhoneOff className="w-5 h-5" />
+                </button>
             </div>
         </div>
 
@@ -317,7 +337,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
             {connectionState === 'CONNECTED' && conversationUrl && (
-                <iframe src={conversationUrl} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
+                // IMPROVED IFRAME PERMISSIONS FOR AUTOPLAY
+                <iframe 
+                    src={conversationUrl} 
+                    className="absolute inset-0 w-full h-full border-0" 
+                    allow="microphone; camera; autoplay *; fullscreen; display-capture; encrypted-media" 
+                    title="Tavus Session" 
+                />
             )}
             {connectionState === 'DEMO_MODE' && (
                 <div className="absolute inset-0 w-full h-full bg-black">
@@ -327,8 +353,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP --- */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+        {/* --- USER PIP: TOP-MIDDLE, SMALL --- */}
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-30 w-28 md:w-36 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             {camOn ? (
                 // --- 3. MUTED PREVENTS FEEDBACK ---
                 <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover transform scale-x-[-1]" />
@@ -340,21 +366,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- BOTTOM CONTROLS: SINGLE PILL (NO BACKGROUND BAR) --- */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-4 z-40 bg-black/80 backdrop-blur-xl px-6 py-3 rounded-full border border-white/10 shadow-2xl animate-in slide-in-from-bottom-10 fade-in duration-500">
-            <button onClick={() => setMicOn(!micOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 ${micOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
-                {micOn ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
-            </button>
-            <button onClick={() => setCamOn(!camOn)} className={`p-4 rounded-full transition-all duration-200 hover:scale-110 border border-white/10 ${camOn ? 'bg-gray-900/60 text-white hover:bg-gray-800/80' : 'bg-red-500 text-white shadow-lg shadow-red-500/20'}`}>
-                {camOn ? <VideoIcon className="w-6 h-6" /> : <VideoOff className="w-6 h-6" />}
-            </button>
-            
-            <div className="w-px h-8 bg-white/10 mx-1"></div>
-            
-            <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-500 text-white p-4 rounded-full font-bold shadow-lg shadow-red-600/20 transition-all hover:scale-110 active:scale-95 border border-red-400/20" title="End Session">
-                <PhoneOff className="w-6 h-6" />
-            </button>
-        </div>
     </div>
   );
 };
