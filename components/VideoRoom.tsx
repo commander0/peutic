@@ -56,8 +56,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         setEstWait(Database.getEstimatedWaitTime(pos));
 
         // FIX: If you are at the front (#1), enter immediately.
-        // We let the backend reject if it's truly over capacity (402/429), 
-        // preventing users from getting "stuck" due to ghost sessions.
         if (pos === 1) {
              startTavusConnection();
         }
@@ -336,9 +334,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP (Mobile: top-24, Desktop: top-4) --- */}
-        {/* Adjusted to top-24 on mobile to prevent blocking status bar/notches */}
-        <div className="absolute top-24 md:top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
+        {/* --- USER PIP (Always Top Middle: top-4 left-1/2) --- */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
                     <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
