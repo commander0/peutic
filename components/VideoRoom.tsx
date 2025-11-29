@@ -1,12 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Companion } from '../types';
+import { Companion } from './types';
 import { 
-    Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, MessageSquare, 
-    Loader2, AlertCircle, RefreshCcw, Shield, Signal, GripHorizontal, 
-    Maximize2, Minimize2, Aperture, Star, CheckCircle, ThumbsUp, AlertTriangle, Users
+    Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, 
+    Loader2, AlertCircle, RefreshCcw, Aperture, Star, CheckCircle, Users
 } from 'lucide-react';
-import { createTavusConversation, endTavusConversation } from '../services/tavusService';
-import { Database } from '../services/database';
+
+/**
+ * !!! IMPORTANT FOR SERVER DEPLOYMENT !!!
+ * * The imports below use './' to ensure the code compiles in this preview environment.
+ * When you upload this file to your server, you MUST update them to match your folder structure.
+ * * CHANGE THESE LINES:
+ * import { createTavusConversation, endTavusConversation } from './tavusService';
+ * import { Database } from './database';
+ * * TO THIS (or whatever your structure is):
+ * import { createTavusConversation, endTavusConversation } from '../services/tavusService';
+ * import { Database } from '../services/database';
+ */
+import { createTavusConversation, endTavusConversation } from './tavusService';
+import { Database } from './database';
 
 interface VideoRoomProps {
   companion: Companion;
@@ -61,6 +72,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         if (conversationIdRef.current) {
             endTavusConversation(conversationIdRef.current);
+            Database.decrementActiveSessions();
         }
     };
 
@@ -153,7 +165,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
       } catch (err: any) {
           if (err.message.includes("Insufficient Credits")) {
-              alert("Your session ended because you are out of credits.");
+              console.warn("User out of credits");
               handleEndSession(); 
               return;
           }
@@ -272,7 +284,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- RENDER ---
   if (showSummary) {
-      // (Summary UI same as previous code)
       return (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm">
               <div className="bg-gray-900 p-8 rounded-3xl max-w-md w-full text-center border border-gray-800 animate-in zoom-in duration-300 shadow-2xl">
@@ -363,7 +374,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             )}
             
-            {/* Error & Connected States (Same as before) */}
+            {/* Error & Connected States */}
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center backdrop-blur-md">
@@ -376,7 +387,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
 
             {connectionState === 'CONNECTED' && conversationUrl && (
-                <iframe src={conversationUrl} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
+                // UPDATE: Added robust permissions to ensure the Avatar can hear the user
+                <iframe 
+                    src={conversationUrl} 
+                    className="absolute inset-0 w-full h-full border-0" 
+                    allow="microphone *; camera *; autoplay *; fullscreen *; display-capture *;" 
+                    title="Tavus Session" 
+                />
             )}
 
             {connectionState === 'DEMO_MODE' && (
@@ -391,16 +408,18 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         </div>
 
         {/* --- USER PIP (STATIONARY, TOP-MIDDLE, SMALLER) --- */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+        <div className="absolute top-4 right-4 z-30 w-24 md:w-40 aspect-[9/16] rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl bg-black transition-all duration-300">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
-                    <video ref={videoRef} autoPlay playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
+                    // UPDATE: Added 'muted' attribute here to fix the echo
+                    <video ref={videoRef} autoPlay playsInline muted className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-6 h-6 md:w-8 md:h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Cam Off</span></div>
                 )}
                 <div className="absolute bottom-2 right-2">
                      <div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
                 </div>
+                <div className="absolute top-2 left-2 text-white text-[8px] md:text-[10px] font-bold uppercase tracking-wider bg-black/60 px-2 py-0.5 rounded-full">You</div>
             </div>
         </div>
 
