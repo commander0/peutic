@@ -1,3 +1,4 @@
+
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry, BreathLog } from '../types';
 
 const DB_KEYS = {
@@ -11,10 +12,8 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals_v14',
   ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
-  // QUEUE KEYS
-  QUEUE_LIST: 'peutic_db_queue_list_v15',
-  ACTIVE_SESSIONS_LIST: 'peutic_db_active_sessions_list_v15',
-  
+  QUEUE: 'peutic_db_queue_v14',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v14',
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
@@ -22,19 +21,20 @@ const DB_KEYS = {
   GIFTS: 'peutic_db_gifts_v14',
 };
 
+// Expanded Stable Pool of Real Humans (Unsplash) - High Quality, Professional
 export const STABLE_AVATAR_POOL = [
-    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1619895862022-09114b41f16f?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=800",
-    "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800", // Female Professional
+    "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800", // Male Smile
+    "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=800", // Female Asian
+    "https://images.unsplash.com/photo-1531427186611-ecfd6d936c79?auto=format&fit=crop&q=80&w=800", // Male Beard
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=800", // Female Model
+    "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=800", // Male Suit
+    "https://images.unsplash.com/photo-1619895862022-09114b41f16f?auto=format&fit=crop&q=80&w=800", // Female Soft
+    "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=800", // Male Generic
+    "https://images.unsplash.com/photo-1567532939604-b6b5b0db2604?auto=format&fit=crop&q=80&w=800", // Female Glasses
+    "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=800", // Male Older
+    "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&q=80&w=800", // Female
+    "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=800", // Male Professional
     "https://images.unsplash.com/photo-1598550874175-4d7112ee7f41?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=800", 
@@ -59,6 +59,7 @@ export const STABLE_AVATAR_POOL = [
     "https://images.unsplash.com/photo-1633332755192-727a05c4013d?auto=format&fit=crop&q=80&w=800"
 ];
 
+// All 27 Provided Replica IDs
 export const INITIAL_COMPANIONS: Companion[] = [
   { id: 'c1', name: 'Ruby', gender: 'Female', specialty: 'Anxiety & Panic', status: 'AVAILABLE', rating: 4.9, imageUrl: STABLE_AVATAR_POOL[0], bio: 'Specializing in grounding techniques.', replicaId: 're3a705cf66a' },
   { id: 'c2', name: 'Carter', gender: 'Male', specialty: 'Life Coaching', status: 'AVAILABLE', rating: 4.8, imageUrl: STABLE_AVATAR_POOL[1], bio: 'Success roadmap planning.', replicaId: 'rca8a38779a8' },
@@ -98,15 +99,28 @@ export class Database {
   static createUser(name: string, email: string, provider: 'email' | 'google' | 'facebook' | 'x', birthday?: string, role: UserRole = UserRole.USER): User {
     const users = this.getAllUsers();
     if (role === UserRole.ADMIN && provider !== 'email') role = UserRole.USER; 
+
+    // DEFAULT AVATAR: Sunny Smiling Face (Yellow Theme)
     const defaultAvatar = "https://images.unsplash.com/photo-1618331835717-801e976710b2?q=80&w=800";
+
+    // Initialize streak and lastLoginDate
     const today = new Date().toISOString().split('T')[0];
+
     const newUser: User = {
       id: `u_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name, email, role, provider, balance: 0, avatar: defaultAvatar, 
-      subscriptionStatus: 'ACTIVE', joinedAt: new Date().toISOString(),
-      lastActive: new Date().toISOString(), birthday,
+      name,
+      email,
+      role,
+      provider,
+      balance: 0,
+      avatar: defaultAvatar, 
+      subscriptionStatus: 'ACTIVE',
+      joinedAt: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
+      birthday,
       emailPreferences: { marketing: true, updates: true },
-      streak: 1, lastLoginDate: today
+      streak: 1,
+      lastLoginDate: today
     };
     users.push(newUser);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
@@ -114,15 +128,37 @@ export class Database {
     return newUser;
   }
 
+  // CHECK AND INCREMENT STREAK LOGIC
   static checkAndIncrementStreak(user: User): User {
       const today = new Date().toISOString().split('T')[0];
       const lastLogin = user.lastLoginDate ? user.lastLoginDate.split('T')[0] : null;
-      if (lastLogin === today) return user;
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+
+      if (lastLogin === today) {
+          // Already logged in today, return user as is (maybe update lastActive)
+          return user;
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
       const yesterdayStr = yesterday.toISOString().split('T')[0];
+
       let newStreak = user.streak || 0;
-      if (lastLogin === yesterdayStr) newStreak += 1; else newStreak = 1;
-      const updatedUser = { ...user, streak: newStreak, lastLoginDate: today, lastActive: new Date().toISOString() };
+
+      if (lastLogin === yesterdayStr) {
+          // Consecutive login
+          newStreak += 1;
+      } else {
+          // Streak broken or first time back in a while
+          newStreak = 1;
+      }
+
+      const updatedUser = {
+          ...user,
+          streak: newStreak,
+          lastLoginDate: today,
+          lastActive: new Date().toISOString()
+      };
+
       this.updateUser(updatedUser);
       return updatedUser;
   }
@@ -132,6 +168,7 @@ export class Database {
     users = users.filter(u => u.id !== userId);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     this.clearSession();
+    this.logSystemEvent('WARNING', 'Account Deleted', `User ${userId} deleted account.`);
   }
 
   static getUser(): User | null {
@@ -139,8 +176,14 @@ export class Database {
     return userStr ? JSON.parse(userStr) : null;
   }
 
-  static saveUserSession(user: User) { localStorage.setItem(DB_KEYS.USER, JSON.stringify(user)); }
-  static clearSession() { localStorage.removeItem(DB_KEYS.USER); }
+  static saveUserSession(user: User) {
+    localStorage.setItem(DB_KEYS.USER, JSON.stringify(user));
+  }
+
+  static clearSession() {
+    localStorage.removeItem(DB_KEYS.USER);
+  }
+
   static updateUser(updatedUser: User) {
     const users = this.getAllUsers();
     const index = users.findIndex(u => u.id === updatedUser.id);
@@ -149,11 +192,18 @@ export class Database {
       localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     }
     const currentUser = this.getUser();
-    if (currentUser && currentUser.id === updatedUser.id) this.saveUserSession(updatedUser);
+    if (currentUser && currentUser.id === updatedUser.id) {
+      this.saveUserSession(updatedUser);
+    }
   }
 
-  static getUserByEmail(email: string): User | undefined { return this.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase()); }
-  static hasAdmin(): boolean { return this.getAllUsers().some(u => u.role === UserRole.ADMIN); }
+  static getUserByEmail(email: string): User | undefined {
+      return this.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+  }
+
+  static hasAdmin(): boolean {
+      return this.getAllUsers().some(u => u.role === UserRole.ADMIN);
+  }
 
   static checkAdminLockout(): number | null {
       const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
@@ -162,8 +212,12 @@ export class Database {
       if (data.count >= 5) {
           const now = Date.now();
           const diff = now - data.lastAttempt;
-          if (diff < 24 * 60 * 60 * 1000) return Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 1000)); 
-          else { localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS); return null; }
+          if (diff < 24 * 60 * 60 * 1000) { 
+              return Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 1000)); 
+          } else {
+              localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS);
+              return null;
+          }
       }
       return null;
   }
@@ -171,73 +225,128 @@ export class Database {
   static recordAdminFailure() {
       const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
       let data = attemptsStr ? JSON.parse(attemptsStr) : { count: 0, lastAttempt: Date.now() };
-      data.count += 1; data.lastAttempt = Date.now();
+      data.count += 1;
+      data.lastAttempt = Date.now();
       localStorage.setItem(DB_KEYS.ADMIN_ATTEMPTS, JSON.stringify(data));
   }
 
-  static resetAdminFailure() { localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS); }
+  static resetAdminFailure() {
+      localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS);
+  }
 
   static getCompanions(): Companion[] {
     const saved = localStorage.getItem(DB_KEYS.COMPANIONS);
-    if (!saved) { localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(INITIAL_COMPANIONS)); return INITIAL_COMPANIONS; }
+    if (!saved) {
+        localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(INITIAL_COMPANIONS));
+        return INITIAL_COMPANIONS;
+    }
     return JSON.parse(saved);
   }
 
   static updateCompanion(updated: Companion) {
       const list = this.getCompanions();
       const idx = list.findIndex(c => c.id === updated.id);
-      if (idx !== -1) { list[idx] = updated; localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(list)); }
+      if (idx !== -1) {
+          list[idx] = updated;
+          localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(list));
+      }
   }
 
   static setAllCompanionsStatus(status: 'AVAILABLE' | 'BUSY' | 'OFFLINE') {
       const list = this.getCompanions();
       const updatedList = list.map(c => ({ ...c, status }));
       localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
+      this.logSystemEvent('INFO', 'Mass Status Update', `All specialists set to ${status}`);
   }
 
   static topUpWallet(minutes: number, cost: number, targetUserId?: string) {
-    let user = targetUserId ? this.getAllUsers().find(u => u.id === targetUserId) || null : this.getUser();
+    let user = null;
+    if (targetUserId) {
+        const allUsers = this.getAllUsers();
+        user = allUsers.find(u => u.id === targetUserId) || null;
+    } else {
+        user = this.getUser();
+    }
+
     if (user) {
       user.balance += minutes;
       this.updateUser(user);
       this.addTransaction({
-        id: `tx_${Date.now()}`, userId: user.id, userName: user.name,
-        date: new Date().toISOString(), amount: minutes, cost: cost, description: 'Wallet Top-up', status: 'COMPLETED'
+        id: `tx_${Date.now()}`,
+        userId: user.id,
+        userName: user.name,
+        date: new Date().toISOString(),
+        amount: minutes,
+        cost: cost,
+        description: 'Wallet Top-up',
+        status: 'COMPLETED'
       });
+      this.logSystemEvent('SUCCESS', 'Payment Received', `User ${user.email} added $${cost}`);
     }
   }
 
   static deductBalance(minutes: number) {
     const user = this.getUser();
-    if (user) { user.balance = Math.max(0, user.balance - minutes); this.updateUser(user); }
+    if (user) {
+      user.balance = Math.max(0, user.balance - minutes);
+      this.updateUser(user);
+    }
   }
 
-  static getAllTransactions(): Transaction[] { return JSON.parse(localStorage.getItem(DB_KEYS.TRANSACTIONS) || '[]'); }
-  static getUserTransactions(userId: string): Transaction[] { return this.getAllTransactions().filter(tx => tx.userId === userId).reverse(); }
+  static getAllTransactions(): Transaction[] {
+    const txStr = localStorage.getItem(DB_KEYS.TRANSACTIONS);
+    return txStr ? JSON.parse(txStr) : [];
+  }
+
+  static getUserTransactions(userId: string): Transaction[] {
+    return this.getAllTransactions().filter(tx => tx.userId === userId).reverse();
+  }
+
   static addTransaction(tx: Transaction) {
     const all = this.getAllTransactions();
-    if (!tx.userId) { const u = this.getUser(); if (u) { tx.userId = u.id; tx.userName = u.name; } }
-    all.push(tx); localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(all));
+    if (!tx.userId) {
+        const u = this.getUser();
+        if (u) { tx.userId = u.id; tx.userName = u.name; }
+    }
+    all.push(tx);
+    localStorage.setItem(DB_KEYS.TRANSACTIONS, JSON.stringify(all));
   }
 
   static getSettings(): GlobalSettings {
     const saved = localStorage.getItem(DB_KEYS.SETTINGS);
-    const defaultSettings = {
-      pricePerMinute: 1.49, saleMode: true, maintenanceMode: false, allowSignups: true, siteName: 'Peutic',
-      maxConcurrentSessions: 15, multilingualMode: true
+    return saved ? JSON.parse(saved) : {
+      pricePerMinute: 1.49,
+      saleMode: true,
+      maintenanceMode: false,
+      allowSignups: true,
+      siteName: 'Peutic',
+      maxConcurrentSessions: 15,
+      multilingualMode: true
     };
-    if (!saved) return defaultSettings;
-    const parsed = JSON.parse(saved);
-    if (parsed.maxConcurrentSessions !== 15) { parsed.maxConcurrentSessions = 15; localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(parsed)); }
-    return parsed;
   }
 
-  static saveSettings(s: GlobalSettings) { localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(s)); }
-  static getSystemLogs(): SystemLog[] { return JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || '[]'); }
+  static saveSettings(s: GlobalSettings) {
+    localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(s));
+    this.logSystemEvent('WARNING', 'Settings Changed', 'Global configuration updated by admin');
+  }
+
+  static getSystemLogs(): SystemLog[] {
+      const saved = localStorage.getItem(DB_KEYS.LOGS);
+      return saved ? JSON.parse(saved) : [];
+  }
+
   static logSystemEvent(type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' | 'SECURITY', event: string, details: string) {
       const logs = this.getSystemLogs();
-      const newLog: SystemLog = { id: `log_${Date.now()}_${Math.random()}`, timestamp: new Date().toISOString(), type, event, details };
-      logs.unshift(newLog); if (logs.length > 200) logs.pop(); localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
+      const newLog: SystemLog = {
+          id: `log_${Date.now()}_${Math.random()}`,
+          timestamp: new Date().toISOString(),
+          type,
+          event,
+          details
+      };
+      logs.unshift(newLog); 
+      if (logs.length > 200) logs.pop(); 
+      localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
   }
 
   static getServerMetrics(): ServerMetric[] {
@@ -252,122 +361,211 @@ export class Database {
       })).reverse();
   }
   
-  // ==========================================
-  // === FIXED QUEUE SYSTEM IMPLEMENTATION ===
-  // ==========================================
-  
-  static getActiveSessionsList(): string[] {
-      return JSON.parse(localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS_LIST) || '[]');
-  }
-
-  static getQueueList(): string[] {
-      return JSON.parse(localStorage.getItem(DB_KEYS.QUEUE_LIST) || '[]');
-  }
-
-  static getActiveSessionCount(): number {
-      return this.getActiveSessionsList().length;
-  }
-
-  // --- REPAIRED: JOIN QUEUE (Actually adds user now) ---
+  // --- QUEUE SYSTEM ---
   static joinQueue(userId: string): number {
-      let queue = this.getQueueList();
-      const active = this.getActiveSessionsList();
-
-      // If user is already in an active session, they are effectively "at the avatar"
-      // Returning 0 might be confusing, but technically they aren't in the wait queue.
-      if (active.includes(userId)) return 0;
-
-      // Add to queue if not present
-      if (!queue.includes(userId)) {
-          queue.push(userId);
-          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
+      const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
+      if (!q.includes(userId)) {
+          q.push(userId);
+          localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
       }
-
-      // Return their position (1-based index)
-      return queue.indexOf(userId) + 1;
-  }
-
-  // --- NEW: ENTER ACTIVE SESSION (Replaces incrementActiveSessions) ---
-  static enterActiveSession(userId: string) {
-      let active = this.getActiveSessionsList();
-      if (!active.includes(userId)) {
-          active.push(userId);
-          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
-      }
+      return q.indexOf(userId) + 1;
   }
 
   static leaveQueue(userId: string) {
-      let queue = this.getQueueList();
-      if (queue.includes(userId)) {
-          queue = queue.filter(id => id !== userId);
-          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
-      }
-  }
-
-  // --- REPAIRED: END SESSION (Clean up both lists) ---
-  static endSession(userId: string) {
-      let active = this.getActiveSessionsList();
-      if (active.includes(userId)) {
-          active = active.filter(id => id !== userId);
-          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
-      }
-      this.leaveQueue(userId);
+      let q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
+      q = q.filter((id: string) => id !== userId);
+      localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
   }
 
   static getQueuePosition(userId: string): number {
-      const q = this.getQueueList();
+      const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
       return q.indexOf(userId) + 1; 
   }
 
-  static getEstimatedWaitTime(position: number): number {
-      return Math.max(0, (position) * 3); // Approx 3 mins per person
+  static getQueueLength(): number {
+      const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
+      return q.length;
   }
 
-  static saveJournal(entry: JournalEntry) { const j = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]'); j.push(entry); localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(j)); }
-  static getJournals(userId: string): JournalEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]').filter((j: JournalEntry) => j.userId === userId).reverse(); }
-  static saveMood(userId: string, mood: 'confetti' | 'rain' | null) { if (!mood) return; const m = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]'); m.push({ id: `mood_${Date.now()}`, userId, date: new Date().toISOString(), mood }); localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(m)); }
-  static getMoods(userId: string): MoodEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]').filter((m: MoodEntry) => m.userId === userId).reverse(); }
-  static recordBreathSession(userId: string, durationSeconds: number) { const l = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]'); l.push({ id: `breath_${Date.now()}`, userId, date: new Date().toISOString(), durationSeconds }); localStorage.setItem(DB_KEYS.BREATHE_LOGS, JSON.stringify(l)); }
-  static getBreathLogs(userId: string): BreathLog[] { return JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]').filter((l: BreathLog) => l.userId === userId); }
+  static getEstimatedWaitTime(position: number): number {
+      return Math.max(0, (position - 1) * 5); 
+  }
+
+  static getActiveSessionCount(): number {
+      return parseInt(localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS) || '0', 10);
+  }
+
+  static incrementActiveSessions() {
+      let count = this.getActiveSessionCount();
+      localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, (count + 1).toString());
+  }
+
+  static decrementActiveSessions() {
+      let count = this.getActiveSessionCount();
+      localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, Math.max(0, count - 1).toString());
+  }
+
+  // --- JOURNAL ---
+  static saveJournal(entry: JournalEntry) {
+      const journals = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]');
+      journals.push(entry);
+      localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(journals));
+  }
   
+  static getJournals(userId: string): JournalEntry[] {
+      const journals = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]');
+      return journals.filter((j: JournalEntry) => j.userId === userId).reverse();
+  }
+
+  // --- MOOD TRACKER ---
+  static saveMood(userId: string, mood: 'confetti' | 'rain' | null) {
+      if (!mood) return;
+      const moods = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]');
+      moods.push({
+          id: `mood_${Date.now()}`,
+          userId,
+          date: new Date().toISOString(),
+          mood
+      });
+      localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(moods));
+  }
+
+  static getMoods(userId: string): MoodEntry[] {
+      const moods = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]');
+      return moods.filter((m: MoodEntry) => m.userId === userId).reverse();
+  }
+
+  // --- BREATHING LOGS ---
+  static recordBreathSession(userId: string, durationSeconds: number) {
+      const logs = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]');
+      logs.push({
+          id: `breath_${Date.now()}`,
+          userId,
+          date: new Date().toISOString(),
+          durationSeconds
+      });
+      localStorage.setItem(DB_KEYS.BREATHE_LOGS, JSON.stringify(logs));
+  }
+
+  static getBreathLogs(userId: string): BreathLog[] {
+      const logs = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]');
+      return logs.filter((l: BreathLog) => l.userId === userId);
+  }
+
+  // --- ART GALLERY (QUOTA SAFE) ---
   static saveArt(entry: ArtEntry) {
       let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      
+      // 1. Add new entry to the end (UNLIMITED UNTIL ERROR)
       art.push(entry);
-      try { localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); } 
-      catch (e: any) {
-          if (e.name === 'QuotaExceededError' || e.code === 22) {
-              while (art.length > 1) { art.shift(); try { localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); break; } catch (r) {} }
+      
+      try {
+          localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+      } catch (e: any) {
+          // 3. Quota Exceeded Handling
+          if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+              console.warn("LocalStorage quota exceeded. Pruning old art to save new entry.");
+              
+              // Fallback: Remove oldest items one by one until it fits
+              let saved = false;
+              while (art.length > 1 && !saved) {
+                 art.shift(); // Remove oldest
+                 try {
+                    localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+                    saved = true;
+                 } catch (retryErr) {
+                    // Continue loop
+                 }
+              }
+
+              if (!saved) {
+                 // If we can't even save the single new image
+                 throw new Error("Storage full. Unable to save artwork.");
+              }
+          } else {
+              throw e;
           }
       }
   }
-  static getUserArt(userId: string): ArtEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]').filter((a: ArtEntry) => a.userId === userId).reverse(); }
-  static deleteArt(artId: string) { let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]'); art = art.filter((a: ArtEntry) => a.id !== artId); localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); }
-  static getBreathingCooldown(): number | null { const cd = localStorage.getItem(DB_KEYS.BREATHE_COOLDOWN); return cd ? parseInt(cd, 10) : null; }
-  static setBreathingCooldown(timestamp: number) { localStorage.setItem(DB_KEYS.BREATHE_COOLDOWN, timestamp.toString()); }
 
+  static getUserArt(userId: string): ArtEntry[] {
+      const art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      return art.filter((a: ArtEntry) => a.userId === userId).reverse();
+  }
+
+  static deleteArt(artId: string) {
+      let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]');
+      art = art.filter((a: ArtEntry) => a.id !== artId);
+      localStorage.setItem(DB_KEYS.ART, JSON.stringify(art));
+  }
+
+  static getBreathingCooldown(): number | null {
+      const cd = localStorage.getItem(DB_KEYS.BREATHE_COOLDOWN);
+      return cd ? parseInt(cd, 10) : null;
+  }
+
+  static setBreathingCooldown(timestamp: number) {
+      localStorage.setItem(DB_KEYS.BREATHE_COOLDOWN, timestamp.toString());
+  }
+
+  // --- WEEKLY PROGRESS CALCULATION ---
   static getWeeklyProgress(userId: string): { current: number; target: number; message: string } {
-      const now = new Date(); const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const tx = this.getUserTransactions(userId).filter(t => new Date(t.date) > oneWeekAgo && t.amount < 0);
-      const j = this.getJournals(userId).filter(j => new Date(j.date) > oneWeekAgo);
-      const a = this.getUserArt(userId).filter(a => new Date(a.createdAt) > oneWeekAgo);
-      const m = this.getMoods(userId).filter(m => new Date(m.date) > oneWeekAgo);
-      const b = this.getBreathLogs(userId).filter(b => new Date(b.date) > oneWeekAgo);
-      const score = (tx.length * 3) + (j.length * 1) + (a.length * 1) + (b.length * 1) + (m.length * 0.5);
-      const target = 10;
+      const now = new Date();
+      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      
+      const transactions = this.getUserTransactions(userId).filter(t => new Date(t.date) > oneWeekAgo && t.amount < 0);
+      const journals = this.getJournals(userId).filter(j => new Date(j.date) > oneWeekAgo);
+      const art = this.getUserArt(userId).filter(a => new Date(a.createdAt) > oneWeekAgo);
+      const moods = this.getMoods(userId).filter(m => new Date(m.date) > oneWeekAgo);
+      const breath = this.getBreathLogs(userId).filter(b => new Date(b.date) > oneWeekAgo);
+
+      // SCORING: Session=3, Journal=1, Art=1, Breath=1, Mood=0.5
+      const score = 
+          (transactions.length * 3) + 
+          (journals.length * 1) + 
+          (art.length * 1) + 
+          (breath.length * 1) +
+          (moods.length * 0.5);
+
+      const target = 10; // Weekly Point Target
       let message = "Start your journey.";
       const pct = score / target;
-      if (pct > 0 && pct < 0.3) message = "Great start!"; else if (pct >= 0.3 && pct < 0.6) message = "Building momentum!"; else if (pct >= 0.6 && pct < 1) message = "Almost there!"; else if (pct >= 1) message = "Goal Crushed! 🌟";
+
+      if (pct > 0 && pct < 0.3) message = "Great start!";
+      else if (pct >= 0.3 && pct < 0.6) message = "Building momentum!";
+      else if (pct >= 0.6 && pct < 1) message = "Almost there!";
+      else if (pct >= 1) message = "Goal Crushed! 🌟";
+
       return { current: score, target, message };
   }
 
-  static getPromoCodes(): PromoCode[] { return JSON.parse(localStorage.getItem(DB_KEYS.PROMOS) || '[]'); }
-  static createPromoCode(code: string, discount: number) { const list = this.getPromoCodes(); list.push({ id: Date.now().toString(), code: code.toUpperCase(), discountPercentage: discount, uses: 0, active: true }); localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list)); }
-  static deletePromoCode(id: string) { const list = this.getPromoCodes().filter(p => p.id !== id); localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list)); }
+  static getPromoCodes(): PromoCode[] {
+      return JSON.parse(localStorage.getItem(DB_KEYS.PROMOS) || '[]');
+  }
+  
+  static createPromoCode(code: string, discount: number) {
+      const list = this.getPromoCodes();
+      list.push({ id: Date.now().toString(), code: code.toUpperCase(), discountPercentage: discount, uses: 0, active: true });
+      localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
+  }
+
+  static deletePromoCode(id: string) {
+      const list = this.getPromoCodes().filter(p => p.id !== id);
+      localStorage.setItem(DB_KEYS.PROMOS, JSON.stringify(list));
+  }
+
   static exportData(type: 'USERS' | 'LOGS') {
       const data = type === 'USERS' ? this.getAllUsers() : this.getSystemLogs();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = `peutic_${type.toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `peutic_${type.toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
   }
+
+  // Removed sendEmail
 }
