@@ -1,3 +1,4 @@
+
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry, BreathLog } from '../types';
 
 const DB_KEYS = {
@@ -11,10 +12,8 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals_v14',
   ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
-  // NEW QUEUE SYSTEM KEYS
-  QUEUE_LIST: 'peutic_db_queue_list_v15',
-  ACTIVE_SESSIONS_LIST: 'peutic_db_active_sessions_list_v15',
-  
+  QUEUE: 'peutic_db_queue_v14',
+  ACTIVE_SESSIONS: 'peutic_db_active_sessions_v14',
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
@@ -92,8 +91,6 @@ export const INITIAL_COMPANIONS: Companion[] = [
 ];
 
 export class Database {
-  // ... (Other standard methods remain unchanged) ...
-  
   static getAllUsers(): User[] {
     const usersStr = localStorage.getItem(DB_KEYS.ALL_USERS);
     return usersStr ? JSON.parse(usersStr) : [];
@@ -137,6 +134,7 @@ export class Database {
       const lastLogin = user.lastLoginDate ? user.lastLoginDate.split('T')[0] : null;
 
       if (lastLogin === today) {
+          // Already logged in today, return user as is (maybe update lastActive)
           return user;
       }
 
@@ -147,8 +145,10 @@ export class Database {
       let newStreak = user.streak || 0;
 
       if (lastLogin === yesterdayStr) {
+          // Consecutive login
           newStreak += 1;
       } else {
+          // Streak broken or first time back in a while
           newStreak = 1;
       }
 
@@ -314,24 +314,15 @@ export class Database {
 
   static getSettings(): GlobalSettings {
     const saved = localStorage.getItem(DB_KEYS.SETTINGS);
-    // FORCE MAX CONCURRENT TO 15 if not already set
-    const defaultSettings = {
+    return saved ? JSON.parse(saved) : {
       pricePerMinute: 1.49,
       saleMode: true,
       maintenanceMode: false,
       allowSignups: true,
       siteName: 'Peutic',
-      maxConcurrentSessions: 15, // --- FIXED LIMIT ---
+      maxConcurrentSessions: 15,
       multilingualMode: true
     };
-    if (!saved) return defaultSettings;
-    
-    const parsed = JSON.parse(saved);
-    if (parsed.maxConcurrentSessions !== 15) {
-        parsed.maxConcurrentSessions = 15;
-        localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(parsed));
-    }
-    return parsed;
   }
 
   static saveSettings(s: GlobalSettings) {
@@ -370,112 +361,49 @@ export class Database {
       })).reverse();
   }
   
-  // ==========================================
-  // === NEW ROUND ROBIN QUEUE SYSTEM IMPLEMENTATION ===
-  // ==========================================
-  
-  static getActiveSessionsList(): string[] {
-      return JSON.parse(localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS_LIST) || '[]');
-  }
-
-  static getQueueList(): string[] {
-      return JSON.parse(localStorage.getItem(DB_KEYS.QUEUE_LIST) || '[]');
-  }
-
-  static getActiveSessionCount(): number {
-      return this.getActiveSessionsList().length;
-  }
-
-  /**
-   * CORE LOGIC: Round Robin Entry
-   * Returns TRUE if user is actively in a session or just got promoted.
-   * Returns FALSE if user is queued.
-   */
-  static attemptJoinSession(userId: string): boolean {
-      let active = this.getActiveSessionsList();
-      let queue = this.getQueueList();
-      const MAX = 15;
-
-      // 1. If already active, great.
-      if (active.includes(userId)) {
-          // Ensure they aren't in queue anymore
-          if (queue.includes(userId)) {
-              queue = queue.filter(id => id !== userId);
-              localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
-          }
-          return true;
+  // --- QUEUE SYSTEM ---
+  static joinQueue(userId: string): number {
+      const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
+      if (!q.includes(userId)) {
+          q.push(userId);
+          localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
       }
-
-      // 2. If slots available...
-      if (active.length < MAX) {
-          // Check if queue has people ahead
-          if (queue.length > 0) {
-              // Is this user at the front?
-              if (queue[0] === userId) {
-                  // PROMOTE THEM (Round Robin: First In, First Out)
-                  queue.shift(); // Remove from front
-                  active.push(userId); // Add to active
-                  
-                  localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
-                  localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
-                  return true;
-              } else {
-                  // Not at front, ensure they are in queue somewhere
-                  if (!queue.includes(userId)) {
-                      queue.push(userId);
-                      localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
-                  }
-                  return false; // Wait your turn
-              }
-          } else {
-              // Queue empty, just enter
-              active.push(userId);
-              localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
-              return true;
-          }
-      }
-
-      // 3. No slots available. Join Queue.
-      if (!queue.includes(userId)) {
-          queue.push(userId);
-          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
-      }
-      return false;
-  }
-
-  static endSession(userId: string) {
-      let active = this.getActiveSessionsList();
-      if (active.includes(userId)) {
-          active = active.filter(id => id !== userId);
-          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
-      }
-      // Also remove from queue just in case
-      this.leaveQueue(userId);
+      return q.indexOf(userId) + 1;
   }
 
   static leaveQueue(userId: string) {
-      let queue = this.getQueueList();
-      if (queue.includes(userId)) {
-          queue = queue.filter(id => id !== userId);
-          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
-      }
+      let q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
+      q = q.filter((id: string) => id !== userId);
+      localStorage.setItem(DB_KEYS.QUEUE, JSON.stringify(q));
   }
 
   static getQueuePosition(userId: string): number {
-      const q = this.getQueueList();
+      const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
       return q.indexOf(userId) + 1; 
   }
 
-  static getEstimatedWaitTime(position: number): number {
-      return Math.max(0, (position) * 3); // Approx 3 mins per person
+  static getQueueLength(): number {
+      const q = JSON.parse(localStorage.getItem(DB_KEYS.QUEUE) || '[]');
+      return q.length;
   }
 
-  // --- DEPRECATED BUT KEPT FOR COMPATIBILITY ---
-  static joinQueue(userId: string): number {
-      return this.getQueuePosition(userId); // Handled in attemptJoinSession now
+  static getEstimatedWaitTime(position: number): number {
+      return Math.max(0, (position - 1) * 5); 
   }
-  static incrementActiveSessions() {} // Handled automatically
-  static decrementActiveSessions() {} // Handled automatically
+
+  static getActiveSessionCount(): number {
+      return parseInt(localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS) || '0', 10);
+  }
+
+  static incrementActiveSessions() {
+      let count = this.getActiveSessionCount();
+      localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, (count + 1).toString());
+  }
+
+  static decrementActiveSessions() {
+      let count = this.getActiveSessionCount();
+      localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS, Math.max(0, count - 1).toString());
+  }
 
   // --- JOURNAL ---
   static saveJournal(entry: JournalEntry) {
@@ -638,4 +566,6 @@ export class Database {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
   }
+
+  // Removed sendEmail
 }
