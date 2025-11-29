@@ -44,7 +44,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const [lowBalanceWarning, setLowBalanceWarning] = useState(false);
 
   const userId = useRef(`user_${Date.now()}`).current;
-  const conversationIdRef = useRef<string | null>(null); // Ref for cleanup access
+  const conversationIdRef = useRef<string | null>(null);
 
   // --- Session Initialization ---
   useEffect(() => {
@@ -81,7 +81,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
-    // CLEANUP ON UNMOUNT OR TAB CLOSE
     const cleanup = () => {
         clearInterval(queueInterval);
         Database.endSession(userId);
@@ -90,7 +89,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         }
     };
 
-    // Add listener for browser close/refresh
     window.addEventListener('beforeunload', cleanup);
 
     return () => {
@@ -122,7 +120,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           if (response.conversation_url) {
                setConversationUrl(response.conversation_url);
                setActiveConversationId(response.conversation_id);
-               conversationIdRef.current = response.conversation_id; // Update ref for cleanup
+               conversationIdRef.current = response.conversation_id;
                setConnectionState('CONNECTED');
           } else {
               throw new Error("Invalid response from video server.");
@@ -325,8 +323,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP --- */}
-        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-32 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
+        {/* --- USER PIP (Mobile: w-20, Desktop: w-40) --- */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
                     <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
