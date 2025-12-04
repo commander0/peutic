@@ -13,36 +13,35 @@ interface VideoRoomProps {
   userName: string;
 }
 
-// --- HELPER: GENERATE SESSION ARTIFACT IMAGE ---
+// --- ARTIFACT GENERATOR ---
 const renderSessionArtifact = (companionName: string, durationStr: string, dateStr: string): string => {
     const canvas = document.createElement('canvas');
-    canvas.width = 1080;
-    canvas.height = 1350; // Instagram Portrait Ratio
+    canvas.width = 1080; canvas.height = 1350;
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
-
+    
     // 1. Gradient Background
     const grd = ctx.createLinearGradient(0, 0, 1080, 1350);
     grd.addColorStop(0, '#FFFBEB'); // Light Yellow
     grd.addColorStop(1, '#FEF3C7'); // Amber 100
-    ctx.fillStyle = grd;
+    ctx.fillStyle = grd; 
     ctx.fillRect(0, 0, 1080, 1350);
 
-    // 2. Abstract Circle Art
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.1)'; // Yellow-400 transparent
-    ctx.beginPath(); ctx.arc(540, 675, 400, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.2)'; 
-    ctx.beginPath(); ctx.arc(540, 675, 300, 0, Math.PI * 2); ctx.fill();
+    // 2. Abstract Circle Art (Background)
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.1)'; 
+    ctx.beginPath(); ctx.arc(540, 675, 450, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.15)'; 
+    ctx.beginPath(); ctx.arc(540, 675, 350, 0, Math.PI * 2); ctx.fill();
 
-    // 3. Text
-    ctx.fillStyle = '#111827'; // Gray-900
+    // 3. Text Configuration
     ctx.textAlign = 'center';
     
-    // Header
-    ctx.font = 'bold 40px Manrope, sans-serif';
-    ctx.fillText('PEUTIC SESSION SUMMARY', 540, 150);
+    // Header (Moved Up)
+    ctx.fillStyle = '#111827'; // Gray-900
+    ctx.font = 'bold 40px Manrope, sans-serif'; 
+    ctx.fillText('PEUTIC SESSION SUMMARY', 540, 120);
 
-    // Main Quote
+    // Main Quote (Moved Up to avoid overlap)
     const quotes = [
         "Clarity comes in moments of calm.",
         "You are stronger than you know.",
@@ -51,38 +50,56 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     ];
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
     
-    ctx.font = 'italic 500 50px Manrope, sans-serif';
+    ctx.font = 'italic 500 48px Manrope, sans-serif'; 
     ctx.fillStyle = '#4B5563'; // Gray-600
-    ctx.fillText(`"${quote}"`, 540, 400);
+    // Wrap text function for long quotes if needed, but these are short enough
+    ctx.fillText(`"${quote}"`, 540, 300); 
 
-    // Stats Box
+    // Stats Box (Moved Down and centered better)
     ctx.fillStyle = '#FFFFFF';
     ctx.shadowColor = "rgba(0,0,0,0.1)";
-    ctx.shadowBlur = 20;
-    ctx.roundRect(140, 600, 800, 400, 40);
+    ctx.shadowBlur = 30;
+    // x, y, w, h, radius
+    ctx.roundRect(140, 450, 800, 550, 50); 
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Stats Text
+    // Inside Box Content
+    // Duration (Hero Number)
     ctx.fillStyle = '#000000';
-    ctx.font = 'bold 80px Manrope, sans-serif';
-    ctx.fillText(durationStr, 540, 780);
+    ctx.font = 'bold 100px Manrope, sans-serif'; 
+    ctx.fillText(durationStr, 540, 620);
     
-    ctx.font = 'bold 30px Manrope, sans-serif';
+    // Label
+    ctx.font = 'bold 28px Manrope, sans-serif'; 
     ctx.fillStyle = '#9CA3AF'; // Gray-400
-    ctx.fillText('MINUTES OF CLARITY', 540, 830);
+    ctx.fillText('MINUTES OF CLARITY', 540, 680);
 
-    ctx.font = 'bold 40px Manrope, sans-serif';
-    ctx.fillStyle = '#000000';
-    ctx.fillText(`with ${companionName}`, 540, 920);
+    // Divider Line
+    ctx.strokeStyle = '#F3F4F6';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(290, 740);
+    ctx.lineTo(790, 740);
+    ctx.stroke();
 
-    // Footer
+    // Companion Name
+    ctx.font = 'bold 36px Manrope, sans-serif'; 
+    ctx.fillStyle = '#4B5563'; 
+    ctx.fillText('Session with', 540, 820);
+    
+    ctx.font = 'bold 60px Manrope, sans-serif'; 
+    ctx.fillStyle = '#F59E0B'; // Amber-500 (Brand Color)
+    ctx.fillText(companionName, 540, 900);
+
+    // Footer (Updated Domain)
     ctx.font = '30px Manrope, sans-serif';
     ctx.fillStyle = '#6B7280';
     ctx.fillText(dateStr, 540, 1250);
-    ctx.font = 'bold 30px Manrope, sans-serif';
-    ctx.fillStyle = '#F59E0B'; // Amber-500
-    ctx.fillText('peutic.app', 540, 1290);
+    
+    ctx.font = 'bold 32px Manrope, sans-serif';
+    ctx.fillStyle = '#F59E0B'; 
+    ctx.fillText('peutic.xyz', 540, 1300); // FIXED DOMAIN
 
     return canvas.toDataURL('image/png');
 };
@@ -123,15 +140,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- Session Initialization ---
   useEffect(() => {
-    // 1. Join Queue (Async Supabase)
     const initQueue = async () => {
         try {
-            // Join Queue
             const pos = await Database.joinQueue(userId);
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
-            // Instant Entry for #1 (Fix for "Stuck in Queue")
             if (pos === 1) {
                  startTavusConnection();
             }
@@ -142,7 +156,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         }
     };
 
-    // Polling Interval
     const queueInterval = setInterval(async () => {
         if (connectionState === 'QUEUED') {
             const pos = await Database.getQueuePosition(userId);
@@ -158,7 +171,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
-    // CLEANUP: Kill session on unmount or refresh (API Usage Fix)
     const cleanup = async () => {
         clearInterval(queueInterval);
         await Database.endSession(userId);
@@ -179,7 +191,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      // Move to active list (Async)
       await Database.enterActiveSession(userId);
 
       try {
@@ -265,13 +276,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           setActiveConversationId(null);
           conversationIdRef.current = null;
       }
-      // Generate Artifact
-      const artifactUrl = renderSessionArtifact(
-          companion.name, 
-          formatTime(duration), 
-          new Date().toLocaleDateString()
-      );
-      setSummaryImage(artifactUrl);
+      setSummaryImage(renderSessionArtifact(companion.name, formatTime(duration), new Date().toLocaleDateString()));
       setShowSummary(true);
   };
 
@@ -292,7 +297,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
-  // --- HELPER: Pre-fill Name (Name Box Fix) ---
   const getIframeUrl = () => {
       if (!conversationUrl) return '';
       try {
@@ -304,10 +308,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       }
   };
 
-  // --- RENDER ---
   if (showSummary) {
       return (
-          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
               <div className="bg-gray-900 border border-gray-800 p-8 rounded-3xl max-w-md w-full text-center animate-in zoom-in duration-300 shadow-2xl my-auto">
                   <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50"><CheckCircle className="w-8 h-8 text-green-500" /></div>
                   <h2 className="text-2xl font-black text-white mb-6 tracking-tight">Session Complete</h2>
@@ -332,6 +335,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                   <div className="mb-6">
                       <p className="text-xs font-bold uppercase text-gray-500 mb-3 tracking-widest">Rate Experience</p>
                       <div className="flex justify-center gap-2 mb-4">{[1, 2, 3, 4, 5].map(star => (<button key={star} onClick={() => setRating(star)} className="focus:outline-none"><Star className={`w-6 h-6 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-700'}`} /></button>))}</div>
+                      <div className="flex flex-wrap justify-center gap-2">{['Good Listener', 'Empathetic', 'Helpful', 'Calming', 'Insightful'].map(tag => (<button key={tag} onClick={() => toggleFeedbackTag(tag)} className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${feedbackTags.includes(tag) ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-700 hover:border-gray-500'}`}>{tag}</button>))}</div>
                   </div>
                   
                   <button onClick={submitFeedbackAndClose} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-4 rounded-xl font-black tracking-wide transition-colors shadow-lg">Return to Dashboard</button>
@@ -343,10 +347,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
         
-        {/* --- HEADER --- */}
+        {/* --- HEADER OVERLAY --- */}
         <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none bg-gradient-to-b from-black/80 via-black/20 to-transparent pb-20 transition-opacity duration-500">
-            {/* Added Padding-Left to clear vertical bar */}
-            <div className="flex items-center gap-4 pointer-events-auto pl-16"> 
+            <div className="flex items-center gap-4 pointer-events-auto pl-16">
                 <div className={`bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} text-white font-mono shadow-xl flex items-center gap-3 transition-colors duration-500`}>
                     <div className={`w-2 h-2 rounded-full ${connectionState === 'CONNECTED' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`}></div>
                     <span className={`font-variant-numeric tabular-nums tracking-wide font-bold ${lowBalanceWarning ? 'text-red-400' : 'text-white'}`}>
@@ -355,6 +358,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             </div>
             <div className="flex items-center gap-2 pointer-events-auto">
+                {/* Network Quality */}
                 <div className="flex gap-1 h-4 items-end">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div>
@@ -363,9 +367,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- MAIN CONTENT --- */}
+        {/* --- MAIN CONTENT AREA --- */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
-            {/* QUEUE */}
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95 text-center p-4">
                     <div className="relative mb-8">
@@ -379,17 +382,25 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
             {connectionState === 'CONNECTING' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/90 backdrop-blur-md">
-                    <Loader2 className="w-16 h-16 animate-spin text-yellow-500 mb-4" />
+                    <div className="relative mb-8">
+                        <div className="absolute inset-0 bg-yellow-500/20 blur-[60px] rounded-full animate-pulse"></div>
+                        <div className="relative z-10 p-8 rounded-full border border-yellow-500/30 bg-black/50 shadow-2xl">
+                            <Loader2 className="w-16 h-16 animate-spin text-yellow-500" />
+                        </div>
+                    </div>
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">Securing Link</h3>
+                    <p className="text-gray-400 text-sm">Establishing end-to-end encryption...</p>
                 </div>
             )}
             
             {connectionState === 'ERROR' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95 p-4 text-center">
-                    <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
-                    <h3 className="text-2xl font-bold text-white mb-2">Connection Failed</h3>
-                    <p className="text-gray-400 mb-8 text-sm">{errorMsg}</p>
-                    <button onClick={onEndSession} className="bg-white text-black px-8 py-3 rounded-full font-bold">Return</button>
+                    <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md backdrop-blur-md">
+                        <AlertCircle className="w-16 h-16 text-red-500 mb-4 mx-auto" />
+                        <h3 className="text-2xl font-bold text-white mb-2">Connection Failed</h3>
+                        <p className="text-gray-400 mb-8 text-sm">{errorMsg}</p>
+                        <button onClick={onEndSession} className="bg-white text-black px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform">Return</button>
+                    </div>
                 </div>
             )}
 
@@ -401,18 +412,20 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 <div className="absolute inset-0 w-full h-full bg-black">
                     <img src={companion.imageUrl} className="w-full h-full object-cover object-top opacity-60 scale-105 animate-pulse-slow" alt="Background" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40"></div>
+                    <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex items-center gap-1 h-12 z-10">
+                        {new Array(12).fill(0).map((_, i) => ( <div key={i} className="w-1.5 bg-white/80 rounded-full animate-pulse" style={{ height: `${Math.random() * 100}%`, animationDuration: `${0.5 + Math.random()}s` }}></div> ))}
+                    </div>
                 </div>
             )}
         </div>
 
-        {/* --- USER PIP (Top Middle Fix: top-4 left-1/2 -translate-x-1/2) --- */}
-        {/* Same layout for Mobile and Desktop to ensure visibility */}
+        {/* --- USER PIP (Top Middle Fixed: top-4 left-1/2 -translate-x-1/2) --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
-                    <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
+                    <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
                 )}
                 <div className="absolute bottom-2 right-2">
                      <div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
@@ -423,9 +436,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         {/* --- VERTICAL CONTROLS (Top Left: top-24 left-4) --- */}
         <div className="absolute top-24 left-4 z-30 pointer-events-auto">
             <div className="flex flex-col items-center gap-3 bg-black/60 backdrop-blur-md px-3 py-5 rounded-full border border-white/10 shadow-2xl hover:bg-black/80 transition-all">
-                <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}</button>
-                <button onClick={() => setCamOn(!camOn)} className={`p-3 rounded-full transition-all ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{camOn ? <VideoIcon className="w-5 h-5" /> : <VideoOff className="w-5 h-5" />}</button>
-                <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 rounded-full transition-all ${blurBackground ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}><Aperture className="w-5 h-5" /></button>
+                <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{micOn ? <Mic className="w-5 h-5"/> : <MicOff className="w-5 h-5"/>}</button>
+                <button onClick={() => setCamOn(!camOn)} className={`p-3 rounded-full transition-all ${camOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{camOn ? <VideoIcon className="w-5 h-5"/> : <VideoOff className="w-5 h-5"/>}</button>
+                <button onClick={() => setBlurBackground(!blurBackground)} className={`p-3 rounded-full transition-all ${blurBackground ? 'bg-yellow-500 text-black' : 'bg-white/10 text-white hover:bg-white/20'}`}><Aperture className="w-5 h-5"/></button>
                 <div className="w-6 h-px bg-white/20 my-1"></div>
                 <button onClick={handleEndSession} className="bg-red-600 hover:bg-red-700 text-white p-3 rounded-full transition-colors shadow-lg shadow-red-600/20" title="End Session">
                     <PhoneOff className="w-5 h-5" />
