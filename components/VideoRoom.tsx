@@ -22,12 +22,12 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     
     // 1. Gradient Background
     const grd = ctx.createLinearGradient(0, 0, 1080, 1350);
-    grd.addColorStop(0, '#FFFBEB'); // Light Yellow
-    grd.addColorStop(1, '#FEF3C7'); // Amber 100
+    grd.addColorStop(0, '#FFFBEB'); 
+    grd.addColorStop(1, '#FEF3C7'); 
     ctx.fillStyle = grd; 
     ctx.fillRect(0, 0, 1080, 1350);
 
-    // 2. Abstract Circle Art (Background)
+    // 2. Abstract Circle Art
     ctx.fillStyle = 'rgba(250, 204, 21, 0.1)'; 
     ctx.beginPath(); ctx.arc(540, 675, 450, 0, Math.PI * 2); ctx.fill();
     ctx.fillStyle = 'rgba(250, 204, 21, 0.15)'; 
@@ -36,12 +36,12 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     // 3. Text Configuration
     ctx.textAlign = 'center';
     
-    // Header (Moved Higher)
-    ctx.fillStyle = '#111827'; // Gray-900
+    // Header
+    ctx.fillStyle = '#111827'; 
     ctx.font = 'bold 40px Manrope, sans-serif'; 
     ctx.fillText('PEUTIC SESSION SUMMARY', 540, 100);
 
-    // Main Quote (Positioned higher to avoid overlap)
+    // Main Quote
     const quotes = [
         "Clarity comes in moments of calm.",
         "You are stronger than you know.",
@@ -51,32 +51,26 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
     
     ctx.font = 'italic 500 48px Manrope, sans-serif'; 
-    ctx.fillStyle = '#4B5563'; // Gray-600
-    // Raised Y position from 300/400 to 250
+    ctx.fillStyle = '#4B5563'; 
     ctx.fillText(`"${quote}"`, 540, 250); 
 
-    // Stats Box (Pushed DOWN to y=480)
+    // Stats Box
     ctx.fillStyle = '#FFFFFF';
     ctx.shadowColor = "rgba(0,0,0,0.1)";
     ctx.shadowBlur = 30;
-    // x, y, w, h, radius
     ctx.roundRect(140, 480, 800, 550, 50); 
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Inside Box Content (All shifted down relative to box)
-    
-    // Duration (Hero Number)
+    // Inside Box Content
     ctx.fillStyle = '#000000';
     ctx.font = 'bold 100px Manrope, sans-serif'; 
     ctx.fillText(durationStr, 540, 650);
     
-    // Label
     ctx.font = 'bold 28px Manrope, sans-serif'; 
-    ctx.fillStyle = '#9CA3AF'; // Gray-400
+    ctx.fillStyle = '#9CA3AF'; 
     ctx.fillText('MINUTES OF CLARITY', 540, 710);
 
-    // Divider Line
     ctx.strokeStyle = '#F3F4F6';
     ctx.lineWidth = 4;
     ctx.beginPath();
@@ -84,13 +78,12 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     ctx.lineTo(790, 770);
     ctx.stroke();
 
-    // Companion Name
     ctx.font = 'bold 36px Manrope, sans-serif'; 
     ctx.fillStyle = '#4B5563'; 
     ctx.fillText('Session with', 540, 850);
     
     ctx.font = 'bold 60px Manrope, sans-serif'; 
-    ctx.fillStyle = '#F59E0B'; // Amber-500 (Brand Color)
+    ctx.fillStyle = '#F59E0B'; 
     ctx.fillText(companionName, 540, 930);
 
     // Footer
@@ -109,50 +102,38 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Media State
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
   const [blurBackground, setBlurBackground] = useState(false);
-  
-  // Session State
   const [duration, setDuration] = useState(0);
   const [connectionState, setConnectionState] = useState<'QUEUED' | 'CONNECTING' | 'CONNECTED' | 'ERROR' | 'DEMO_MODE'>('QUEUED');
   const [errorMsg, setErrorMsg] = useState<string>('');
   const [conversationUrl, setConversationUrl] = useState<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [networkQuality, setNetworkQuality] = useState(4); 
-  
-  // Queue State
   const [queuePos, setQueuePos] = useState(0);
   const [estWait, setEstWait] = useState(0);
-
-  // Post Session State
   const [showSummary, setShowSummary] = useState(false);
-  const [summaryImage, setSummaryImage] = useState<string>(''); // Artifact URL
+  const [summaryImage, setSummaryImage] = useState<string>('');
   const [rating, setRating] = useState(0);
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
-
-  // Credit Tracking
   const [remainingMinutes, setRemainingMinutes] = useState(0);
   const [lowBalanceWarning, setLowBalanceWarning] = useState(false);
 
   const userId = useRef(`user_${Date.now()}`).current;
   const conversationIdRef = useRef<string | null>(null);
   
-  // GUARD: Prevent double initialization in React Strict Mode
+  // GUARD: Prevent double initialization
   const connectionInitiated = useRef(false);
 
   // --- Session Initialization ---
   useEffect(() => {
-    // 1. Join Queue (Async)
     const initQueue = async () => {
         try {
-            // Join Queue
             const pos = await Database.joinQueue(userId);
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
-            // Instant Entry for #1 (Fix for "Stuck in Queue")
             if (pos === 1) {
                  startTavusConnection();
             }
@@ -163,7 +144,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         }
     };
 
-    // Polling Interval
     const queueInterval = setInterval(async () => {
         if (connectionState === 'QUEUED') {
             const pos = await Database.getQueuePosition(userId);
@@ -179,11 +159,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
-    // CLEANUP: Kill session on unmount or refresh (API Usage Fix)
+    // CLEANUP: Kill session on unmount or refresh
     const cleanup = async () => {
         clearInterval(queueInterval);
         await Database.endSession(userId);
         if (conversationIdRef.current) {
+            console.log("Cleanup: Terminating Tavus Session", conversationIdRef.current);
             endTavusConversation(conversationIdRef.current);
         }
     };
@@ -211,7 +192,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      // Move to active list (Async)
       await Database.enterActiveSession(userId);
 
       try {
@@ -237,7 +217,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           }
 
       } catch (err: any) {
-          connectionInitiated.current = false; 
+          connectionInitiated.current = false; // Reset guard on error
           if (err.message.includes("Insufficient Credits")) {
               alert("Your session ended because you are out of credits.");
               handleEndSession(); 
@@ -393,7 +373,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
         {/* --- MAIN CONTENT AREA --- */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
-            {/* QUEUE SCREEN */}
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
                     <div className="relative mb-8">
@@ -402,18 +381,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                          </div>
                     </div>
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">You are in queue</h3>
-                    <p className="text-gray-400 text-sm mb-6">Our specialists are currently assisting others.</p>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-center max-w-sm w-full">
-                         <div className="bg-gray-800 p-4 rounded-xl">
-                             <div className="text-2xl font-black text-white">{queuePos}</div>
-                             <div className="text-xs text-gray-500 uppercase font-bold">Position</div>
-                         </div>
-                         <div className="bg-gray-800 p-4 rounded-xl">
-                             <div className="text-2xl font-black text-white">~{estWait}m</div>
-                             <div className="text-xs text-gray-500 uppercase font-bold">Est. Wait</div>
-                         </div>
-                    </div>
+                    <p className="text-gray-400 text-sm mb-6">Position {queuePos} • Est. {estWait}m wait</p>
                     <button onClick={onEndSession} className="mt-8 text-gray-500 hover:text-white text-sm font-bold">Leave Queue</button>
                 </div>
             )}
