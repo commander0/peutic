@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Companion } from '../types';
 import { 
     Mic, MicOff, Video as VideoIcon, VideoOff, PhoneOff, 
-    Loader2, AlertCircle, RefreshCcw, Aperture, Star, CheckCircle, Users
+    Loader2, AlertCircle, RefreshCcw, Aperture, Star, CheckCircle, Users, Download, Share2
 } from 'lucide-react';
 import { createTavusConversation, endTavusConversation } from '../services/tavusService';
 import { Database } from '../services/database';
@@ -12,6 +12,80 @@ interface VideoRoomProps {
   onEndSession: () => void;
   userName: string;
 }
+
+// --- HELPER: GENERATE SESSION ARTIFACT IMAGE ---
+const renderSessionArtifact = (companionName: string, durationStr: string, dateStr: string): string => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1080;
+    canvas.height = 1350; // Instagram Portrait Ratio
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+
+    // 1. Gradient Background (Calming Yellow/Orange or Dark Mode)
+    const grd = ctx.createLinearGradient(0, 0, 1080, 1350);
+    grd.addColorStop(0, '#FFFBEB'); // Light Yellow
+    grd.addColorStop(1, '#FEF3C7'); // Amber 100
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 1080, 1350);
+
+    // 2. Abstract Circle Art
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.1)'; // Yellow-400 transparent
+    ctx.beginPath(); ctx.arc(540, 675, 400, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.2)'; 
+    ctx.beginPath(); ctx.arc(540, 675, 300, 0, Math.PI * 2); ctx.fill();
+
+    // 3. Text
+    ctx.fillStyle = '#111827'; // Gray-900
+    ctx.textAlign = 'center';
+    
+    // Header
+    ctx.font = 'bold 40px Manrope, sans-serif';
+    ctx.fillText('PEUTIC SESSION SUMMARY', 540, 150);
+
+    // Main Quote
+    const quotes = [
+        "Clarity comes in moments of calm.",
+        "You are stronger than you know.",
+        "Peace begins with a single breath.",
+        "Growth happens in the quiet moments."
+    ];
+    const quote = quotes[Math.floor(Math.random() * quotes.length)];
+    
+    ctx.font = 'italic 500 50px Manrope, sans-serif';
+    ctx.fillStyle = '#4B5563'; // Gray-600
+    ctx.fillText(`"${quote}"`, 540, 400);
+
+    // Stats Box
+    ctx.fillStyle = '#FFFFFF';
+    ctx.shadowColor = "rgba(0,0,0,0.1)";
+    ctx.shadowBlur = 20;
+    ctx.roundRect(140, 600, 800, 400, 40);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Stats Text
+    ctx.fillStyle = '#000000';
+    ctx.font = 'bold 80px Manrope, sans-serif';
+    ctx.fillText(durationStr, 540, 780);
+    
+    ctx.font = 'bold 30px Manrope, sans-serif';
+    ctx.fillStyle = '#9CA3AF'; // Gray-400
+    ctx.fillText('MINUTES OF CLARITY', 540, 830);
+
+    ctx.font = 'bold 40px Manrope, sans-serif';
+    ctx.fillStyle = '#000000';
+    ctx.fillText(`with ${companionName}`, 540, 920);
+
+    // Footer
+    ctx.font = '30px Manrope, sans-serif';
+    ctx.fillStyle = '#6B7280';
+    ctx.fillText(dateStr, 540, 1250);
+    ctx.font = 'bold 30px Manrope, sans-serif';
+    ctx.fillStyle = '#F59E0B'; // Amber-500
+    ctx.fillText('peutic.app', 540, 1290);
+
+    return canvas.toDataURL('image/png');
+};
 
 const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -36,6 +110,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // Post Session State
   const [showSummary, setShowSummary] = useState(false);
+  const [summaryImage, setSummaryImage] = useState<string>(''); // Artifact URL
   const [rating, setRating] = useState(0);
   const [feedbackTags, setFeedbackTags] = useState<string[]>([]);
 
@@ -50,13 +125,15 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   useEffect(() => {
     // 1. Join Queue
     const initQueue = () => {
-        // Register in queue
+        const settings = Database.getSettings();
+        const active = Database.getActiveSessionCount();
+        const limit = settings.maxConcurrentSessions;
+
         const pos = Database.joinQueue(userId);
         setQueuePos(pos);
         setEstWait(Database.getEstimatedWaitTime(pos));
 
-        // FIX: If you are at the front (#1), enter immediately.
-        if (pos === 1) {
+        if (pos === 1 && active < limit) {
              startTavusConnection();
         }
     };
@@ -64,11 +141,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     const queueInterval = setInterval(() => {
         if (connectionState === 'QUEUED') {
             const pos = Database.getQueuePosition(userId);
+            const settings = Database.getSettings();
+            const active = Database.getActiveSessionCount();
+            
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
-            // FIX: Polling check for position #1
-            if (pos === 1) {
+            if (pos === 1 && active < settings.maxConcurrentSessions) {
                 clearInterval(queueInterval);
                 startTavusConnection();
             }
@@ -77,7 +156,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
-    // CLEANUP: Kill session on unmount or refresh
     const cleanup = () => {
         clearInterval(queueInterval);
         Database.endSession(userId);
@@ -98,7 +176,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      // Move to active list
       Database.enterActiveSession(userId);
       Database.leaveQueue(userId);
 
@@ -140,7 +217,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       }
   };
 
-  // --- Webcam Logic ---
   useEffect(() => {
     let stream: MediaStream | null = null;
     const startVideo = async () => {
@@ -156,7 +232,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, [camOn, showSummary]);
 
-  // --- Timers & Credit Enforcement ---
   useEffect(() => {
     if (showSummary) return;
     if (connectionState !== 'CONNECTED' && connectionState !== 'DEMO_MODE') return;
@@ -185,6 +260,13 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
           setActiveConversationId(null);
           conversationIdRef.current = null;
       }
+      // Generate Artifact
+      const artifactUrl = renderSessionArtifact(
+          companion.name, 
+          formatTime(duration), 
+          new Date().toLocaleDateString()
+      );
+      setSummaryImage(artifactUrl);
       setShowSummary(true);
   };
 
@@ -205,7 +287,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
-  // --- HELPER: Pre-fill Name to Skip Input Screen ---
   const getIframeUrl = () => {
       if (!conversationUrl) return '';
       try {
@@ -217,26 +298,36 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       }
   };
 
-  // --- RENDER ---
   if (showSummary) {
       return (
-          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm">
-              <div className="bg-gray-900 p-8 rounded-3xl max-w-md w-full text-center border border-gray-800 animate-in zoom-in duration-300 shadow-2xl">
-                  <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-green-500/50"><CheckCircle className="w-10 h-10 text-green-500" /></div>
-                  <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Session Complete</h2>
-                  <p className="text-gray-400 mb-8 text-sm">We hope you found clarity with {companion.name}.</p>
-                  <div className="bg-black/50 rounded-2xl p-6 mb-8 border border-gray-800">
-                      <div className="flex justify-between mb-3"><span className="text-gray-500 font-bold text-xs uppercase tracking-wider">Duration</span><span className="font-mono font-bold text-white">{formatTime(duration)}</span></div>
-                      <div className="flex justify-between mb-3"><span className="text-gray-500 font-bold text-xs uppercase tracking-wider">Rate</span><span className="font-mono font-bold text-white">${settings.pricePerMinute}/min</span></div>
-                      <div className="w-full h-px bg-gray-800 my-3"></div>
-                      <div className="flex justify-between items-center"><span className="text-white font-bold text-lg">Total</span><span className="text-green-500 font-black text-2xl">${cost.toFixed(2)}</span></div>
+          <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm overflow-y-auto">
+              <div className="bg-gray-900 border border-gray-800 p-8 rounded-3xl max-w-md w-full text-center animate-in zoom-in duration-300 shadow-2xl my-auto">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-4 border border-green-500/50"><CheckCircle className="w-8 h-8 text-green-500" /></div>
+                  <h2 className="text-2xl font-black text-white mb-6 tracking-tight">Session Complete</h2>
+                  
+                  {/* ARTIFACT DISPLAY */}
+                  {summaryImage && (
+                      <div className="mb-6 relative group">
+                          <img src={summaryImage} alt="Session Artifact" className="w-full rounded-xl shadow-lg border border-gray-700" />
+                          <div className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
+                              <a href={summaryImage} download={`peutic-session-${Date.now()}.png`} className="bg-white text-black px-4 py-2 rounded-full font-bold flex items-center gap-2 hover:scale-105 transition-transform">
+                                  <Download className="w-4 h-4" /> Save Card
+                              </a>
+                          </div>
+                      </div>
+                  )}
+
+                  <div className="bg-black/50 rounded-2xl p-4 mb-6 border border-gray-800">
+                      <div className="flex justify-between mb-2"><span className="text-gray-500 font-bold text-xs uppercase">Time</span><span className="font-mono font-bold text-white">{formatTime(duration)}</span></div>
+                      <div className="flex justify-between items-center"><span className="text-gray-500 font-bold text-xs uppercase">Cost</span><span className="text-green-500 font-black text-lg">${cost.toFixed(2)}</span></div>
                   </div>
-                  <div className="mb-8">
-                      <p className="text-xs font-bold uppercase text-gray-500 mb-4 tracking-widest">How was your experience?</p>
-                      <div className="flex justify-center gap-3 mb-6">{[1, 2, 3, 4, 5].map(star => (<button key={star} onClick={() => setRating(star)} className="transition-transform hover:scale-110 focus:outline-none"><Star className={`w-8 h-8 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-700'}`} /></button>))}</div>
-                      <div className="flex flex-wrap justify-center gap-2">{['Good Listener', 'Empathetic', 'Helpful', 'Calming', 'Insightful'].map(tag => (<button key={tag} onClick={() => toggleFeedbackTag(tag)} className={`px-3 py-1 rounded-full text-[10px] font-bold border transition-all ${feedbackTags.includes(tag) ? 'bg-white text-black border-white' : 'bg-transparent text-gray-500 border-gray-700 hover:border-gray-500'}`}>{tag}</button>))}</div>
+                  
+                  <div className="mb-6">
+                      <p className="text-xs font-bold uppercase text-gray-500 mb-3 tracking-widest">Rate Experience</p>
+                      <div className="flex justify-center gap-2 mb-4">{[1, 2, 3, 4, 5].map(star => (<button key={star} onClick={() => setRating(star)} className="focus:outline-none"><Star className={`w-6 h-6 ${star <= rating ? 'fill-yellow-500 text-yellow-500' : 'text-gray-700'}`} /></button>))}</div>
                   </div>
-                  <button onClick={submitFeedbackAndClose} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-4 rounded-xl font-black tracking-wide transition-colors shadow-lg shadow-yellow-500/20">Return to Dashboard</button>
+                  
+                  <button onClick={submitFeedbackAndClose} className="w-full bg-yellow-500 hover:bg-yellow-400 text-black py-4 rounded-xl font-black tracking-wide transition-colors shadow-lg">Return to Dashboard</button>
               </div>
           </div>
       );
@@ -245,9 +336,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   return (
     <div ref={containerRef} className="fixed inset-0 bg-black z-50 flex flex-col overflow-hidden select-none">
         
-        {/* --- HEADER OVERLAY --- */}
+        {/* --- HEADER --- */}
         <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none bg-gradient-to-b from-black/80 via-black/20 to-transparent pb-20 transition-opacity duration-500">
-            <div className="flex items-center gap-4 pointer-events-auto">
+            <div className="flex items-center gap-4 pointer-events-auto pl-16"> {/* Added Padding-Left to clear vertical bar */}
                 <div className={`bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} text-white font-mono shadow-xl flex items-center gap-3 transition-colors duration-500`}>
                     <div className={`w-2 h-2 rounded-full ${connectionState === 'CONNECTED' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`}></div>
                     <span className={`font-variant-numeric tabular-nums tracking-wide font-bold ${lowBalanceWarning ? 'text-red-400' : 'text-white'}`}>
@@ -256,7 +347,6 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 </div>
             </div>
             <div className="flex items-center gap-2 pointer-events-auto">
-                {/* Network Quality */}
                 <div className="flex gap-1 h-4 items-end">
                     {[1, 2, 3, 4].map(i => (
                         <div key={i} className={`w-1 rounded-sm ${i <= networkQuality ? 'bg-green-500' : 'bg-gray-600'}`} style={{ height: `${i * 25}%` }}></div>
@@ -265,60 +355,35 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- MAIN CONTENT AREA --- */}
+        {/* --- MAIN CONTENT --- */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
-            
-            {/* QUEUE SCREEN */}
             {connectionState === 'QUEUED' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95 text-center p-4">
                     <div className="relative mb-8">
-                         <div className="w-24 h-24 rounded-full border-4 border-yellow-500/20 flex items-center justify-center animate-pulse">
-                             <Users className="w-10 h-10 text-yellow-500" />
-                         </div>
+                         <div className="w-24 h-24 rounded-full border-4 border-yellow-500/20 flex items-center justify-center animate-pulse"><Users className="w-10 h-10 text-yellow-500" /></div>
                     </div>
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">You are in queue</h3>
-                    <p className="text-gray-400 text-sm mb-6">Our specialists are currently assisting others.</p>
-                    
-                    <div className="grid grid-cols-2 gap-4 text-center max-w-sm w-full">
-                         <div className="bg-gray-800 p-4 rounded-xl">
-                             <div className="text-2xl font-black text-white">{queuePos}</div>
-                             <div className="text-xs text-gray-500 uppercase font-bold">Position</div>
-                         </div>
-                         <div className="bg-gray-800 p-4 rounded-xl">
-                             <div className="text-2xl font-black text-white">~{estWait}m</div>
-                             <div className="text-xs text-gray-500 uppercase font-bold">Est. Wait</div>
-                         </div>
-                    </div>
-                    <button onClick={onEndSession} className="mt-8 text-gray-500 hover:text-white text-sm font-bold">Leave Queue</button>
+                    <p className="text-gray-400 text-sm mb-6">Position {queuePos} • Est. {estWait}m wait</p>
+                    <button onClick={onEndSession} className="text-gray-500 hover:text-white text-sm font-bold">Leave Queue</button>
                 </div>
             )}
 
             {connectionState === 'CONNECTING' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/90 backdrop-blur-md">
-                    <div className="relative mb-8">
-                        <div className="absolute inset-0 bg-yellow-500/20 blur-[60px] rounded-full animate-pulse"></div>
-                        <div className="relative z-10 p-8 rounded-full border border-yellow-500/30 bg-black/50 shadow-2xl">
-                            <Loader2 className="w-16 h-16 animate-spin text-yellow-500" />
-                        </div>
-                    </div>
+                    <Loader2 className="w-16 h-16 animate-spin text-yellow-500 mb-4" />
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">Securing Link</h3>
-                    <p className="text-gray-400 text-sm">Establishing end-to-end encryption...</p>
                 </div>
             )}
             
-            {/* Error State */}
             {connectionState === 'ERROR' && (
-                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95">
-                    <div className="bg-red-500/10 border border-red-500/30 p-8 rounded-3xl max-w-md text-center backdrop-blur-md">
-                        <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-red-500/30"><AlertCircle className="w-8 h-8 text-red-500" /></div>
-                        <h3 className="text-2xl font-bold text-white mb-2">Connection Failed</h3>
-                        <p className="text-gray-400 mb-8 text-sm">{errorMsg}</p>
-                        <button onClick={onEndSession} className="bg-white text-black px-8 py-3 rounded-full font-bold hover:scale-105 transition-transform flex items-center justify-center gap-2 mx-auto"><RefreshCcw className="w-4 h-4" /> Return to Dashboard</button>
-                    </div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95 p-4 text-center">
+                    <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
+                    <h3 className="text-2xl font-bold text-white mb-2">Connection Failed</h3>
+                    <p className="text-gray-400 mb-8 text-sm">{errorMsg}</p>
+                    <button onClick={onEndSession} className="bg-white text-black px-8 py-3 rounded-full font-bold">Return</button>
                 </div>
             )}
 
-            {/* CONNECTED: Iframe pre-fills username to skip input box */}
             {connectionState === 'CONNECTED' && conversationUrl && (
                 <iframe src={getIframeUrl()} className="absolute inset-0 w-full h-full border-0" allow="microphone; camera; autoplay; fullscreen" title="Tavus Session" />
             )}
@@ -327,20 +392,17 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 <div className="absolute inset-0 w-full h-full bg-black">
                     <img src={companion.imageUrl} className="w-full h-full object-cover object-top opacity-60 scale-105 animate-pulse-slow" alt="Background" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black/40"></div>
-                    <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex items-center gap-1 h-12 z-10">
-                        {new Array(12).fill(0).map((_, i) => ( <div key={i} className="w-1.5 bg-white/80 rounded-full animate-pulse" style={{ height: `${Math.random() * 100}%`, animationDuration: `${0.5 + Math.random()}s` }}></div> ))}
-                    </div>
                 </div>
             )}
         </div>
 
-        {/* --- USER PIP (Always Top Middle: top-4 left-1/2) --- */}
+        {/* --- USER PIP (Top Middle Fix) --- */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
                     <video ref={videoRef} autoPlay muted playsInline className={`w-full h-full object-cover transform scale-x-[-1] ${blurBackground ? 'blur-md scale-110' : ''}`} />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /></div>
                 )}
                 <div className="absolute bottom-2 right-2">
                      <div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
@@ -348,7 +410,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- VERTICAL CONTROLS (TOP LEFT) --- */}
+        {/* --- VERTICAL CONTROLS (Top Left) --- */}
         <div className="absolute top-24 left-4 z-30 pointer-events-auto">
             <div className="flex flex-col items-center gap-3 bg-black/60 backdrop-blur-md px-3 py-5 rounded-full border border-white/10 shadow-2xl hover:bg-black/80 transition-all">
                 <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}</button>
