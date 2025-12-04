@@ -1,5 +1,4 @@
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry, BreathLog } from '../types';
-import { supabase } from './supabaseClient';
 
 const DB_KEYS = {
   USER: 'peutic_db_current_user_v14',
@@ -12,6 +11,8 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals_v14',
   ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
+  QUEUE_LIST: 'peutic_db_queue_list_v15',
+  ACTIVE_SESSIONS_LIST: 'peutic_db_active_sessions_list_v15',
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
@@ -19,7 +20,6 @@ const DB_KEYS = {
   GIFTS: 'peutic_db_gifts_v14',
 };
 
-// --- ORIGINAL AVATAR POOL ---
 export const STABLE_AVATAR_POOL = [
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800",
@@ -88,7 +88,6 @@ export const INITIAL_COMPANIONS: Companion[] = [
 ];
 
 export class Database {
-  // --- ORIGINAL LOCALSTORAGE METHODS (UNCHANGED) ---
   static getAllUsers(): User[] {
     const usersStr = localStorage.getItem(DB_KEYS.ALL_USERS);
     return usersStr ? JSON.parse(usersStr) : [];
@@ -113,6 +112,26 @@ export class Database {
     return newUser;
   }
 
+  static checkAndIncrementStreak(user: User): User {
+      const today = new Date().toISOString().split('T')[0];
+      const lastLogin = user.lastLoginDate ? user.lastLoginDate.split('T')[0] : null;
+      if (lastLogin === today) return user;
+      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+      let newStreak = user.streak || 0;
+      if (lastLogin === yesterdayStr) newStreak += 1; else newStreak = 1;
+      const updatedUser = { ...user, streak: newStreak, lastLoginDate: today, lastActive: new Date().toISOString() };
+      this.updateUser(updatedUser);
+      return updatedUser;
+  }
+
+  static deleteUser(userId: string) {
+    let users = this.getAllUsers();
+    users = users.filter(u => u.id !== userId);
+    localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
+    this.clearSession();
+  }
+
   static getUser(): User | null {
     const userStr = localStorage.getItem(DB_KEYS.USER);
     return userStr ? JSON.parse(userStr) : null;
@@ -120,7 +139,6 @@ export class Database {
 
   static saveUserSession(user: User) { localStorage.setItem(DB_KEYS.USER, JSON.stringify(user)); }
   static clearSession() { localStorage.removeItem(DB_KEYS.USER); }
-  
   static updateUser(updatedUser: User) {
     const users = this.getAllUsers();
     const index = users.findIndex(u => u.id === updatedUser.id);
@@ -135,22 +153,44 @@ export class Database {
   static getUserByEmail(email: string): User | undefined { return this.getAllUsers().find(u => u.email.toLowerCase() === email.toLowerCase()); }
   static hasAdmin(): boolean { return this.getAllUsers().some(u => u.role === UserRole.ADMIN); }
 
-  static checkAndIncrementStreak(user: User): User {
-      const today = new Date().toISOString().split('T')[0];
-      const lastLogin = user.lastLoginDate ? user.lastLoginDate.split('T')[0] : null;
-      if (lastLogin === today) return user;
-      const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split('T')[0];
-      const newStreak = lastLogin === yesterdayStr ? (user.streak || 0) + 1 : 1;
-      const updated = { ...user, streak: newStreak, lastLoginDate: today, lastActive: new Date().toISOString() };
-      this.updateUser(updated); return updated;
+  static checkAdminLockout(): number | null {
+      const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
+      if (!attemptsStr) return null;
+      const data = JSON.parse(attemptsStr);
+      if (data.count >= 5) {
+          const now = Date.now();
+          const diff = now - data.lastAttempt;
+          if (diff < 24 * 60 * 60 * 1000) return Math.ceil((24 * 60 * 60 * 1000 - diff) / (60 * 1000)); 
+          else { localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS); return null; }
+      }
+      return null;
   }
 
-  static deleteUser(userId: string) {
-    let users = this.getAllUsers();
-    users = users.filter(u => u.id !== userId);
-    localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
-    this.clearSession();
+  static recordAdminFailure() {
+      const attemptsStr = localStorage.getItem(DB_KEYS.ADMIN_ATTEMPTS);
+      let data = attemptsStr ? JSON.parse(attemptsStr) : { count: 0, lastAttempt: Date.now() };
+      data.count += 1; data.lastAttempt = Date.now();
+      localStorage.setItem(DB_KEYS.ADMIN_ATTEMPTS, JSON.stringify(data));
+  }
+
+  static resetAdminFailure() { localStorage.removeItem(DB_KEYS.ADMIN_ATTEMPTS); }
+
+  static getCompanions(): Companion[] {
+    const saved = localStorage.getItem(DB_KEYS.COMPANIONS);
+    if (!saved) { localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(INITIAL_COMPANIONS)); return INITIAL_COMPANIONS; }
+    return JSON.parse(saved);
+  }
+
+  static updateCompanion(updated: Companion) {
+      const list = this.getCompanions();
+      const idx = list.findIndex(c => c.id === updated.id);
+      if (idx !== -1) { list[idx] = updated; localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(list)); }
+  }
+
+  static setAllCompanionsStatus(status: 'AVAILABLE' | 'BUSY' | 'OFFLINE') {
+      const list = this.getCompanions();
+      const updatedList = list.map(c => ({ ...c, status }));
+      localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
   }
 
   static topUpWallet(minutes: number, cost: number, targetUserId?: string) {
@@ -180,127 +220,112 @@ export class Database {
 
   static getSettings(): GlobalSettings {
     const saved = localStorage.getItem(DB_KEYS.SETTINGS);
-    return saved ? JSON.parse(saved) : { pricePerMinute: 1.49, saleMode: true, maintenanceMode: false, allowSignups: true, siteName: 'Peutic', maxConcurrentSessions: 15, multilingualMode: true };
+    const defaultSettings = {
+      pricePerMinute: 1.49, saleMode: true, maintenanceMode: false, allowSignups: true, siteName: 'Peutic',
+      maxConcurrentSessions: 15, multilingualMode: true
+    };
+    if (!saved) return defaultSettings;
+    const parsed = JSON.parse(saved);
+    if (parsed.maxConcurrentSessions !== 15) { parsed.maxConcurrentSessions = 15; localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(parsed)); }
+    return parsed;
   }
 
   static saveSettings(s: GlobalSettings) { localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(s)); }
-  
-  static getCompanions(): Companion[] {
-    const saved = localStorage.getItem(DB_KEYS.COMPANIONS);
-    if (!saved) { localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(INITIAL_COMPANIONS)); return INITIAL_COMPANIONS; }
-    return JSON.parse(saved);
-  }
-
-  static updateCompanion(updated: Companion) {
-      const list = this.getCompanions();
-      const idx = list.findIndex(c => c.id === updated.id);
-      if (idx !== -1) { list[idx] = updated; localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(list)); }
-  }
-
-  static setAllCompanionsStatus(status: 'AVAILABLE' | 'BUSY' | 'OFFLINE') {
-      const list = this.getCompanions();
-      const updatedList = list.map(c => ({ ...c, status }));
-      localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
-  }
-
-  // --- ADMIN & LOGS ---
-  static checkAdminLockout(): number | null { return null; }
-  static recordAdminFailure() {}
-  static resetAdminFailure() {}
   static getSystemLogs(): SystemLog[] { return JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || '[]'); }
-  static logSystemEvent(type: string, event: string, details: string) {
+  static logSystemEvent(type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' | 'SECURITY', event: string, details: string) {
       const logs = this.getSystemLogs();
-      logs.unshift({ id: `log_${Date.now()}`, timestamp: new Date().toISOString(), type: type as any, event, details });
-      if (logs.length > 200) logs.pop();
-      localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
+      const newLog: SystemLog = { id: `log_${Date.now()}_${Math.random()}`, timestamp: new Date().toISOString(), type, event, details };
+      logs.unshift(newLog); if (logs.length > 200) logs.pop(); localStorage.setItem(DB_KEYS.LOGS, JSON.stringify(logs));
   }
+
   static getServerMetrics(): ServerMetric[] {
+      const now = new Date();
+      const active = this.getActiveSessionCount();
       return Array.from({length: 10}, (_, i) => ({
-          time: new Date(Date.now() - i * 5000).toLocaleTimeString(),
-          cpu: 20 + Math.random() * 30, memory: 30 + Math.random() * 20, latency: 15 + Math.random() * 40, activeSessions: 0
+          time: new Date(now.getTime() - i * 5000).toLocaleTimeString(),
+          cpu: 20 + Math.random() * 30 + (active * 2),
+          memory: 30 + Math.random() * 20,
+          latency: 15 + Math.random() * 40,
+          activeSessions: active
       })).reverse();
   }
-
+  
   // ==========================================
-  // === FIXED SUPABASE QUEUE SYSTEM ===
+  // === QUEUE SYSTEM (REPAIRED) ===
   // ==========================================
+  
+  static getActiveSessionsList(): string[] {
+      return JSON.parse(localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS_LIST) || '[]');
+  }
 
-  static async getActiveSessionCount(): Promise<number> {
-      const { count, error } = await supabase
-          .from('active_sessions')
-          .select('*', { count: 'exact', head: true });
-      
-      if (error) {
-          console.error("Supabase Error (Active Sessions):", error);
-          return 0; 
+  static getQueueList(): string[] {
+      return JSON.parse(localStorage.getItem(DB_KEYS.QUEUE_LIST) || '[]');
+  }
+
+  static getActiveSessionCount(): number {
+      return this.getActiveSessionsList().length;
+  }
+
+  // --- REPAIRED JOIN QUEUE ---
+  // Returns the queue position (1-based).
+  static joinQueue(userId: string): number {
+      let queue = this.getQueueList();
+      const active = this.getActiveSessionsList();
+
+      // If user is already active, they are not "waiting", return 0 to indicate they can enter
+      if (active.includes(userId)) return 0;
+
+      // Add to queue if not present
+      if (!queue.includes(userId)) {
+          queue.push(userId);
+          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
       }
-      return count || 0;
+
+      return queue.indexOf(userId) + 1;
   }
 
-  static async joinQueue(userId: string): Promise<number> {
-      // Check if already active
-      const { data: active, error: activeError } = await supabase
-          .from('active_sessions')
-          .select('user_id')
-          .eq('user_id', userId)
-          .maybeSingle(); // FIXED: Changed from .single() to .maybeSingle() to prevent crash
-      
-      if (activeError) console.error("Active Check Error:", activeError);
-      if (active) return 0; 
-
-      // Join Queue
-      const { error: upsertError } = await supabase
-          .from('queue')
-          .upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
-      
-      if (upsertError) console.error("Queue Join Error:", upsertError);
-
-      return this.getQueuePosition(userId);
+  // --- MOVE TO ACTIVE ---
+  static enterActiveSession(userId: string) {
+      let active = this.getActiveSessionsList();
+      if (!active.includes(userId)) {
+          active.push(userId);
+          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
+      }
   }
 
-  static async getQueuePosition(userId: string): Promise<number> {
-      const { data: userEntry, error: entryError } = await supabase
-          .from('queue')
-          .select('created_at')
-          .eq('user_id', userId)
-          .maybeSingle(); // FIXED: Changed from .single() to prevent crash
-
-      if (entryError) console.error("Pos Check Error:", entryError);
-      if (!userEntry) return 0; 
-
-      const { count, error: countError } = await supabase
-          .from('queue')
-          .select('*', { count: 'exact', head: true })
-          .lt('created_at', userEntry.created_at);
-
-      if (countError) console.error("Count Error:", countError);
-      return (count || 0) + 1;
+  // --- REMOVE FROM QUEUE ---
+  static leaveQueue(userId: string) {
+      let queue = this.getQueueList();
+      if (queue.includes(userId)) {
+          queue = queue.filter(id => id !== userId);
+          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
+      }
   }
 
-  static async enterActiveSession(userId: string): Promise<void> {
-      await supabase.from('active_sessions').upsert({ user_id: userId });
-      await this.leaveQueue(userId);
+  // --- CLEANUP ---
+  static endSession(userId: string) {
+      let active = this.getActiveSessionsList();
+      if (active.includes(userId)) {
+          active = active.filter(id => id !== userId);
+          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
+      }
+      this.leaveQueue(userId);
   }
 
-  static async leaveQueue(userId: string): Promise<void> {
-      await supabase.from('queue').delete().eq('user_id', userId);
-  }
-
-  static async endSession(userId: string): Promise<void> {
-      await supabase.from('active_sessions').delete().eq('user_id', userId);
-      await supabase.from('queue').delete().eq('user_id', userId);
+  static getQueuePosition(userId: string): number {
+      const q = this.getQueueList();
+      return q.indexOf(userId) + 1; 
   }
 
   static getEstimatedWaitTime(position: number): number {
-      return Math.max(0, (position - 1) * 3); 
+      return Math.max(0, (position - 1) * 3); // Approx 3 mins per person ahead
   }
 
-  // --- EXTRAS (Journal, Mood, Art) ---
   static saveJournal(entry: JournalEntry) { const j = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]'); j.push(entry); localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(j)); }
   static getJournals(userId: string): JournalEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]').filter((j: JournalEntry) => j.userId === userId).reverse(); }
-  static saveMood(userId: string, mood: any) { const m = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]'); m.push({ id: `m_${Date.now()}`, userId, date: new Date().toISOString(), mood }); localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(m)); }
+  static saveMood(userId: string, mood: 'confetti' | 'rain' | null) { if (!mood) return; const m = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]'); m.push({ id: `mood_${Date.now()}`, userId, date: new Date().toISOString(), mood }); localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(m)); }
   static getMoods(userId: string): MoodEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]').filter((m: MoodEntry) => m.userId === userId).reverse(); }
-  static recordBreathSession(userId: string, s: number) { const l = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]'); l.push({ id: `b_${Date.now()}`, userId, date: new Date().toISOString(), durationSeconds: s }); localStorage.setItem(DB_KEYS.BREATHE_LOGS, JSON.stringify(l)); }
+  static recordBreathSession(userId: string, durationSeconds: number) { const l = JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]'); l.push({ id: `breath_${Date.now()}`, userId, date: new Date().toISOString(), durationSeconds }); localStorage.setItem(DB_KEYS.BREATHE_LOGS, JSON.stringify(l)); }
   static getBreathLogs(userId: string): BreathLog[] { return JSON.parse(localStorage.getItem(DB_KEYS.BREATHE_LOGS) || '[]').filter((l: BreathLog) => l.userId === userId); }
   
   static saveArt(entry: ArtEntry) {
@@ -314,20 +339,23 @@ export class Database {
       }
   }
   static getUserArt(userId: string): ArtEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]').filter((a: ArtEntry) => a.userId === userId).reverse(); }
-  static deleteArt(id: string) { let a = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]'); a = a.filter((i: ArtEntry) => i.id !== id); localStorage.setItem(DB_KEYS.ART, JSON.stringify(a)); }
-  static getBreathingCooldown(): number | null { return null; }
-  static setBreathingCooldown(t: number) {}
+  static deleteArt(artId: string) { let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]'); art = art.filter((a: ArtEntry) => a.id !== artId); localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); }
+  static getBreathingCooldown(): number | null { const cd = localStorage.getItem(DB_KEYS.BREATHE_COOLDOWN); return cd ? parseInt(cd, 10) : null; }
+  static setBreathingCooldown(timestamp: number) { localStorage.setItem(DB_KEYS.BREATHE_COOLDOWN, timestamp.toString()); }
 
   static getWeeklyProgress(userId: string): { current: number; target: number; message: string } {
-      const now = new Date();
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const now = new Date(); const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const tx = this.getUserTransactions(userId).filter(t => new Date(t.date) > oneWeekAgo && t.amount < 0);
       const j = this.getJournals(userId).filter(j => new Date(j.date) > oneWeekAgo);
       const a = this.getUserArt(userId).filter(a => new Date(a.createdAt) > oneWeekAgo);
       const m = this.getMoods(userId).filter(m => new Date(m.date) > oneWeekAgo);
       const b = this.getBreathLogs(userId).filter(b => new Date(b.date) > oneWeekAgo);
       const score = (tx.length * 3) + (j.length * 1) + (a.length * 1) + (b.length * 1) + (m.length * 0.5);
-      return { current: score, target: 10, message: score >= 10 ? "Goal Crushed!" : "Start your journey." };
+      const target = 10;
+      let message = "Start your journey.";
+      const pct = score / target;
+      if (pct > 0 && pct < 0.3) message = "Great start!"; else if (pct >= 0.3 && pct < 0.6) message = "Building momentum!"; else if (pct >= 0.6 && pct < 1) message = "Almost there!"; else if (pct >= 1) message = "Goal Crushed! 🌟";
+      return { current: score, target, message };
   }
 
   static getPromoCodes(): PromoCode[] { return JSON.parse(localStorage.getItem(DB_KEYS.PROMOS) || '[]'); }
