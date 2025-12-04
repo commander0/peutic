@@ -16,7 +16,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
-        darkMode: 'class', // ENABLED MANUAL DARK MODE
+        darkMode: 'class', // REQUIRED FOR MANUAL TOGGLE
         theme: {
           extend: {
             fontFamily: {
@@ -79,7 +79,7 @@
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
       }
-      /* Dark mode body override via JS class is handled, but default style here */
+      /* Dark Mode Override */
       .dark body {
         background-color: #0A0A0A;
         color: #F3F4F6;
@@ -114,6 +114,21 @@
       .grab-cursor { cursor: grab; }
       .grabbing-cursor { cursor: grabbing; user-select: none; }
     </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.554.0",
+    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
+    "react-router-dom": "https://aistudiocdn.com/react-router-dom@^7.9.6",
+    "recharts": "https://aistudiocdn.com/recharts@^3.5.0"
+  }
+}
+</script>
 </head>
   <body>
     <div id="root"></div>
