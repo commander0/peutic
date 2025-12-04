@@ -73,16 +73,18 @@ export const createTavusConversation = async (replicaId: string, userName: strin
   }
 };
 
-// NEW: Explicit Session Termination to Stop Billing
+// OPTIMIZED: Explicit Session Termination with keepalive
 export const endTavusConversation = async (conversationId: string): Promise<void> => {
   if (!conversationId || !API_KEY) return;
 
   try {
+    // 'keepalive: true' ensures the request completes even if the page unloads
     await fetch(`${TAVUS_API_URL}/conversations/${conversationId}/end`, {
       method: 'POST',
       headers: {
         'x-api-key': API_KEY,
       },
+      keepalive: true 
     });
     console.log(`Session ${conversationId} terminated successfully.`);
   } catch (error) {
