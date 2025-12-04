@@ -21,7 +21,7 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
 
-    // 1. Gradient Background (Calming Yellow/Orange or Dark Mode)
+    // 1. Gradient Background
     const grd = ctx.createLinearGradient(0, 0, 1080, 1350);
     grd.addColorStop(0, '#FFFBEB'); // Light Yellow
     grd.addColorStop(1, '#FEF3C7'); // Amber 100
@@ -123,31 +123,33 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- Session Initialization ---
   useEffect(() => {
-    // 1. Join Queue
-    const initQueue = () => {
-        const settings = Database.getSettings();
-        const active = Database.getActiveSessionCount();
-        const limit = settings.maxConcurrentSessions;
-
-        const pos = Database.joinQueue(userId);
-        setQueuePos(pos);
-        setEstWait(Database.getEstimatedWaitTime(pos));
-
-        if (pos === 1 && active < limit) {
-             startTavusConnection();
-        }
-    };
-
-    const queueInterval = setInterval(() => {
-        if (connectionState === 'QUEUED') {
-            const pos = Database.getQueuePosition(userId);
-            const settings = Database.getSettings();
-            const active = Database.getActiveSessionCount();
-            
+    // 1. Join Queue (Async Supabase)
+    const initQueue = async () => {
+        try {
+            // Join Queue
+            const pos = await Database.joinQueue(userId);
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
-            if (pos === 1 && active < settings.maxConcurrentSessions) {
+            // Instant Entry for #1 (Fix for "Stuck in Queue")
+            if (pos === 1) {
+                 startTavusConnection();
+            }
+        } catch (error) {
+            console.error("Queue Error:", error);
+            setErrorMsg("Failed to join queue. Please retry.");
+            setConnectionState('ERROR');
+        }
+    };
+
+    // Polling Interval
+    const queueInterval = setInterval(async () => {
+        if (connectionState === 'QUEUED') {
+            const pos = await Database.getQueuePosition(userId);
+            setQueuePos(pos);
+            setEstWait(Database.getEstimatedWaitTime(pos));
+
+            if (pos === 1) {
                 clearInterval(queueInterval);
                 startTavusConnection();
             }
@@ -156,9 +158,10 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
-    const cleanup = () => {
+    // CLEANUP: Kill session on unmount or refresh (API Usage Fix)
+    const cleanup = async () => {
         clearInterval(queueInterval);
-        Database.endSession(userId);
+        await Database.endSession(userId);
         if (conversationIdRef.current) {
             endTavusConversation(conversationIdRef.current);
         }
@@ -176,8 +179,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
-      Database.enterActiveSession(userId);
-      Database.leaveQueue(userId);
+      // Move to active list (Async)
+      await Database.enterActiveSession(userId);
 
       try {
           const user = Database.getUser();
@@ -217,6 +220,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       }
   };
 
+  // --- Webcam Logic ---
   useEffect(() => {
     let stream: MediaStream | null = null;
     const startVideo = async () => {
@@ -232,6 +236,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
     return () => { if (stream) stream.getTracks().forEach(track => track.stop()); };
   }, [camOn, showSummary]);
 
+  // --- Timers & Credit Enforcement ---
   useEffect(() => {
     if (showSummary) return;
     if (connectionState !== 'CONNECTED' && connectionState !== 'DEMO_MODE') return;
@@ -287,6 +292,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
+  // --- HELPER: Pre-fill Name (Name Box Fix) ---
   const getIframeUrl = () => {
       if (!conversationUrl) return '';
       try {
@@ -298,6 +304,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       }
   };
 
+  // --- RENDER ---
   if (showSummary) {
       return (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center text-white p-4 backdrop-blur-sm overflow-y-auto">
@@ -338,7 +345,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         
         {/* --- HEADER --- */}
         <div className="absolute top-0 left-0 right-0 p-4 md:p-6 flex justify-between items-start z-20 pointer-events-none bg-gradient-to-b from-black/80 via-black/20 to-transparent pb-20 transition-opacity duration-500">
-            <div className="flex items-center gap-4 pointer-events-auto pl-16"> {/* Added Padding-Left to clear vertical bar */}
+            {/* Added Padding-Left to clear vertical bar */}
+            <div className="flex items-center gap-4 pointer-events-auto pl-16"> 
                 <div className={`bg-black/40 backdrop-blur-xl px-4 py-2 rounded-full border ${lowBalanceWarning ? 'border-red-500 animate-pulse' : 'border-white/10'} text-white font-mono shadow-xl flex items-center gap-3 transition-colors duration-500`}>
                     <div className={`w-2 h-2 rounded-full ${connectionState === 'CONNECTED' ? 'bg-red-500 animate-pulse' : 'bg-yellow-500'}`}></div>
                     <span className={`font-variant-numeric tabular-nums tracking-wide font-bold ${lowBalanceWarning ? 'text-red-400' : 'text-white'}`}>
@@ -357,6 +365,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
         {/* --- MAIN CONTENT --- */}
         <div className="absolute inset-0 w-full h-full bg-gray-900 flex items-center justify-center">
+            {/* QUEUE */}
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95 text-center p-4">
                     <div className="relative mb-8">
@@ -396,7 +405,8 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             )}
         </div>
 
-        {/* --- USER PIP (Top Middle Fix) --- */}
+        {/* --- USER PIP (Top Middle Fix: top-4 left-1/2 -translate-x-1/2) --- */}
+        {/* Same layout for Mobile and Desktop to ensure visibility */}
         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-30 w-20 md:w-40 aspect-[9/16] rounded-2xl overflow-hidden border border-white/20 shadow-2xl bg-black transition-all duration-500">
             <div className="absolute inset-0 bg-black">
                 {camOn ? (
@@ -410,7 +420,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             </div>
         </div>
 
-        {/* --- VERTICAL CONTROLS (Top Left) --- */}
+        {/* --- VERTICAL CONTROLS (Top Left: top-24 left-4) --- */}
         <div className="absolute top-24 left-4 z-30 pointer-events-auto">
             <div className="flex flex-col items-center gap-3 bg-black/60 backdrop-blur-md px-3 py-5 rounded-full border border-white/10 shadow-2xl hover:bg-black/80 transition-all">
                 <button onClick={() => setMicOn(!micOn)} className={`p-3 rounded-full transition-all ${micOn ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}>{micOn ? <Mic className="w-5 h-5" /> : <MicOff className="w-5 h-5" />}</button>
