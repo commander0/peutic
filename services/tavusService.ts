@@ -73,7 +73,7 @@ export const createTavusConversation = async (replicaId: string, userName: strin
   }
 };
 
-// OPTIMIZED: Explicit Session Termination with keepalive
+// OPTIMIZED: Explicit Session Termination with keepalive to prevent ghost sessions
 export const endTavusConversation = async (conversationId: string): Promise<void> => {
   if (!conversationId || !API_KEY) return;
 
