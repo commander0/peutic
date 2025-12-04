@@ -1,5 +1,4 @@
 import { User, UserRole, Transaction, Companion, GlobalSettings, SystemLog, ServerMetric, MoodEntry, JournalEntry, PromoCode, SessionMemory, GiftCard, ArtEntry, BreathLog } from '../types';
-import { supabase } from './supabaseClient';
 
 const DB_KEYS = {
   USER: 'peutic_db_current_user_v14',
@@ -12,7 +11,8 @@ const DB_KEYS = {
   JOURNALS: 'peutic_db_journals_v14',
   ART: 'peutic_db_art_v14',
   PROMOS: 'peutic_db_promos_v14',
-  // Local keys for offline/personal data (Queue moved to Supabase)
+  QUEUE_LIST: 'peutic_db_queue_list_v15',
+  ACTIVE_SESSIONS_LIST: 'peutic_db_active_sessions_list_v15',
   ADMIN_ATTEMPTS: 'peutic_db_admin_attempts_v14',
   BREATHE_COOLDOWN: 'peutic_db_breathe_cooldown_v14',
   BREATHE_LOGS: 'peutic_db_breathe_logs_v14',
@@ -20,7 +20,6 @@ const DB_KEYS = {
   GIFTS: 'peutic_db_gifts_v14',
 };
 
-// --- ORIGINAL AVATAR POOL (Do Not Remove) ---
 export const STABLE_AVATAR_POOL = [
     "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=800",
@@ -38,6 +37,7 @@ export const STABLE_AVATAR_POOL = [
     "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=800", 
     "https://images.unsplash.com/photo-1522529599102-193c0d76b5b6?auto=format&fit=crop&q=80&w=800",
+    "https://images.unsplash.com/photo-1552374196-c4e7ffc6e126?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1500048993953-d23a436266cf?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1554151228-14d9def656ec?auto=format&fit=crop&q=80&w=800",
     "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?auto=format&fit=crop&q=80&w=800",
@@ -88,7 +88,6 @@ export const INITIAL_COMPANIONS: Companion[] = [
 ];
 
 export class Database {
-  // --- ORIGINAL SYNC METHODS (Local Storage) ---
   static getAllUsers(): User[] {
     const usersStr = localStorage.getItem(DB_KEYS.ALL_USERS);
     return usersStr ? JSON.parse(usersStr) : [];
@@ -131,7 +130,6 @@ export class Database {
     users = users.filter(u => u.id !== userId);
     localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
     this.clearSession();
-    this.logSystemEvent('WARNING', 'Account Deleted', `User ${userId} deleted account.`);
   }
 
   static getUser(): User | null {
@@ -144,7 +142,10 @@ export class Database {
   static updateUser(updatedUser: User) {
     const users = this.getAllUsers();
     const index = users.findIndex(u => u.id === updatedUser.id);
-    if (index !== -1) { users[index] = updatedUser; localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users)); }
+    if (index !== -1) {
+      users[index] = updatedUser;
+      localStorage.setItem(DB_KEYS.ALL_USERS, JSON.stringify(users));
+    }
     const currentUser = this.getUser();
     if (currentUser && currentUser.id === updatedUser.id) this.saveUserSession(updatedUser);
   }
@@ -190,12 +191,10 @@ export class Database {
       const list = this.getCompanions();
       const updatedList = list.map(c => ({ ...c, status }));
       localStorage.setItem(DB_KEYS.COMPANIONS, JSON.stringify(updatedList));
-      this.logSystemEvent('INFO', 'Mass Status Update', `All specialists set to ${status}`);
   }
 
   static topUpWallet(minutes: number, cost: number, targetUserId?: string) {
-    let user = null;
-    if (targetUserId) { user = this.getAllUsers().find(u => u.id === targetUserId) || null; } else { user = this.getUser(); }
+    let user = targetUserId ? this.getAllUsers().find(u => u.id === targetUserId) || null : this.getUser();
     if (user) {
       user.balance += minutes;
       this.updateUser(user);
@@ -203,7 +202,6 @@ export class Database {
         id: `tx_${Date.now()}`, userId: user.id, userName: user.name,
         date: new Date().toISOString(), amount: minutes, cost: cost, description: 'Wallet Top-up', status: 'COMPLETED'
       });
-      this.logSystemEvent('SUCCESS', 'Payment Received', `User ${user.email} added $${cost}`);
     }
   }
 
@@ -222,14 +220,17 @@ export class Database {
 
   static getSettings(): GlobalSettings {
     const saved = localStorage.getItem(DB_KEYS.SETTINGS);
-    return saved ? JSON.parse(saved) : { pricePerMinute: 1.49, saleMode: true, maintenanceMode: false, allowSignups: true, siteName: 'Peutic', maxConcurrentSessions: 15, multilingualMode: true };
+    const defaultSettings = {
+      pricePerMinute: 1.49, saleMode: true, maintenanceMode: false, allowSignups: true, siteName: 'Peutic',
+      maxConcurrentSessions: 15, multilingualMode: true
+    };
+    if (!saved) return defaultSettings;
+    const parsed = JSON.parse(saved);
+    if (parsed.maxConcurrentSessions !== 15) { parsed.maxConcurrentSessions = 15; localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(parsed)); }
+    return parsed;
   }
 
-  static saveSettings(s: GlobalSettings) {
-    localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(s));
-    this.logSystemEvent('WARNING', 'Settings Changed', 'Global configuration updated by admin');
-  }
-
+  static saveSettings(s: GlobalSettings) { localStorage.setItem(DB_KEYS.SETTINGS, JSON.stringify(s)); }
   static getSystemLogs(): SystemLog[] { return JSON.parse(localStorage.getItem(DB_KEYS.LOGS) || '[]'); }
   static logSystemEvent(type: 'INFO' | 'WARNING' | 'ERROR' | 'SUCCESS' | 'SECURITY', event: string, details: string) {
       const logs = this.getSystemLogs();
@@ -239,7 +240,7 @@ export class Database {
 
   static getServerMetrics(): ServerMetric[] {
       const now = new Date();
-      const active = 0; 
+      const active = this.getActiveSessionCount();
       return Array.from({length: 10}, (_, i) => ({
           time: new Date(now.getTime() - i * 5000).toLocaleTimeString(),
           cpu: 20 + Math.random() * 30 + (active * 2),
@@ -250,48 +251,76 @@ export class Database {
   }
   
   // ==========================================
-  // === ASYNC SUPABASE QUEUE SYSTEM ===
+  // === QUEUE SYSTEM (REPAIRED) ===
   // ==========================================
-
-  static async getActiveSessionCount(): Promise<number> {
-      const { count, error } = await supabase.from('active_sessions').select('*', { count: 'exact', head: true });
-      if (error) { console.error("Error fetching active sessions:", error); return 0; }
-      return count || 0;
+  
+  static getActiveSessionsList(): string[] {
+      return JSON.parse(localStorage.getItem(DB_KEYS.ACTIVE_SESSIONS_LIST) || '[]');
   }
 
-  static async joinQueue(userId: string): Promise<number> {
-      const { data: active } = await supabase.from('active_sessions').select('user_id').eq('user_id', userId).single();
-      if (active) return 0; 
-      await supabase.from('queue').upsert({ user_id: userId }, { onConflict: 'user_id', ignoreDuplicates: true });
-      return this.getQueuePosition(userId);
+  static getQueueList(): string[] {
+      return JSON.parse(localStorage.getItem(DB_KEYS.QUEUE_LIST) || '[]');
   }
 
-  static async getQueuePosition(userId: string): Promise<number> {
-      const { data: userEntry } = await supabase.from('queue').select('created_at').eq('user_id', userId).single();
-      if (!userEntry) return 0; 
-      const { count } = await supabase.from('queue').select('*', { count: 'exact', head: true }).lt('created_at', userEntry.created_at);
-      return (count || 0) + 1;
+  static getActiveSessionCount(): number {
+      return this.getActiveSessionsList().length;
   }
 
-  static async enterActiveSession(userId: string): Promise<void> {
-      await supabase.from('active_sessions').upsert({ user_id: userId });
-      await this.leaveQueue(userId);
+  // --- REPAIRED JOIN QUEUE ---
+  // Returns the queue position (1-based).
+  static joinQueue(userId: string): number {
+      let queue = this.getQueueList();
+      const active = this.getActiveSessionsList();
+
+      // If user is already active, they are not "waiting", return 0 to indicate they can enter
+      if (active.includes(userId)) return 0;
+
+      // Add to queue if not present
+      if (!queue.includes(userId)) {
+          queue.push(userId);
+          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
+      }
+
+      return queue.indexOf(userId) + 1;
   }
 
-  static async leaveQueue(userId: string): Promise<void> {
-      await supabase.from('queue').delete().eq('user_id', userId);
+  // --- MOVE TO ACTIVE ---
+  static enterActiveSession(userId: string) {
+      let active = this.getActiveSessionsList();
+      if (!active.includes(userId)) {
+          active.push(userId);
+          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
+      }
   }
 
-  static async endSession(userId: string): Promise<void> {
-      await supabase.from('active_sessions').delete().eq('user_id', userId);
-      await supabase.from('queue').delete().eq('user_id', userId);
+  // --- REMOVE FROM QUEUE ---
+  static leaveQueue(userId: string) {
+      let queue = this.getQueueList();
+      if (queue.includes(userId)) {
+          queue = queue.filter(id => id !== userId);
+          localStorage.setItem(DB_KEYS.QUEUE_LIST, JSON.stringify(queue));
+      }
+  }
+
+  // --- CLEANUP ---
+  static endSession(userId: string) {
+      let active = this.getActiveSessionsList();
+      if (active.includes(userId)) {
+          active = active.filter(id => id !== userId);
+          localStorage.setItem(DB_KEYS.ACTIVE_SESSIONS_LIST, JSON.stringify(active));
+      }
+      this.leaveQueue(userId);
+  }
+
+  static getQueuePosition(userId: string): number {
+      const q = this.getQueueList();
+      return q.indexOf(userId) + 1; 
   }
 
   static getEstimatedWaitTime(position: number): number {
-      return Math.max(0, (position - 1) * 3); 
+      return Math.max(0, (position - 1) * 3); // Approx 3 mins per person ahead
   }
 
-  // --- JOURNAL & EXTRAS ---
   static saveJournal(entry: JournalEntry) { const j = JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]'); j.push(entry); localStorage.setItem(DB_KEYS.JOURNALS, JSON.stringify(j)); }
   static getJournals(userId: string): JournalEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.JOURNALS) || '[]').filter((j: JournalEntry) => j.userId === userId).reverse(); }
   static saveMood(userId: string, mood: 'confetti' | 'rain' | null) { if (!mood) return; const m = JSON.parse(localStorage.getItem(DB_KEYS.MOODS) || '[]'); m.push({ id: `mood_${Date.now()}`, userId, date: new Date().toISOString(), mood }); localStorage.setItem(DB_KEYS.MOODS, JSON.stringify(m)); }
@@ -304,27 +333,29 @@ export class Database {
       art.push(entry);
       try { localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); } 
       catch (e: any) {
-          if (e.name === 'QuotaExceededError' || e.code === 22 || e.code === 1014) {
+          if (e.name === 'QuotaExceededError' || e.code === 22) {
               while (art.length > 1) { art.shift(); try { localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); break; } catch (r) {} }
-          } else { throw e; }
+          }
       }
   }
-
   static getUserArt(userId: string): ArtEntry[] { return JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]').filter((a: ArtEntry) => a.userId === userId).reverse(); }
   static deleteArt(artId: string) { let art = JSON.parse(localStorage.getItem(DB_KEYS.ART) || '[]'); art = art.filter((a: ArtEntry) => a.id !== artId); localStorage.setItem(DB_KEYS.ART, JSON.stringify(art)); }
   static getBreathingCooldown(): number | null { const cd = localStorage.getItem(DB_KEYS.BREATHE_COOLDOWN); return cd ? parseInt(cd, 10) : null; }
   static setBreathingCooldown(timestamp: number) { localStorage.setItem(DB_KEYS.BREATHE_COOLDOWN, timestamp.toString()); }
 
   static getWeeklyProgress(userId: string): { current: number; target: number; message: string } {
-      const now = new Date();
-      const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const transactions = this.getUserTransactions(userId).filter(t => new Date(t.date) > oneWeekAgo && t.amount < 0);
-      const journals = this.getJournals(userId).filter(j => new Date(j.date) > oneWeekAgo);
-      const art = this.getUserArt(userId).filter(a => new Date(a.createdAt) > oneWeekAgo);
-      const moods = this.getMoods(userId).filter(m => new Date(m.date) > oneWeekAgo);
-      const breath = this.getBreathLogs(userId).filter(b => new Date(b.date) > oneWeekAgo);
-      const score = (transactions.length * 3) + (journals.length * 1) + (art.length * 1) + (breath.length * 1) + (moods.length * 0.5);
-      return { current: score, target: 10, message: score >= 10 ? "Goal Crushed! 🌟" : "Start your journey." };
+      const now = new Date(); const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const tx = this.getUserTransactions(userId).filter(t => new Date(t.date) > oneWeekAgo && t.amount < 0);
+      const j = this.getJournals(userId).filter(j => new Date(j.date) > oneWeekAgo);
+      const a = this.getUserArt(userId).filter(a => new Date(a.createdAt) > oneWeekAgo);
+      const m = this.getMoods(userId).filter(m => new Date(m.date) > oneWeekAgo);
+      const b = this.getBreathLogs(userId).filter(b => new Date(b.date) > oneWeekAgo);
+      const score = (tx.length * 3) + (j.length * 1) + (a.length * 1) + (b.length * 1) + (m.length * 0.5);
+      const target = 10;
+      let message = "Start your journey.";
+      const pct = score / target;
+      if (pct > 0 && pct < 0.3) message = "Great start!"; else if (pct >= 0.3 && pct < 0.6) message = "Building momentum!"; else if (pct >= 0.6 && pct < 1) message = "Almost there!"; else if (pct >= 1) message = "Goal Crushed! 🌟";
+      return { current: score, target, message };
   }
 
   static getPromoCodes(): PromoCode[] { return JSON.parse(localStorage.getItem(DB_KEYS.PROMOS) || '[]'); }
@@ -337,4 +368,4 @@ export class Database {
       const a = document.createElement('a'); a.href = url; a.download = `peutic_${type.toLowerCase()}_${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
   }
-  }
+}
