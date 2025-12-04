@@ -19,95 +19,26 @@ const renderSessionArtifact = (companionName: string, durationStr: string, dateS
     canvas.width = 1080; canvas.height = 1350;
     const ctx = canvas.getContext('2d');
     if (!ctx) return '';
-    
-    // 1. Gradient Background
     const grd = ctx.createLinearGradient(0, 0, 1080, 1350);
-    grd.addColorStop(0, '#FFFBEB'); // Light Yellow
-    grd.addColorStop(1, '#FEF3C7'); // Amber 100
-    ctx.fillStyle = grd; 
-    ctx.fillRect(0, 0, 1080, 1350);
-
-    // 2. Abstract Circle Art (Background)
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.1)'; 
-    ctx.beginPath(); ctx.arc(540, 675, 450, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = 'rgba(250, 204, 21, 0.15)'; 
-    ctx.beginPath(); ctx.arc(540, 675, 350, 0, Math.PI * 2); ctx.fill();
-
-    // 3. Text Configuration
-    ctx.textAlign = 'center';
-    
-    // Header (Moved Up)
-    ctx.fillStyle = '#111827'; // Gray-900
-    ctx.font = 'bold 40px Manrope, sans-serif'; 
-    ctx.fillText('PEUTIC SESSION SUMMARY', 540, 120);
-
-    // Main Quote (Moved Up to avoid overlap)
-    const quotes = [
-        "Clarity comes in moments of calm.",
-        "You are stronger than you know.",
-        "Peace begins with a single breath.",
-        "Growth happens in the quiet moments."
-    ];
+    grd.addColorStop(0, '#FFFBEB'); grd.addColorStop(1, '#FEF3C7');
+    ctx.fillStyle = grd; ctx.fillRect(0, 0, 1080, 1350);
+    ctx.fillStyle = 'rgba(250, 204, 21, 0.1)'; ctx.beginPath(); ctx.arc(540, 675, 400, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#111827'; ctx.textAlign = 'center';
+    ctx.font = 'bold 40px Manrope, sans-serif'; ctx.fillText('PEUTIC SESSION SUMMARY', 540, 150);
+    const quotes = ["Clarity comes in moments of calm.", "You are stronger than you know.", "Peace begins with a single breath."];
     const quote = quotes[Math.floor(Math.random() * quotes.length)];
-    
-    ctx.font = 'italic 500 48px Manrope, sans-serif'; 
-    ctx.fillStyle = '#4B5563'; // Gray-600
-    // Wrap text function for long quotes if needed, but these are short enough
-    ctx.fillText(`"${quote}"`, 540, 300); 
-
-    // Stats Box (Moved Down and centered better)
-    ctx.fillStyle = '#FFFFFF';
-    ctx.shadowColor = "rgba(0,0,0,0.1)";
-    ctx.shadowBlur = 30;
-    // x, y, w, h, radius
-    ctx.roundRect(140, 450, 800, 550, 50); 
-    ctx.fill();
-    ctx.shadowBlur = 0;
-
-    // Inside Box Content
-    // Duration (Hero Number)
-    ctx.fillStyle = '#000000';
-    ctx.font = 'bold 100px Manrope, sans-serif'; 
-    ctx.fillText(durationStr, 540, 620);
-    
-    // Label
-    ctx.font = 'bold 28px Manrope, sans-serif'; 
-    ctx.fillStyle = '#9CA3AF'; // Gray-400
-    ctx.fillText('MINUTES OF CLARITY', 540, 680);
-
-    // Divider Line
-    ctx.strokeStyle = '#F3F4F6';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(290, 740);
-    ctx.lineTo(790, 740);
-    ctx.stroke();
-
-    // Companion Name
-    ctx.font = 'bold 36px Manrope, sans-serif'; 
-    ctx.fillStyle = '#4B5563'; 
-    ctx.fillText('Session with', 540, 820);
-    
-    ctx.font = 'bold 60px Manrope, sans-serif'; 
-    ctx.fillStyle = '#F59E0B'; // Amber-500 (Brand Color)
-    ctx.fillText(companionName, 540, 900);
-
-    // Footer (Updated Domain)
-    ctx.font = '30px Manrope, sans-serif';
-    ctx.fillStyle = '#6B7280';
-    ctx.fillText(dateStr, 540, 1250);
-    
-    ctx.font = 'bold 32px Manrope, sans-serif';
-    ctx.fillStyle = '#F59E0B'; 
-    ctx.fillText('peutic.xyz', 540, 1300); // FIXED DOMAIN
-
+    ctx.font = 'italic 500 50px Manrope, sans-serif'; ctx.fillStyle = '#4B5563'; ctx.fillText(`"${quote}"`, 540, 400);
+    ctx.fillStyle = '#FFFFFF'; ctx.shadowColor = "rgba(0,0,0,0.1)"; ctx.shadowBlur = 20; ctx.roundRect(140, 600, 800, 400, 40); ctx.fill(); ctx.shadowBlur = 0;
+    ctx.fillStyle = '#000000'; ctx.font = 'bold 80px Manrope, sans-serif'; ctx.fillText(durationStr, 540, 780);
+    ctx.font = 'bold 30px Manrope, sans-serif'; ctx.fillStyle = '#9CA3AF'; ctx.fillText('MINUTES OF CLARITY', 540, 830);
+    ctx.font = 'bold 40px Manrope, sans-serif'; ctx.fillStyle = '#000000'; ctx.fillText(`with ${companionName}`, 540, 920);
+    ctx.font = '30px Manrope, sans-serif'; ctx.fillStyle = '#6B7280'; ctx.fillText(dateStr, 540, 1250);
     return canvas.toDataURL('image/png');
 };
 
 const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
+  
   // Media State
   const [micOn, setMicOn] = useState(true);
   const [camOn, setCamOn] = useState(true);
@@ -140,12 +71,15 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
   // --- Session Initialization ---
   useEffect(() => {
+    // 1. Join Queue (Async)
     const initQueue = async () => {
         try {
+            // Join Queue
             const pos = await Database.joinQueue(userId);
             setQueuePos(pos);
             setEstWait(Database.getEstimatedWaitTime(pos));
 
+            // Instant Entry for #1 (Fix for "Stuck in Queue")
             if (pos === 1) {
                  startTavusConnection();
             }
@@ -156,6 +90,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
         }
     };
 
+    // Polling Interval
     const queueInterval = setInterval(async () => {
         if (connectionState === 'QUEUED') {
             const pos = await Database.getQueuePosition(userId);
@@ -171,10 +106,12 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
 
     initQueue();
 
+    // CLEANUP: Kill session on unmount or refresh (API Usage Fix)
     const cleanup = async () => {
         clearInterval(queueInterval);
         await Database.endSession(userId);
         if (conversationIdRef.current) {
+            // Ensure this runs even if component is unmounting
             endTavusConversation(conversationIdRef.current);
         }
     };
@@ -191,6 +128,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       setConnectionState('CONNECTING');
       setErrorMsg('');
       
+      // Move to active list (Async)
       await Database.enterActiveSession(userId);
 
       try {
@@ -297,6 +235,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
   const settings = Database.getSettings();
   const cost = Math.ceil(duration / 60) * settings.pricePerMinute;
 
+  // --- HELPER: Pre-fill Name to Skip Input Screen ---
   const getIframeUrl = () => {
       if (!conversationUrl) return '';
       try {
@@ -308,6 +247,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
       }
   };
 
+  // --- RENDER ---
   if (showSummary) {
       return (
           <div className="fixed inset-0 bg-black/95 z-[60] flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
@@ -372,7 +312,9 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
             {connectionState === 'QUEUED' && (
                 <div className="absolute inset-0 flex flex-col items-center justify-center z-10 bg-black/95 text-center p-4">
                     <div className="relative mb-8">
-                         <div className="w-24 h-24 rounded-full border-4 border-yellow-500/20 flex items-center justify-center animate-pulse"><Users className="w-10 h-10 text-yellow-500" /></div>
+                         <div className="w-24 h-24 rounded-full border-4 border-yellow-500/20 flex items-center justify-center animate-pulse">
+                             <Users className="w-10 h-10 text-yellow-500" />
+                         </div>
                     </div>
                     <h3 className="text-3xl font-black text-white tracking-tight mb-2">You are in queue</h3>
                     <p className="text-gray-400 text-sm mb-6">Position {queuePos} • Est. {estWait}m wait</p>
@@ -425,7 +367,7 @@ const VideoRoom: React.FC<VideoRoomProps> = ({ companion, onEndSession, userName
                 {camOn ? (
                     <video ref={videoRef} autoPlay muted playsInline className="w-full h-full object-cover transform scale-x-[-1]" />
                 ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /><span className="text-[8px] font-bold uppercase tracking-widest opacity-50">Off</span></div>
+                    <div className="w-full h-full flex flex-col items-center justify-center text-gray-500 bg-gray-900"><VideoOff className="w-8 h-8 mb-2 opacity-50" /></div>
                 )}
                 <div className="absolute bottom-2 right-2">
                      <div className={`w-2 h-2 rounded-full ${micOn ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : 'bg-red-500'}`}></div>
