@@ -892,7 +892,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
   // Dark Mode Initialization
   useEffect(() => {
       const savedTheme = localStorage.getItem('peutic_theme');
-      if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      if (savedTheme === 'dark') {
           setDarkMode(true);
           document.documentElement.classList.add('dark');
       } else {
@@ -947,12 +947,16 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       return () => clearInterval(interval);
   }, [user.id]);
 
+  // Weather Auto-Clear Effect (8 seconds) - REMOVED to be Unlimited
+  // useEffect(() => { ... }, [weather]);
+
   const handlePaymentSuccess = (minutesAdded: number, cost: number) => {
       Database.topUpWallet(minutesAdded, cost);
       setBalance(prev => prev + minutesAdded);
       setShowPayment(false);
       setPaymentError(undefined);
       setWeather('confetti');
+      // Auto-clear handled by effect
   };
 
   const handleConnectRequest = (companion: Companion) => {
@@ -966,6 +970,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
   const handleMoodSelect = (mood: 'confetti' | 'rain' | null) => {
       setWeather(mood);
+      // Persist mood to database so it counts towards goals
       Database.saveMood(user.id, mood);
   };
 
@@ -998,7 +1003,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
       {/* Navbar */}
       <nav className="bg-[#FFFBEB]/80 dark:bg-black/80 backdrop-blur-xl border-b border-yellow-100 dark:border-gray-800 sticky top-0 z-30 px-6 py-4 flex justify-between items-center shadow-sm transition-colors">
           <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-400/20"><Heart className="fill-black w-6 h-6" /></div>
+              <div className="w-10 h-10 bg-yellow-400 rounded-xl flex items-center justify-center shadow-lg shadow-yellow-400/20"><Heart className="fill-black w-6 h-6 text-black" /></div>
               <span className="font-black text-xl tracking-tight dark:text-white">Peutic</span>
           </div>
           <div className="flex items-center gap-4">
@@ -1036,7 +1041,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
                   <h3 className="font-black text-2xl dark:text-white">{dashboardUser.name}</h3>
                   <p className="text-xs font-bold text-yellow-600 uppercase tracking-widest mb-6">Premium Member</p>
                   
-                  {/* WEEKLY GOAL CARD */}
+                  {/* WEEKLY GOAL CARD - ENHANCED */}
                   <div className={`p-6 rounded-3xl text-left border shadow-inner transition-all duration-500 relative overflow-hidden ${isGoalMet ? 'bg-white dark:bg-gray-800 border-blue-200 dark:border-blue-900 shadow-[0_0_20px_rgba(59,130,246,0.15)]' : 'bg-white dark:bg-gray-800 border-yellow-100 dark:border-gray-700'}`}>
                       {isGoalMet && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-400 to-purple-500"></div>}
                       
