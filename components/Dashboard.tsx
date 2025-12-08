@@ -66,7 +66,7 @@ const AvatarImage: React.FC<{ src: string; alt: string; className?: string }> = 
     return <img src={imgSrc} alt={alt} className={className} onError={() => setHasError(true)} loading="lazy" />;
 };
 
-// --- LOCAL WISDOM CARD GENERATOR ---
+// --- LOCAL WISDOM CARD GENERATOR (Canvas API) ---
 const renderWisdomCard = (text: string): string => {
     const canvas = document.createElement('canvas');
     canvas.width = 1080;
@@ -149,7 +149,7 @@ const WisdomGenerator: React.FC<{ userId: string }> = ({ userId }) => {
         setLoading(true);
         
         try {
-            // 1. Get text affirmation
+            // 1. Get text affirmation (AI or Local)
             const wisdom = await generateAffirmation(input);
             
             // 2. Render to image locally
@@ -249,11 +249,12 @@ const SoundscapePlayer: React.FC = () => {
     const [track, setTrack] = useState('rain');
     const audioRef = useRef<HTMLAudioElement | null>(null);
 
+    // Reliable Mixkit Sources
     const TRACKS = {
         rain: "https://assets.mixkit.co/active_storage/sfx/2393/2393-preview.mp3",
         forest: "https://assets.mixkit.co/active_storage/sfx/2434/2434-preview.mp3",
-        white: "https://assets.mixkit.co/active_storage/sfx/2513/2513-preview.mp3", 
-        lofi: "https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3"
+        white: "https://assets.mixkit.co/active_storage/sfx/2513/2513-preview.mp3", // Cafe
+        lofi: "https://assets.mixkit.co/active_storage/sfx/1196/1196-preview.mp3"  // Ocean
     };
 
     useEffect(() => {
@@ -863,31 +864,26 @@ const JournalModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 // --- DASHBOARD MAIN ---
 const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession }) => {
   const [activeTab, setActiveTab] = useState<'hub' | 'history' | 'settings'>('hub');
-  const [weather, setWeather] = useState<'confetti' | 'rain' | null>(null);
-  
-  // DARK MODE STATE
-  const [darkMode, setDarkMode] = useState(false);
-
-  const [showBreathing, setShowBreathing] = useState(false);
-  const [showProfile, setShowProfile] = useState(false);
-  const [showJournal, setShowJournal] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
-  const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [dailyInsight, setDailyInsight] = useState<string>('');
-  const [nameEditMode, setNameEditMode] = useState(false);
-  const [tempName, setTempName] = useState(user.name);
-  
-  const [dashboardUser, setDashboardUser] = useState(user);
+  const [darkMode, setDarkMode] = useState(false); // DEFAULT FALSE (Light Mode)
   const [balance, setBalance] = useState(user.balance);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [companions, setCompanions] = useState<Companion[]>([]);
-  const [loadingCompanions, setLoadingCompanions] = useState(true); 
+  const [loadingCompanions, setLoadingCompanions] = useState(true);
   const [streak, setStreak] = useState(3);
-  
   const [weeklyGoal, setWeeklyGoal] = useState(0);
   const [weeklyTarget, setWeeklyTarget] = useState(10);
   const [weeklyMessage, setWeeklyMessage] = useState("Start your journey.");
+  const [dailyInsight, setDailyInsight] = useState<string>('');
+  const [dashboardUser, setDashboardUser] = useState(user);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | undefined>(undefined);
+  const [showBreathing, setShowBreathing] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [showJournal, setShowJournal] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [nameEditMode, setNameEditMode] = useState(false);
+  const [tempName, setTempName] = useState(user.name);
+  const [weather, setWeather] = useState<'confetti' | 'rain' | null>(null);
 
   // Dark Mode Initialization
   useEffect(() => {
@@ -946,9 +942,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onStartSession })
 
       return () => clearInterval(interval);
   }, [user.id]);
-
-  // Weather Auto-Clear Effect (8 seconds) - REMOVED to be Unlimited
-  // useEffect(() => { ... }, [weather]);
 
   const handlePaymentSuccess = (minutesAdded: number, cost: number) => {
       Database.topUpWallet(minutesAdded, cost);
