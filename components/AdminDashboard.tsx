@@ -78,6 +78,7 @@ const AdminDashboard: React.FC<{ onLogout: () => void }> = ({ onLogout }) => {
   const [settings, setSettings] = useState<GlobalSettings>(Database.getSettings());
   const [logs, setLogs] = useState<SystemLog[]>([]);
   const [promos, setPromos] = useState<PromoCode[]>([]);
+  const [metrics, setMetrics] = useState<ServerMetric[]>([]);
   
   // Concurrency States
   const [activeCount, setActiveCount] = useState(0);
